@@ -1,0 +1,7 @@
+build/
+filesystem/
+tools/
+assets/png/
+assets/wav/
+*.z64
+runevalley *.png
