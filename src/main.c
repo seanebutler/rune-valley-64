@@ -37,15 +37,16 @@
 
 enum { TER_GRASS, TER_PATH, TER_SAND, TER_WATER, TER_BRIDGE, TER_WALL, TER_FLOOR };
 enum { OBJ_NONE, OBJ_TREE, OBJ_OAK, OBJ_STUMP, OBJ_ROCK_COPPER, OBJ_ROCK_TIN,
-       OBJ_ROCK_IRON, OBJ_ROCK_EMPTY, OBJ_FISH, OBJ_BOOTH, OBJ_FIRE };
+       OBJ_ROCK_IRON, OBJ_ROCK_EMPTY, OBJ_FISH, OBJ_BOOTH, OBJ_FIRE,
+       OBJ_ESSENCE, OBJ_ALTAR_AIR, OBJ_ALTAR_FIRE };
 
 static const char *map_rows[MAP_H] = {
     "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT~~~~TTTTTT",
     "T.....................................~~~~.....T",
     "T.................wwwwwwwwwwwww.......~~~~.....T",
+    "T...E.E...........wfffffffffffw.......~~~~.....T",
     "T.................wfffffffffffw.......~~~~.....T",
-    "T.................wfffffffffffw.......~~~~.....T",
-    "T.................wfffffffffffw.......~~~~.....T",
+    "T....A............wfffffffffffw.......~~~~.....T",
     "T.................wfBBBBBBBBBfw.......~~~~.....T",
     "T.................wfffffffffffw.......~~~~.....T",
     "T.................wwwwwpppwwwww.......~~~~.....T",
@@ -70,7 +71,7 @@ static const char *map_rows[MAP_H] = {
     "T...................................ssF~~~.....T",
     "T......I..I......O..................ss~~~~.....T",
     "T...................................ss~~~~.....T",
-    "T.............................O.....ss~~~~.....T",
+    "T.............................O.....ss~~~~..R..T",
     "T...................................ssF~~~.....T",
     "T...................T...............ss~~~~.....T",
     "T.....T...............................~~~~.....T",
@@ -86,11 +87,11 @@ static int16_t obj_timer[MAP_H][MAP_W];
 /* ------------------------------------------------------------ skills */
 
 enum { SK_ATT, SK_STR, SK_DEF, SK_HP, SK_WC, SK_MINE, SK_FISH, SK_FM, SK_COOK,
-       SK_PRAY, NUM_SKILLS };
+       SK_PRAY, SK_RC, NUM_SKILLS };
 
 static const char *skill_names[NUM_SKILLS] = {
     "Attack", "Strength", "Defence", "Hitpoints", "Woodcutting",
-    "Mining", "Fishing", "Firemaking", "Cooking", "Prayer"
+    "Mining", "Fishing", "Firemaking", "Cooking", "Prayer", "Runecraft"
 };
 
 static int32_t xp[NUM_SKILLS];        /* stored as xp * 10 */
@@ -117,7 +118,7 @@ static int level_of(int sk)
 
 enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_RAW_SHRIMP, IT_SHRIMP, IT_BURNT, IT_AXE, IT_PICK, IT_NET,
-       IT_TINDER, IT_BONES, NUM_ITEMS };
+       IT_TINDER, IT_BONES, IT_ESSENCE, IT_AIR_RUNE, IT_FIRE_RUNE, NUM_ITEMS };
 
 typedef struct { const char *name; int spr; int heal; bool tool; } iteminfo_t;
 
@@ -133,6 +134,8 @@ enum {
     SPR_I_LOGS, SPR_I_OAK_LOGS, SPR_I_COPPER, SPR_I_TIN, SPR_I_IRON,
     SPR_I_RAW_SHRIMP, SPR_I_SHRIMP, SPR_I_BURNT, SPR_I_AXE, SPR_I_PICK,
     SPR_I_NET, SPR_I_TINDER, SPR_I_BONES,
+    SPR_ESSENCE, SPR_ALTAR_AIR, SPR_ALTAR_FIRE,
+    SPR_I_ESSENCE, SPR_I_AIR_RUNE, SPR_I_FIRE_RUNE,
     NUM_SPR
 };
 
@@ -146,7 +149,9 @@ static const char *spr_files[NUM_SPR] = {
     "goblin_a", "goblin_b",
     "item_logs", "item_oak_logs", "item_copper_ore", "item_tin_ore",
     "item_iron_ore", "item_raw_shrimp", "item_shrimp", "item_burnt_shrimp",
-    "item_axe", "item_pickaxe", "item_net", "item_tinderbox", "item_bones"
+    "item_axe", "item_pickaxe", "item_net", "item_tinderbox", "item_bones",
+    "obj_essence_rock", "obj_altar_air", "obj_altar_fire",
+    "item_essence", "item_air_rune", "item_fire_rune"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -166,14 +171,18 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     [IT_NET]        = { "Small net",   SPR_I_NET,        0, true  },
     [IT_TINDER]     = { "Tinderbox",   SPR_I_TINDER,     0, true  },
     [IT_BONES]      = { "Bones",       SPR_I_BONES,      0, false },
+    [IT_ESSENCE]    = { "Rune essence",SPR_I_ESSENCE,    0, false },
+    [IT_AIR_RUNE]   = { "Air rune",    SPR_I_AIR_RUNE,   0, false },
+    [IT_FIRE_RUNE]  = { "Fire rune",   SPR_I_FIRE_RUNE,  0, false },
 };
 
 /* ------------------------------------------------------------ audio */
 
 enum { SND_CHOP, SND_MINE, SND_SPLASH, SND_HIT, SND_EAT, SND_COOK, SND_FIRE,
-       SND_LEVELUP, SND_DEATH, NUM_SND };
+       SND_LEVELUP, SND_DEATH, SND_CRAFT, NUM_SND };
 static const char *snd_files[NUM_SND] = {
-    "chop", "mine", "splash", "hit", "eat", "cook", "fire", "levelup", "death"
+    "chop", "mine", "splash", "hit", "eat", "cook", "fire", "levelup", "death",
+    "craft"
 };
 static wav64_t snd[NUM_SND];
 static wav64_t music;
@@ -352,6 +361,9 @@ static void init_map(void)
             case 'N': obj = OBJ_ROCK_TIN;    break;
             case 'I': obj = OBJ_ROCK_IRON;   break;
             case 'F': ter = TER_WATER; obj = OBJ_FISH; break;
+            case 'E': obj = OBJ_ESSENCE;    break;
+            case 'A': obj = OBJ_ALTAR_AIR;  break;
+            case 'R': obj = OBJ_ALTAR_FIRE; break;
             case 'G':
                 if (num_gob < MAX_GOB) {
                     gob_t *g = &gob[num_gob++];
@@ -499,9 +511,23 @@ static void tick_skilling(void)
     }
     case ST_MINE: {
         int o = object[ay][ax];
-        if (o != OBJ_ROCK_COPPER && o != OBJ_ROCK_TIN && o != OBJ_ROCK_IRON) {
+        if (o != OBJ_ROCK_COPPER && o != OBJ_ROCK_TIN && o != OBJ_ROCK_IRON &&
+            o != OBJ_ESSENCE) {
             if (o == OBJ_ROCK_EMPTY) msg("There is no ore currently available in this rock.");
             stop_action(); break;
+        }
+        if (o == OBJ_ESSENCE) {
+            /* essence rocks never deplete */
+            if (--pl.act_timer > 0) break;
+            pl.act_timer = 3;
+            if (inv_full()) { msg("Your inventory is too full to carry any more."); stop_action(); break; }
+            sfx(SND_MINE);
+            if (chance(85)) {
+                add_item(IT_ESSENCE);
+                msg("You manage to mine some rune essence.");
+                add_xp(SK_MINE, 50, true);
+            }
+            break;
         }
         if (--pl.act_timer > 0) break;
         pl.act_timer = 4;
@@ -807,11 +833,29 @@ static void interact(void)
         pl.state = ST_CHOP; pl.act_timer = 2;
         msg("You swing your axe at the tree.");
         break;
-    case OBJ_ROCK_COPPER: case OBJ_ROCK_TIN: case OBJ_ROCK_IRON:
+    case OBJ_ROCK_COPPER: case OBJ_ROCK_TIN: case OBJ_ROCK_IRON: case OBJ_ESSENCE:
         if (!has_item(IT_PICK)) { msg("You need a pickaxe to mine this rock."); return; }
         pl.state = ST_MINE; pl.act_timer = 2;
         msg("You swing your pick at the rock.");
         break;
+    case OBJ_ALTAR_AIR: case OBJ_ALTAR_FIRE: {
+        bool fire = (t.obj == OBJ_ALTAR_FIRE);
+        if (fire && level_of(SK_RC) < 14) {
+            msg("You need a Runecraft level of 14 to bind fire runes.");
+            return;
+        }
+        int n = 0;
+        while (remove_item(IT_ESSENCE)) {
+            add_item(fire ? IT_FIRE_RUNE : IT_AIR_RUNE);
+            n++;
+        }
+        if (!n) { msg("You need some rune essence to craft runes."); return; }
+        sfx_ui(SND_CRAFT);
+        msg("You bind the temple's power into %s rune%s.",
+            fire ? "fire" : "air", n > 1 ? "s" : "");
+        add_xp(SK_RC, n * (fire ? 70 : 50), true);
+        break;
+    }
     case OBJ_ROCK_EMPTY:
         msg("There is no ore currently available in this rock.");
         break;
@@ -850,6 +894,9 @@ static const char *context_hint(void)
     case OBJ_FISH:        return "A: Net Fishing spot";
     case OBJ_BOOTH:       return "A: Use Bank booth";
     case OBJ_FIRE:        return "A: Cook on Fire";
+    case OBJ_ESSENCE:     return "A: Mine Essence rock";
+    case OBJ_ALTAR_AIR:   return "A: Craft runes at Air altar";
+    case OBJ_ALTAR_FIRE:  return "A: Craft runes at Fire altar";
     }
     return NULL;
 }
@@ -896,6 +943,9 @@ static void use_inv_item(int slot)
     case IT_BURNT:
         msg("Ugh, there's nothing left of it. Best discard it.");
         break;
+    case IT_ESSENCE:   msg("A chunk of raw magical essence."); break;
+    case IT_AIR_RUNE:  msg("A rune imbued with the power of air."); break;
+    case IT_FIRE_RUNE: msg("A rune imbued with the power of fire."); break;
     case IT_AXE:    msg("A woodcutter's best friend."); break;
     case IT_PICK:   msg("Used for mining rocks."); break;
     case IT_NET:    msg("Used to catch shrimp at fishing spots."); break;
@@ -1104,6 +1154,9 @@ static void render(void)
             case OBJ_FIRE:
                 rdpq_sprite_blit(spr[anim_frame ? SPR_FIRE_B : SPR_FIRE_A], sx, sy, NULL);
                 break;
+            case OBJ_ESSENCE:    rdpq_sprite_blit(spr[SPR_ESSENCE], sx, sy, NULL); break;
+            case OBJ_ALTAR_AIR:  rdpq_sprite_blit(spr[SPR_ALTAR_AIR], sx, sy, NULL); break;
+            case OBJ_ALTAR_FIRE: rdpq_sprite_blit(spr[SPR_ALTAR_FIRE], sx, sy, NULL); break;
             }
         }
 
@@ -1215,7 +1268,7 @@ static void render(void)
     }
     else if (ui_mode == UI_SKILLS) {
         int px0 = SCREEN_W - 130, py0 = 24;
-        draw_panel(px0, py0, px0 + 124, py0 + 130);
+        draw_panel(px0, py0, px0 + 124, py0 + 152);
         draw_text(1, px0 + 6, py0 + 12, "Skills");
         for (int i = 0; i < NUM_SKILLS; i++)
             draw_text(0, px0 + 6, py0 + 24 + i * 10, "%-11s %2d",
@@ -1223,7 +1276,7 @@ static void render(void)
         int att = level_of(SK_ATT), str = level_of(SK_STR), def = level_of(SK_DEF);
         int cmb = (int)((def + level_of(SK_HP) + level_of(SK_PRAY) / 2) * 0.25f
                         + (att + str) * 0.325f);
-        draw_text(4, px0 + 6, py0 + 127, "Combat level: %d", cmb);
+        draw_text(4, px0 + 6, py0 + 147, "Combat level: %d", cmb);
     }
     else if (ui_mode == UI_BANK) {
         int n = bank_rows();

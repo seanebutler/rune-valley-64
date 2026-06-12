@@ -161,6 +161,15 @@ $s.Note(1.08, 84, 0.45, 0.6, 2)   # C6
 $s.Note(1.08, 72, 0.45, 0.3, 1)   # C4 under
 $s.Save((P 'levelup')); Write-Host '  levelup'
 
+# craft: runecrafting sparkle
+$s = New-Object Synth($R, 0.7)
+$s.Note(0.00, 88, 0.18, 0.35, 0)
+$s.Note(0.07, 92, 0.18, 0.35, 0)
+$s.Note(0.14, 95, 0.18, 0.35, 0)
+$s.Note(0.21, 100, 0.35, 0.4, 0)
+$s.Note(0.30, 104, 0.3, 0.3, 0)
+$s.Save((P 'craft')); Write-Host '  craft'
+
 # death: sad descending line
 $s = New-Object Synth($R, 1.4)
 $s.Note(0.0, 69, 0.3, 0.5, 2)

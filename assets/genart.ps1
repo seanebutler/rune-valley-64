@@ -731,4 +731,102 @@ Save-Sprite 'item_bones' @{ 'w'='#e8e4d8'; 'd'='#b8b4a4' } @(
     '................',
     '................')
 
+Write-Host "Generating runecrafting..."
+
+# Rune essence rock: bluish crystal boulder (never depletes)
+Save-Sprite 'obj_essence_rock' @{ 'a'='#7a8aa4'; 'b'='#5a6a84'; 'c'='#94a4be'; 'o'='#bef0ff' } @(
+    '................',
+    '................',
+    '....bbbbbb......',
+    '..bbacccabbb....',
+    '.baccccccaabb...',
+    '.bacccoccccab...',
+    'bacccccccccaab..',
+    'baccoccccoccab..',
+    'baccccccccccab..',
+    'bacccccoccccaab.',
+    'baacccccccccaab.',
+    'bbaaccocccaaabb.',
+    'bbaaaaaaaaaaabb.',
+    '.bbbaaaaaaabbb..',
+    '..bbbbbbbbbbb...',
+    '................')
+
+# Altars: stone plinth with glowing sigil
+function New-Altar([string]$name, [string]$glow, [string]$core) {
+    $pal = @{ 's'='#9a9a94'; 'd'='#62625c'; 'g'=$glow; 'w'=$core }
+    Save-Sprite $name $pal @(
+        '................',
+        '..dddddddddddd..',
+        '.dssssssssssssd.',
+        '.dssggssssggssd.',
+        '.dsssggssggsssd.',
+        '.dssssgwwgssssd.',
+        '.dsssggssggsssd.',
+        '.dssggssssggssd.',
+        '.ddssssssssssdd.',
+        '...dssssssssd...',
+        '...dssssssssd...',
+        '..ddssssssssdd..',
+        '.dddddddddddddd.',
+        '.dddddddddddddd.',
+        '................',
+        '................')
+}
+New-Altar 'obj_altar_air'  '#7ae0f0' '#e8ffff'
+New-Altar 'obj_altar_fire' '#f08030' '#ffe8a0'
+
+# Item icons
+Save-Sprite 'item_essence' @{ 'a'='#aebed8'; 'b'='#8a9ab4'; 'w'='#e8f8ff' } @(
+    '................',
+    '................',
+    '................',
+    '......ab........',
+    '.....aawb.......',
+    '....aawwab......',
+    '...aawwaaab.....',
+    '...awwaaaab.....',
+    '..aawaaawaab....',
+    '..awaaaawwab....',
+    '..aaaawwwaab....',
+    '...baaawaab.....',
+    '....bbaabb......',
+    '......bb........',
+    '................',
+    '................')
+Save-Sprite 'item_air_rune' @{ 's'='#d8d8d0'; 'd'='#a8a8a0'; 'g'='#48b8d8' } @(
+    '................',
+    '................',
+    '...ssssssssss...',
+    '..sssssssssssd..',
+    '..ssggggggssss..',
+    '..sssssssggsss..',
+    '..ssggggggsssd..',
+    '..ssgsssssssss..',
+    '..ssggggggsssd..',
+    '..sssssssggsss..',
+    '..ssggggggsssd..',
+    '..sssssssssssd..',
+    '...dddddddddd...',
+    '................',
+    '................',
+    '................')
+Save-Sprite 'item_fire_rune' @{ 's'='#d8d8d0'; 'd'='#a8a8a0'; 'g'='#e85820'; 'y'='#f8c83c'; 'w'='#fff0c0' } @(
+    '................',
+    '................',
+    '...ssssssssss...',
+    '..sssssssssssd..',
+    '..ssssssgsssss..',
+    '..sssssggssssd..',
+    '..ssssggygssss..',
+    '..sssggyyggssd..',
+    '..ssggyyyyggss..',
+    '..ssgyywwyygsd..',
+    '..ssggyyyyggss..',
+    '..ssssggggsssd..',
+    '...dddddddddd...',
+    '................',
+    '................',
+    '................')
+
 Write-Host "Done. PNGs in $outDir"

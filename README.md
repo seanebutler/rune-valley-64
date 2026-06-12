@@ -23,6 +23,9 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
 - **Combat** — level-2 goblins roam east of the bridge; they are aggressive,
   they hit 1s, and they drop bones
 - **Prayer** — bury those bones
+- **Runecraft** — mine rune essence from the glittering rock in the northwest
+  ruins (it never depletes) and bind it at the Air altar beside it, or brave
+  the goblin camp to reach the Fire altar (level 14)
 - **Banking** — a bank with deposit-all and per-item withdrawal sits at the
   north end of the path
 - **Hitpoints** start at level 10, regenerate 1 per minute, and shrimp heal 3
