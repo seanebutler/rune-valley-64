@@ -136,6 +136,12 @@ enum {
     SPR_I_NET, SPR_I_TINDER, SPR_I_BONES,
     SPR_ESSENCE, SPR_ALTAR_AIR, SPR_ALTAR_FIRE,
     SPR_I_ESSENCE, SPR_I_AIR_RUNE, SPR_I_FIRE_RUNE,
+    SPR_BOTA_DOWN_A, SPR_BOTA_DOWN_B, SPR_BOTA_UP_A, SPR_BOTA_UP_B,
+    SPR_BOTA_SIDE_A, SPR_BOTA_SIDE_B,
+    SPR_BOTB_DOWN_A, SPR_BOTB_DOWN_B, SPR_BOTB_UP_A, SPR_BOTB_UP_B,
+    SPR_BOTB_SIDE_A, SPR_BOTB_SIDE_B,
+    SPR_BOTC_DOWN_A, SPR_BOTC_DOWN_B, SPR_BOTC_UP_A, SPR_BOTC_UP_B,
+    SPR_BOTC_SIDE_A, SPR_BOTC_SIDE_B,
     NUM_SPR
 };
 
@@ -151,7 +157,13 @@ static const char *spr_files[NUM_SPR] = {
     "item_iron_ore", "item_raw_shrimp", "item_shrimp", "item_burnt_shrimp",
     "item_axe", "item_pickaxe", "item_net", "item_tinderbox", "item_bones",
     "obj_essence_rock", "obj_altar_air", "obj_altar_fire",
-    "item_essence", "item_air_rune", "item_fire_rune"
+    "item_essence", "item_air_rune", "item_fire_rune",
+    "bota_down_a", "bota_down_b", "bota_up_a", "bota_up_b",
+    "bota_side_a", "bota_side_b",
+    "botb_down_a", "botb_down_b", "botb_up_a", "botb_up_b",
+    "botb_side_a", "botb_side_b",
+    "botc_down_a", "botc_down_b", "botc_up_a", "botc_up_b",
+    "botc_side_a", "botc_side_b"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -258,6 +270,7 @@ typedef struct { bool active; char text[24]; float y; int age; } xpdrop_t;
 static xpdrop_t xpdrop[MAX_XPDROP];
 
 static int frame_counter = 0;
+static int gratz_timer = 0;        /* bots say "gz" while this is set */
 
 /* ------------------------------------------------------------ helpers */
 
@@ -294,6 +307,7 @@ static void add_xp(int sk, int amount_x10, bool drop)
         msg("Your %s level is now %d.", skill_names[sk], after);
         sfx_ui(SND_LEVELUP);
         if (sk == SK_HP) pl.hp++;
+        gratz_timer = 3;
     }
 }
 
@@ -732,6 +746,217 @@ static void tick_goblins(void)
     }
 }
 
+/* ------------------------------------------------------------ player bots */
+
+#define MAX_BOT 5
+#define SAY_LEN 32
+
+enum { BS_IDLE, BS_GOTO, BS_WORK };
+
+typedef struct {
+    int   tx, ty;
+    float px, py;
+    int   mtx, mty;
+    bool  moving;
+    int   facing;
+    float walk_anim;
+    int   look;                 /* sprite recolor set 0-2 */
+    const char *name;
+    int   state;
+    int   goal_x, goal_y, goal_obj;
+    int   work_left, act_timer, idle_ticks, stuck;
+    char  say[SAY_LEN];
+    int   say_t;                /* frames of overhead text left */
+    int   chat_cd;              /* ticks until next random line */
+} bot_t;
+
+static bot_t bots[MAX_BOT];
+
+static const char *bot_lines[] = {
+    "selling logs 25gp ea",
+    "buying shrimp in bulk",
+    "anyone seen iron rocks?",
+    "free armor trimming",
+    "dancing 4 money",
+    "follow me 4 a suprise",
+    "wc 99 someday, trust",
+    "essence is gud xp",
+    "lost my axe in the river",
+    "nice valley innit",
+};
+#define NUM_BOT_LINES (int)(sizeof bot_lines / sizeof bot_lines[0])
+
+static const char *gratz_lines[] = { "gz", "grats", "nice one", "gz m8" };
+
+static void bot_say(bot_t *b, const char *text)
+{
+    snprintf(b->say, SAY_LEN, "%s", text);
+    b->say_t = 240;
+    msg("%s: %s", b->name, text);
+}
+
+static bool bot_goal_valid(bot_t *b)
+{
+    return object[b->goal_y][b->goal_x] == b->goal_obj;
+}
+
+static void bot_pick_goal(bot_t *b)
+{
+    b->stuck = 0;
+    /* 1 in 4: just wander somewhere walkable nearby */
+    if (chance(25)) {
+        for (int tries = 0; tries < 8; tries++) {
+            int x = b->tx + rand() % 13 - 6, y = b->ty + rand() % 13 - 6;
+            if (tile_walkable(x, y)) {
+                b->goal_x = x; b->goal_y = y; b->goal_obj = OBJ_NONE;
+                b->state = BS_GOTO;
+                return;
+            }
+        }
+        b->state = BS_IDLE; b->idle_ticks = 2 + rand() % 4;
+        return;
+    }
+    /* otherwise find something to harvest */
+    static int cx[64], cy[64];
+    int n = 0;
+    for (int y = 1; y < MAP_H - 1 && n < 64; y++)
+        for (int x = 1; x < MAP_W - 1 && n < 64; x++) {
+            int o = object[y][x];
+            if (o != OBJ_TREE && o != OBJ_OAK && o != OBJ_ROCK_COPPER &&
+                o != OBJ_ROCK_TIN && o != OBJ_ROCK_IRON && o != OBJ_ESSENCE &&
+                o != OBJ_FISH) continue;
+            if (cheb(x, y, b->tx, b->ty) > 16) continue;
+            cx[n] = x; cy[n] = y; n++;
+        }
+    if (!n) { b->state = BS_IDLE; b->idle_ticks = 4 + rand() % 6; return; }
+    int pick = rand() % n;
+    b->goal_x = cx[pick]; b->goal_y = cy[pick];
+    b->goal_obj = object[cy[pick]][cx[pick]];
+    b->state = BS_GOTO;
+}
+
+static void bot_step(bot_t *b, int tx, int ty)
+{
+    if (b->moving) return;
+    int dx = (tx > b->tx) - (tx < b->tx);
+    int dy = (ty > b->ty) - (ty < b->ty);
+    if (dx && dy && (!tile_walkable(b->tx + dx, b->ty) ||
+                     !tile_walkable(b->tx, b->ty + dy))) {
+        if (tile_walkable(b->tx + dx, b->ty)) dy = 0;
+        else dx = 0;
+    }
+    int nx = b->tx + dx, ny = b->ty + dy;
+    if ((dx || dy) && tile_walkable(nx, ny)) {
+        b->mtx = nx; b->mty = ny;
+        b->moving = true;
+        if (dx) b->facing = dx > 0 ? 3 : 2;
+        else if (dy) b->facing = dy > 0 ? 0 : 1;
+    } else {
+        b->stuck++;
+    }
+}
+
+static void bot_face_goal(bot_t *b)
+{
+    int dx = b->goal_x - b->tx, dy = b->goal_y - b->ty;
+    if (abs(dx) >= abs(dy)) { if (dx) b->facing = dx > 0 ? 3 : 2; }
+    else b->facing = dy > 0 ? 0 : 1;
+}
+
+static void tick_bots(void)
+{
+    for (int i = 0; i < MAX_BOT; i++) {
+        bot_t *b = &bots[i];
+
+        /* chatter */
+        bool near = cheb(b->tx, b->ty, pl.tx, pl.ty) <= 14;
+        if (b->say_t == 0 && gratz_timer > 0 && near && chance(35)) {
+            bot_say(b, gratz_lines[rand() % 4]);
+        } else if (--b->chat_cd <= 0) {
+            b->chat_cd = 50 + rand() % 120;
+            if (near) bot_say(b, bot_lines[rand() % NUM_BOT_LINES]);
+        }
+
+        switch (b->state) {
+        case BS_IDLE:
+            if (--b->idle_ticks <= 0) bot_pick_goal(b);
+            break;
+        case BS_GOTO:
+            if (b->goal_obj != OBJ_NONE && !bot_goal_valid(b)) { bot_pick_goal(b); break; }
+            if (b->goal_obj != OBJ_NONE
+                    ? cheb(b->tx, b->ty, b->goal_x, b->goal_y) <= 1
+                    : (b->tx == b->goal_x && b->ty == b->goal_y)) {
+                if (b->goal_obj == OBJ_NONE) {
+                    b->state = BS_IDLE;
+                    b->idle_ticks = 2 + rand() % 5;
+                } else {
+                    b->state = BS_WORK;
+                    bot_face_goal(b);
+                    b->act_timer = 4;
+                    b->work_left = 5 + rand() % 10;
+                }
+                break;
+            }
+            bot_step(b, b->goal_x, b->goal_y);
+            if (b->stuck > 4) bot_pick_goal(b);
+            break;
+        case BS_WORK: {
+            if (!bot_goal_valid(b)) {
+                b->state = BS_IDLE; b->idle_ticks = 1 + rand() % 3;
+                break;
+            }
+            if (--b->act_timer > 0) break;
+            b->act_timer = 4;
+            if (chance(45)) {
+                /* bots take resources for real */
+                int gx = b->goal_x, gy = b->goal_y;
+                switch (b->goal_obj) {
+                case OBJ_TREE:
+                    object[gy][gx] = OBJ_STUMP; obj_timer[gy][gx] = 10; break;
+                case OBJ_OAK:
+                    if (chance(13)) { object[gy][gx] = OBJ_STUMP; obj_timer[gy][gx] = 14; }
+                    break;
+                case OBJ_ROCK_COPPER: case OBJ_ROCK_TIN:
+                    object[gy][gx] = OBJ_ROCK_EMPTY; obj_timer[gy][gx] = 4; break;
+                case OBJ_ROCK_IRON:
+                    object[gy][gx] = OBJ_ROCK_EMPTY; obj_timer[gy][gx] = 9; break;
+                default: break;     /* essence + fish never deplete */
+                }
+            }
+            if (--b->work_left <= 0) {
+                b->state = BS_IDLE;
+                b->idle_ticks = 3 + rand() % 6;
+            }
+            break;
+        }
+        }
+    }
+    if (gratz_timer > 0) gratz_timer--;
+}
+
+static void init_bots(void)
+{
+    static const struct { int x, y, look; const char *name; } seed[MAX_BOT] = {
+        { 14, 14, 0, "Sir Logsalot" },
+        {  8, 24, 1, "rockcrushr7"  },
+        { 35, 26, 2, "shrimp4lyfe"  },
+        {  8,  4, 1, "xXEssenceXx"  },
+        { 20, 18, 0, "Lumber Jacq"  },
+    };
+    for (int i = 0; i < MAX_BOT; i++) {
+        bot_t *b = &bots[i];
+        memset(b, 0, sizeof *b);
+        b->tx = b->mtx = seed[i].x;
+        b->ty = b->mty = seed[i].y;
+        b->px = b->tx * TILE + 8; b->py = b->ty * TILE + 12;
+        b->look = seed[i].look;
+        b->name = seed[i].name;
+        b->state = BS_IDLE;
+        b->idle_ticks = 1 + i;
+        b->chat_cd = 20 + i * 37;
+    }
+}
+
 /* ------------------------------------------------------------ world tick */
 
 static void game_tick(void)
@@ -749,6 +974,7 @@ static void game_tick(void)
 
     tick_skilling();
     tick_goblins();
+    tick_bots();
 
     /* hp regen: 1 per minute */
     if (pl.hp < level_of(SK_HP) && ++pl.regen >= 100) {
@@ -1009,6 +1235,25 @@ static void update_movement(float dt)
         }
     }
 
+    /* bot interpolation */
+    for (int i = 0; i < MAX_BOT; i++) {
+        bot_t *b = &bots[i];
+        if (!b->moving) continue;
+        float gx = b->mtx * TILE + 8, gy = b->mty * TILE + 12;
+        float dx = gx - b->px, dy = gy - b->py;
+        float dist = sqrtf(dx * dx + dy * dy);
+        float step = WALK_SPEED * dt;
+        b->walk_anim += step;
+        if (step >= dist) {
+            b->px = gx; b->py = gy;
+            b->tx = b->mtx; b->ty = b->mty;
+            b->moving = false;
+        } else {
+            b->px += dx / dist * step;
+            b->py += dy / dist * step;
+        }
+    }
+
     /* goblin interpolation */
     for (int i = 0; i < num_gob; i++) {
         gob_t *g = &gob[i];
@@ -1071,6 +1316,21 @@ static void draw_text(int style, int x, int y, const char *fmt, ...)
     vsnprintf(buf, sizeof buf, fmt, args);
     va_end(args);
     rdpq_text_print(&(rdpq_textparms_t){ .style_id = style }, FONT_ID, x, y, buf);
+}
+
+/* relative sprite index (0-5) within a 6-sprite actor set, + flip flag */
+static int actor_sprite(int facing, bool moving, float walk_anim, bool *flip)
+{
+    int frame = ((int)(walk_anim / 8)) & 1;
+    *flip = (facing == 2);
+    int idx;
+    switch (facing) {
+    case 0:  idx = 0; break;     /* down */
+    case 1:  idx = 2; break;     /* up   */
+    default: idx = 4; break;     /* side */
+    }
+    if (frame && moving) idx++;
+    return idx;
 }
 
 static void draw_entity_hpbar(float sx, float sy, int hp, int maxhp)
@@ -1169,17 +1429,23 @@ static void render(void)
                              g->px - 8 - cam_x, g->py - 12 - cam_y, NULL);
         }
 
+        /* bots whose feet are in this row */
+        for (int i = 0; i < MAX_BOT; i++) {
+            bot_t *b = &bots[i];
+            if ((int)b->py / TILE != y) continue;
+            bool flip;
+            int idx = actor_sprite(b->facing, b->moving, b->walk_anim, &flip);
+            rdpq_sprite_blit(spr[SPR_BOTA_DOWN_A + b->look * 6 + idx],
+                             b->px - 8 - cam_x, b->py - 20 - cam_y,
+                             &(rdpq_blitparms_t){ .flip_x = flip });
+        }
+
         /* player */
         if (pl_row == y) {
-            int base, frame = ((int)(pl.walk_anim / 8)) & 1;
-            bool flip = false;
-            switch (pl.facing) {
-            case 0: base = frame && pl.moving ? SPR_PL_DOWN_B : SPR_PL_DOWN_A; break;
-            case 1: base = frame && pl.moving ? SPR_PL_UP_B   : SPR_PL_UP_A;   break;
-            case 2: base = frame && pl.moving ? SPR_PL_SIDE_B : SPR_PL_SIDE_A; flip = true; break;
-            default:base = frame && pl.moving ? SPR_PL_SIDE_B : SPR_PL_SIDE_A; break;
-            }
-            rdpq_sprite_blit(spr[base], pl.px - 8 - cam_x, pl.py - 20 - cam_y,
+            bool flip;
+            int idx = actor_sprite(pl.facing, pl.moving, pl.walk_anim, &flip);
+            rdpq_sprite_blit(spr[SPR_PL_DOWN_A + idx],
+                             pl.px - 8 - cam_x, pl.py - 20 - cam_y,
                              &(rdpq_blitparms_t){ .flip_x = flip });
         }
     }
@@ -1203,6 +1469,16 @@ static void render(void)
             draw_entity_hpbar(sx, sy - 8, pl.hp, level_of(SK_HP));
             draw_hitsplat(sx, sy, pl.hitsplat);
         }
+    }
+
+    /* ---- bot overhead chat ---- */
+    for (int i = 0; i < MAX_BOT; i++) {
+        bot_t *b = &bots[i];
+        if (b->say_t <= 0) continue;
+        b->say_t--;
+        int w = strlen(b->say) * 6;
+        draw_text(1, (int)(b->px - cam_x) - w / 2, (int)(b->py - cam_y) - 26,
+                  "%s", b->say);
     }
 
     /* ---- xp drops ---- */
@@ -1437,6 +1713,7 @@ int main(void)
     /* game state */
     init_xp_table();
     init_map();
+    init_bots();
     for (int i = 0; i < NUM_SKILLS; i++) xp[i] = 0;
     xp[SK_HP] = xp_table[10];                  /* hitpoints starts at 10 */
     pl.hp = 10;

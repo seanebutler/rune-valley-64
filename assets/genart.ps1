@@ -829,4 +829,43 @@ Save-Sprite 'item_fire_rune' @{ 's'='#d8d8d0'; 'd'='#a8a8a0'; 'g'='#e85820'; 'y'
     '................',
     '................')
 
+Write-Host "Generating bot recolors..."
+
+# Palette-swap the player sprites into bot variants (tunic + hair)
+function New-Recolor([string]$srcName, [string]$dstName, [hashtable]$map) {
+    $srcPath = Join-Path $outDir "$srcName.png"
+    $src = New-Object System.Drawing.Bitmap($srcPath)
+    $out = New-Object System.Drawing.Bitmap($src.Width, $src.Height, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    for ($y = 0; $y -lt $src.Height; $y++) {
+        for ($x = 0; $x -lt $src.Width; $x++) {
+            $c = $src.GetPixel($x, $y)
+            $key = ('#{0:x2}{1:x2}{2:x2}' -f $c.R, $c.G, $c.B)
+            if ($c.A -gt 0 -and $map.ContainsKey($key)) {
+                $hex = $map[$key]
+                $c = [System.Drawing.Color]::FromArgb($c.A,
+                    [Convert]::ToInt32($hex.Substring(1,2),16),
+                    [Convert]::ToInt32($hex.Substring(3,2),16),
+                    [Convert]::ToInt32($hex.Substring(5,2),16))
+            }
+            $out.SetPixel($x, $y, $c)
+        }
+    }
+    $src.Dispose()
+    $out.Save((Join-Path $outDir "$dstName.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+    $out.Dispose()
+    Write-Host "  $dstName"
+}
+
+$botSets = @{
+    'bota' = @{ '#3e5e7e' = '#8e3e3e'; '#4a3320' = '#2a2a2a' }   # red tunic, black hair
+    'botb' = @{ '#3e5e7e' = '#6e468e'; '#4a3320' = '#c8a23c' }   # purple tunic, blond hair
+    'botc' = @{ '#3e5e7e' = '#b8703e'; '#4a3320' = '#8e5e3e' }   # orange tunic, auburn hair
+}
+$parts = 'down_a','down_b','up_a','up_b','side_a','side_b'
+foreach ($set in 'bota','botb','botc') {
+    foreach ($p in $parts) {
+        New-Recolor "pl_$p" "${set}_$p" $botSets[$set]
+    }
+}
+
 Write-Host "Done. PNGs in $outDir"

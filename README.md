@@ -36,6 +36,11 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
 Level-ups play an original fanfare and print the classic congratulations to
 the parchment chatbox.
 
+The valley is populated by five **player bots** — fellow adventurers with
+era-appropriate names who wander between trees, rocks and fishing spots,
+deplete resources you were walking toward, advertise dubious services in
+public chat, and say "gz" when you level up near them.
+
 ## Controls
 
 | Input | Action |
