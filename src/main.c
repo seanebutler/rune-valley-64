@@ -14,6 +14,7 @@
 
 #include <libdragon.h>
 #include <math.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -142,6 +143,7 @@ enum {
     SPR_BOTB_SIDE_A, SPR_BOTB_SIDE_B,
     SPR_BOTC_DOWN_A, SPR_BOTC_DOWN_B, SPR_BOTC_UP_A, SPR_BOTC_UP_B,
     SPR_BOTC_SIDE_A, SPR_BOTC_SIDE_B,
+    SPR_LOGO_0, SPR_LOGO_1, SPR_LOGO_2, SPR_LOGO_3,
     NUM_SPR
 };
 
@@ -163,7 +165,8 @@ static const char *spr_files[NUM_SPR] = {
     "botb_down_a", "botb_down_b", "botb_up_a", "botb_up_b",
     "botb_side_a", "botb_side_b",
     "botc_down_a", "botc_down_b", "botc_up_a", "botc_up_b",
-    "botc_side_a", "botc_side_b"
+    "botc_side_a", "botc_side_b",
+    "ui_logo_0", "ui_logo_1", "ui_logo_2", "ui_logo_3"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -261,6 +264,11 @@ static int num_gob = 0;
 
 typedef enum { UI_NONE, UI_INV, UI_SKILLS, UI_BANK, UI_HELP } ui_t;
 static ui_t ui_mode = UI_NONE;
+
+typedef enum { STATE_TITLE, STATE_PLAY } gstate_t;
+static gstate_t game_state = STATE_TITLE;
+static bool save_found = false;
+static int title_sel = 0;
 static int inv_cursor = 0;
 static int bank_cursor = 0;
 
@@ -409,6 +417,75 @@ static bool tile_walkable(int x, int y)
     return true;
 }
 
+/* ------------------------------------------------------------ saves (EEPROM 4K) */
+
+#define SAVE_MAGIC 0x52563634u     /* 'RV64' */
+#define SAVE_VERSION 1
+
+typedef struct __attribute__((packed)) {
+    uint32_t magic;
+    uint8_t  version;
+    uint8_t  hp;
+    uint8_t  tx, ty;
+    int32_t  xp[NUM_SKILLS];
+    uint8_t  inv[INV_SIZE];
+    uint16_t bank[NUM_ITEMS];
+    uint8_t  run_energy;
+    uint8_t  pad;
+    uint16_t checksum;
+} save_t;
+
+static int save_timer = 0;
+
+static uint16_t save_checksum(const save_t *s)
+{
+    const uint8_t *p = (const uint8_t *)s;
+    uint16_t sum = 0;
+    for (size_t i = 0; i < offsetof(save_t, checksum); i++)
+        sum += p[i];
+    return sum;
+}
+
+static void save_game(void)
+{
+    if (!eeprom_present()) return;
+    save_t s = { .magic = SAVE_MAGIC, .version = SAVE_VERSION };
+    s.hp = pl.hp;
+    s.tx = pl.tx; s.ty = pl.ty;
+    for (int i = 0; i < NUM_SKILLS; i++) s.xp[i] = xp[i];
+    for (int i = 0; i < INV_SIZE; i++) s.inv[i] = inv[i];
+    for (int i = 0; i < NUM_ITEMS; i++) s.bank[i] = bank[i];
+    s.run_energy = pl.run_energy;
+    s.checksum = save_checksum(&s);
+    eeprom_write_bytes((const uint8_t *)&s, 0, sizeof s);
+    save_found = true;
+}
+
+static bool save_peek(save_t *s)
+{
+    if (!eeprom_present()) return false;
+    eeprom_read_bytes((uint8_t *)s, 0, sizeof *s);
+    if (s->magic != SAVE_MAGIC || s->version != SAVE_VERSION) return false;
+    if (s->checksum != save_checksum(s)) return false;
+    return true;
+}
+
+static void load_game(void)
+{
+    save_t s;
+    if (!save_peek(&s)) return;
+    for (int i = 0; i < NUM_SKILLS; i++) xp[i] = s.xp[i];
+    for (int i = 0; i < INV_SIZE; i++)
+        inv[i] = s.inv[i] < NUM_ITEMS ? s.inv[i] : IT_NONE;
+    for (int i = 0; i < NUM_ITEMS; i++) bank[i] = s.bank[i];
+    int maxhp = level_of(SK_HP);
+    pl.hp = (s.hp >= 1 && s.hp <= maxhp) ? s.hp : maxhp;
+    pl.run_energy = s.run_energy <= 100 ? s.run_energy : 100;
+    if (tile_walkable(s.tx, s.ty)) { pl.tx = s.tx; pl.ty = s.ty; }
+    pl.mtx = pl.tx; pl.mty = pl.ty;
+    pl.px = pl.tx * TILE + 8; pl.py = pl.ty * TILE + 12;
+}
+
 /* ------------------------------------------------------------ combat & death */
 
 static void player_die(void)
@@ -426,6 +503,7 @@ static void player_die(void)
         gob[i].aggro = false;
         gob[i].hurt_timer = 0;
     }
+    save_game();
 }
 
 static void hurt_player(int dmg)
@@ -752,6 +830,7 @@ static void tick_goblins(void)
 #define SAY_LEN 32
 
 enum { BS_IDLE, BS_GOTO, BS_WORK };
+enum { GK_HARVEST, GK_WANDER, GK_BANK, GK_FIRE };
 
 typedef struct {
     int   tx, ty;
@@ -763,7 +842,7 @@ typedef struct {
     int   look;                 /* sprite recolor set 0-2 */
     const char *name;
     int   state;
-    int   goal_x, goal_y, goal_obj;
+    int   goal_x, goal_y, goal_obj, goal_kind;
     int   work_left, act_timer, idle_ticks, stuck;
     char  say[SAY_LEN];
     int   say_t;                /* frames of overhead text left */
@@ -803,12 +882,38 @@ static bool bot_goal_valid(bot_t *b)
 static void bot_pick_goal(bot_t *b)
 {
     b->stuck = 0;
-    /* 1 in 4: just wander somewhere walkable nearby */
-    if (chance(25)) {
+    int roll = rand() % 100;
+    /* wander somewhere walkable nearby */
+    if (roll < 20) {
         for (int tries = 0; tries < 8; tries++) {
             int x = b->tx + rand() % 13 - 6, y = b->ty + rand() % 13 - 6;
             if (tile_walkable(x, y)) {
                 b->goal_x = x; b->goal_y = y; b->goal_obj = OBJ_NONE;
+                b->goal_kind = GK_WANDER;
+                b->state = BS_GOTO;
+                return;
+            }
+        }
+        b->state = BS_IDLE; b->idle_ticks = 2 + rand() % 4;
+        return;
+    }
+    /* trip to the bank */
+    if (roll < 32) {
+        b->goal_x = 20 + rand() % 9; b->goal_y = 6;
+        b->goal_obj = OBJ_BOOTH;
+        b->goal_kind = GK_BANK;
+        b->state = BS_GOTO;
+        return;
+    }
+    /* light a fire somewhere open */
+    if (roll < 40) {
+        for (int tries = 0; tries < 8; tries++) {
+            int x = b->tx + rand() % 9 - 4, y = b->ty + rand() % 9 - 4;
+            if (!tile_walkable(x, y) || object[y][x] != OBJ_NONE) continue;
+            int t = terrain[y][x];
+            if (t == TER_GRASS || t == TER_PATH || t == TER_SAND) {
+                b->goal_x = x; b->goal_y = y; b->goal_obj = OBJ_NONE;
+                b->goal_kind = GK_FIRE;
                 b->state = BS_GOTO;
                 return;
             }
@@ -817,6 +922,7 @@ static void bot_pick_goal(bot_t *b)
         return;
     }
     /* otherwise find something to harvest */
+    b->goal_kind = GK_HARVEST;
     static int cx[64], cy[64];
     int n = 0;
     for (int y = 1; y < MAP_H - 1 && n < 64; y++)
@@ -881,33 +987,55 @@ static void tick_bots(void)
         case BS_IDLE:
             if (--b->idle_ticks <= 0) bot_pick_goal(b);
             break;
-        case BS_GOTO:
-            if (b->goal_obj != OBJ_NONE && !bot_goal_valid(b)) { bot_pick_goal(b); break; }
-            if (b->goal_obj != OBJ_NONE
+        case BS_GOTO: {
+            if (b->goal_kind == GK_HARVEST && !bot_goal_valid(b)) { bot_pick_goal(b); break; }
+            if (b->goal_kind == GK_FIRE && object[b->goal_y][b->goal_x] != OBJ_NONE) { bot_pick_goal(b); break; }
+            bool arrived = (b->goal_kind == GK_HARVEST || b->goal_kind == GK_BANK)
                     ? cheb(b->tx, b->ty, b->goal_x, b->goal_y) <= 1
-                    : (b->tx == b->goal_x && b->ty == b->goal_y)) {
-                if (b->goal_obj == OBJ_NONE) {
+                    : (b->tx == b->goal_x && b->ty == b->goal_y);
+            if (arrived) {
+                switch (b->goal_kind) {
+                case GK_WANDER:
                     b->state = BS_IDLE;
                     b->idle_ticks = 2 + rand() % 5;
-                } else {
+                    break;
+                case GK_BANK:
+                    b->state = BS_WORK;
+                    bot_face_goal(b);
+                    b->act_timer = 4;
+                    b->work_left = 2 + rand() % 3;
+                    break;
+                case GK_FIRE:
+                    b->state = BS_WORK;
+                    b->act_timer = 2;
+                    b->work_left = 2;
+                    break;
+                default:
                     b->state = BS_WORK;
                     bot_face_goal(b);
                     b->act_timer = 4;
                     b->work_left = 5 + rand() % 10;
+                    break;
                 }
                 break;
             }
-            bot_step(b, b->goal_x, b->goal_y);
+            /* route through the bank door when entering or leaving */
+            int tx = b->goal_x, ty = b->goal_y;
+            bool here_in = (b->ty <= 8 && b->tx >= 19 && b->tx <= 29);
+            bool goal_in = (ty <= 8 && tx >= 19 && tx <= 29);
+            if (here_in != goal_in) { tx = 24; ty = here_in ? 9 : 8; }
+            bot_step(b, tx, ty);
             if (b->stuck > 4) bot_pick_goal(b);
             break;
+        }
         case BS_WORK: {
-            if (!bot_goal_valid(b)) {
+            if (b->goal_kind == GK_HARVEST && !bot_goal_valid(b)) {
                 b->state = BS_IDLE; b->idle_ticks = 1 + rand() % 3;
                 break;
             }
             if (--b->act_timer > 0) break;
             b->act_timer = 4;
-            if (chance(45)) {
+            if (b->goal_kind == GK_HARVEST && chance(45)) {
                 /* bots take resources for real */
                 int gx = b->goal_x, gy = b->goal_y;
                 switch (b->goal_obj) {
@@ -924,6 +1052,22 @@ static void tick_bots(void)
                 }
             }
             if (--b->work_left <= 0) {
+                if (b->goal_kind == GK_FIRE) {
+                    int t = terrain[b->ty][b->tx];
+                    if (object[b->ty][b->tx] == OBJ_NONE &&
+                        (t == TER_GRASS || t == TER_PATH || t == TER_SAND)) {
+                        object[b->ty][b->tx] = OBJ_FIRE;
+                        obj_timer[b->ty][b->tx] = 60 + rand() % 40;
+                        if (near && chance(50)) bot_say(b, "free fire, gather round");
+                        if (tile_walkable(b->tx - 1, b->ty)) {
+                            b->mtx = b->tx - 1; b->mty = b->ty;
+                            b->moving = true;
+                            b->facing = 2;
+                        }
+                    }
+                } else if (b->goal_kind == GK_BANK && near && chance(40)) {
+                    bot_say(b, "bank space is a myth");
+                }
                 b->state = BS_IDLE;
                 b->idle_ticks = 3 + rand() % 6;
             }
@@ -980,6 +1124,11 @@ static void game_tick(void)
     if (pl.hp < level_of(SK_HP) && ++pl.regen >= 100) {
         pl.regen = 0;
         pl.hp++;
+    }
+    /* silent autosave every ~60s of play */
+    if (game_state == STATE_PLAY && ++save_timer >= 100) {
+        save_timer = 0;
+        save_game();
     }
     /* run energy regen */
     if (!pl.moving || !pl.run_on) {
@@ -1491,6 +1640,39 @@ static void render(void)
                   (int)(pl.py - cam_y) - 30 + (int)xpdrop[i].y, "%s", xpdrop[i].text);
     }
 
+    /* ---- title screen ---- */
+    if (game_state == STATE_TITLE) {
+        /* logo is pre-sliced into TMEM-sized strips */
+        rdpq_set_mode_standard();
+        rdpq_mode_alphacompare(1);
+        int logo_x = (SCREEN_W - spr[SPR_LOGO_0]->width) / 2;
+        for (int i = 0; i < 4; i++)
+            rdpq_sprite_blit(spr[SPR_LOGO_0 + i], logo_x, 28 + i * 14, NULL);
+        rdpq_textparms_t center = { .style_id = 6, .align = ALIGN_CENTER,
+                                    .width = SCREEN_W };
+        rdpq_text_print(&center, FONT_ID, 0, 98,
+                        "An old-school adventure on 64 bits");
+        if (save_found) {
+            rdpq_textparms_t opt = { .align = ALIGN_CENTER, .width = SCREEN_W };
+            opt.style_id = title_sel == 0 ? 1 : 0;
+            rdpq_text_print(&opt, FONT_ID, 0, 148,
+                            title_sel == 0 ? "> Continue <" : "Continue");
+            opt.style_id = title_sel == 1 ? 1 : 0;
+            rdpq_text_print(&opt, FONT_ID, 0, 162,
+                            title_sel == 1 ? "> New Game <" : "New Game");
+            rdpq_text_print(&center, FONT_ID, 0, 186,
+                            "D-Pad: choose   A: select");
+        } else if ((frame_counter / 30) & 1) {
+            rdpq_textparms_t blink = { .style_id = 1, .align = ALIGN_CENTER,
+                                       .width = SCREEN_W };
+            rdpq_text_print(&blink, FONT_ID, 0, 156, "PRESS START");
+        }
+        rdpq_text_print(&center, FONT_ID, 0, 226,
+                        "original homebrew built with libdragon");
+        rdpq_detach_show();
+        return;
+    }
+
     /* ---- HUD ---- */
     rdpq_set_mode_fill(RGBA32(20, 20, 20, 255));
     rdpq_fill_rectangle(4, 4, 84, 28);
@@ -1590,12 +1772,32 @@ static void render(void)
 
 /* ------------------------------------------------------------ input */
 
+static void start_play(void)
+{
+    game_state = STATE_PLAY;
+    msg("Welcome to Rune Valley 64.");
+    msg("Press Start for help.");
+}
+
 static void handle_input(void)
 {
     joypad_poll();
     joypad_buttons_t pressed = joypad_get_buttons_pressed(JOYPAD_PORT_1);
     joypad_buttons_t held = joypad_get_buttons_held(JOYPAD_PORT_1);
     joypad_inputs_t in = joypad_get_inputs(JOYPAD_PORT_1);
+
+    if (game_state == STATE_TITLE) {
+        if (save_found) {
+            if (pressed.d_up || pressed.d_down) title_sel ^= 1;
+            if (pressed.a || pressed.start) {
+                if (title_sel == 0) load_game();
+                start_play();
+            }
+        } else if (pressed.start || pressed.a) {
+            start_play();
+        }
+        return;
+    }
 
     /* global toggles */
     if (pressed.start) ui_mode = (ui_mode == UI_HELP) ? UI_NONE : UI_HELP;
@@ -1630,7 +1832,12 @@ static void handle_input(void)
         return;
     }
     if (ui_mode == UI_BANK) {
-        if (pressed.b) { ui_mode = UI_NONE; return; }
+        if (pressed.b) {
+            ui_mode = UI_NONE;
+            save_game();
+            if (eeprom_present()) msg("Your progress is saved.");
+            return;
+        }
         int n = bank_rows();
         if (pressed.d_up && bank_cursor > 0) bank_cursor--;
         if (pressed.d_down && bank_cursor < n - 1) bank_cursor++;
@@ -1728,8 +1935,10 @@ int main(void)
     memset(bank, 0, sizeof bank);
     for (int i = 0; i < CHAT_LINES; i++) chat[i][0] = 0;
 
-    msg("Welcome to Rune Valley 64.");
-    msg("Press Start for help.");
+    {
+        save_t probe;
+        save_found = save_peek(&probe);
+    }
 
     uint64_t last_ms = get_ticks_ms();
     int tick_acc = 0;

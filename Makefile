@@ -30,6 +30,7 @@ $(BUILD_DIR)/runevalley.dfs: $(assets_conv)
 $(BUILD_DIR)/runevalley.elf: $(src:%.c=$(BUILD_DIR)/%.o)
 
 runevalley.z64: N64_ROM_TITLE = "Rune Valley 64"
+runevalley.z64: N64_ROM_SAVETYPE = eeprom4k
 runevalley.z64: $(BUILD_DIR)/runevalley.dfs
 
 clean:

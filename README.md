@@ -39,7 +39,12 @@ the parchment chatbox.
 The valley is populated by five **player bots** — fellow adventurers with
 era-appropriate names who wander between trees, rocks and fishing spots,
 deplete resources you were walking toward, advertise dubious services in
-public chat, and say "gz" when you level up near them.
+public chat, and say "gz" when you level up near them. They also make bank
+runs through the front door and light campfires you can cook on.
+
+The game opens on a **title screen** (the valley lives behind it) and saves
+to **cartridge EEPROM**: silent autosave every minute, plus saves on bank
+visits and death. The title offers Continue when a valid save exists.
 
 ## Controls
 

@@ -868,4 +868,33 @@ foreach ($set in 'bota','botb','botc') {
     }
 }
 
+Write-Host "Generating title logo..."
+
+$lw = 280; $lh = 56
+$bmp = New-Object System.Drawing.Bitmap($lw, $lh, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+$g = [System.Drawing.Graphics]::FromImage($bmp)
+$g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::SingleBitPerPixelGridFit
+$font = New-Object System.Drawing.Font('Arial Black', 24, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
+$fmt = New-Object System.Drawing.StringFormat
+$fmt.Alignment = [System.Drawing.StringAlignment]::Center
+$fmt.LineAlignment = [System.Drawing.StringAlignment]::Center
+$shadow = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 40, 28, 12))
+$gold   = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 248, 200, 60))
+$g.DrawString('RUNE VALLEY 64', $font, $shadow, (New-Object System.Drawing.RectangleF(3, 3, $lw, $lh)), $fmt)
+$g.DrawString('RUNE VALLEY 64', $font, $gold,   (New-Object System.Drawing.RectangleF(0, 0, $lw, $lh)), $fmt)
+$g.Dispose()
+# slice into 4 strips of 14px so each sprite fits in TMEM (no chunked blits)
+for ($i = 0; $i -lt 4; $i++) {
+    $strip = New-Object System.Drawing.Bitmap($lw, 14, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    $sg = [System.Drawing.Graphics]::FromImage($strip)
+    $dst = New-Object System.Drawing.Rectangle(0, 0, $lw, 14)
+    $src = New-Object System.Drawing.Rectangle(0, ($i * 14), $lw, 14)
+    $sg.DrawImage($bmp, $dst, $src, [System.Drawing.GraphicsUnit]::Pixel)
+    $sg.Dispose()
+    $strip.Save((Join-Path $outDir "ui_logo_$i.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+    $strip.Dispose()
+    Write-Host "  ui_logo_$i ($lw x 14)"
+}
+$bmp.Dispose()
+
 Write-Host "Done. PNGs in $outDir"
