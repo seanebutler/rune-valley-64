@@ -159,6 +159,7 @@ enum {
     SPR_PL_DOWN_A, SPR_PL_DOWN_B, SPR_PL_UP_A, SPR_PL_UP_B,
     SPR_PL_SIDE_A, SPR_PL_SIDE_B, SPR_PL_SIDE_LA, SPR_PL_SIDE_LB,
     SPR_GOB_A, SPR_GOB_B, SPR_SKEL_A, SPR_SKEL_B, SPR_BOSS,
+    SPR_WIGHT_A, SPR_WIGHT_B, SPR_DEMON,
     SPR_I_LOGS, SPR_I_OAK_LOGS, SPR_I_COPPER, SPR_I_TIN, SPR_I_IRON,
     SPR_I_RAW_SHRIMP, SPR_I_SHRIMP, SPR_I_BURNT, SPR_I_AXE, SPR_I_PICK,
     SPR_I_NET, SPR_I_TINDER, SPR_I_BONES,
@@ -223,6 +224,7 @@ static const char *spr_files[NUM_SPR] = {
     "pl_down_a", "pl_down_b", "pl_up_a", "pl_up_b", "pl_side_a", "pl_side_b",
     "pl_side_la", "pl_side_lb",
     "goblin_a", "goblin_b", "skeleton_a", "skeleton_b", "boss",
+    "wight_a", "wight_b", "demon",
     "item_logs", "item_oak_logs", "item_copper_ore", "item_tin_ore",
     "item_iron_ore", "item_raw_shrimp", "item_shrimp", "item_burnt_shrimp",
     "item_axe", "item_pickaxe", "item_net", "item_tinderbox", "item_bones",
@@ -451,15 +453,17 @@ static int num_gob = 0;
 
 /* monster types: stats, sprite, size, drop. mob_def lowers player accuracy;
    hit_base is the mob's chance to land before the player's defence. */
-enum { MOB_GOBLIN, MOB_SKELETON, MOB_BOSS, NUM_MOBS };
+enum { MOB_GOBLIN, MOB_SKELETON, MOB_BOSS, MOB_WIGHT, MOB_DEMON, NUM_MOBS };
 typedef struct {
     const char *name; int max_hp; int max_dmg; int mob_def; int hit_base;
     int aggro; int respawn; int spr_a, spr_b; int w, h;
 } mobinfo_t;
 static const mobinfo_t mobinfo[NUM_MOBS] = {
-    [MOB_GOBLIN]   = { "goblin",         5, 1,  1, 52, 3, 25, SPR_GOB_A,  SPR_GOB_B,  16, 16 },
-    [MOB_SKELETON] = { "skeleton",       9, 2,  6, 60, 4, 25, SPR_SKEL_A, SPR_SKEL_B, 16, 16 },
-    [MOB_BOSS]     = { "Goblin Warlord",45, 5, 15, 75, 6, 80, SPR_BOSS,   SPR_BOSS,   24, 24 },
+    [MOB_GOBLIN]   = { "goblin",         5, 1,  1, 52, 3, 25, SPR_GOB_A,   SPR_GOB_B,   16, 16 },
+    [MOB_SKELETON] = { "skeleton",       9, 2,  6, 60, 4, 25, SPR_SKEL_A,  SPR_SKEL_B,  16, 16 },
+    [MOB_BOSS]     = { "Goblin Warlord",45, 5, 15, 75, 6, 80, SPR_BOSS,    SPR_BOSS,    24, 24 },
+    [MOB_WIGHT]    = { "wight",         14, 3, 10, 64, 4, 25, SPR_WIGHT_A, SPR_WIGHT_B, 16, 16 },
+    [MOB_DEMON]    = { "Demon",         80, 8, 25, 85, 7,100, SPR_DEMON,   SPR_DEMON,   24, 24 },
 };
 
 /* ------------------------------------------------------------ UI state */
@@ -504,6 +508,13 @@ static int wquest = WQ_NONE;
 #define WQ_REQ_ATT   20
 #define WQ_REQ_DEF   20
 #define WQ_REQ_SMITH 15
+
+/* The Demon Below - the follow-up quest, on the dungeon's second floor */
+enum { DQ_NONE, DQ_STARTED, DQ_SLAIN, DQ_DONE };
+static int dquest = DQ_NONE;
+#define DQ_REQ_ATT 30
+#define DQ_REQ_DEF 30
+#define DQ_REQ_HP  30
 
 /* dialog box */
 static const char *dlg_title = "";
@@ -618,7 +629,9 @@ static int cheb(int x0, int y0, int x1, int y1)
 /* ------------------------------------------------------------ map */
 
 static int cur_map = MAP_OVERWORLD;
-static int stairs_x, stairs_y;     /* the stairs in the current map */
+static int dungeon_floor = 1;
+static int up_x, up_y;             /* up-stairs of the current map */
+static int down_x, down_y;         /* down-stairs of the current map (-1 if none) */
 
 static void spawn_mob(int type, int x, int y)
 {
@@ -637,7 +650,8 @@ static void load_overworld(void)
 {
     num_gob = 0;
     pl.spawn_x = 24; pl.spawn_y = 12;
-    stairs_x = 6; stairs_y = 29;
+    down_x = 6; down_y = 29;       /* cave mouth, overwritten by 'X' below */
+    up_x = up_y = -1;
     for (int y = 0; y < MAP_H; y++) {
         assertf(strlen(map_rows[y]) == MAP_W, "map row %d is %d chars", y,
                 (int)strlen(map_rows[y]));
@@ -664,7 +678,7 @@ static void load_overworld(void)
             case 'U': obj = OBJ_FURNACE;    break;
             case 'V': obj = OBJ_ANVIL;      break;
             case 'H': obj = OBJ_CHEF;       break;
-            case 'X': obj = OBJ_STAIRS_DOWN; stairs_x = x; stairs_y = y; break;
+            case 'X': obj = OBJ_STAIRS_DOWN; down_x = x; down_y = y; break;
             case 'K': obj = OBJ_KNIGHT;     break;
             case '1': obj = OBJ_SHOP_GENERAL; break;
             case '2': obj = OBJ_SHOP_WEAPON;  break;
@@ -681,7 +695,7 @@ static void load_overworld(void)
     }
 }
 
-static void build_dungeon(void)
+static void build_dungeon(int floor)
 {
     num_gob = 0;
     for (int y = 0; y < MAP_H; y++)
@@ -695,28 +709,39 @@ static void build_dungeon(void)
     /* a wall dividing the boss chamber (top) from the hall, with a doorway */
     for (int x = 1; x < MAP_W - 1; x++)
         if (x < 22 || x > 26) terrain[10][x] = TER_WALL;
-    /* a few pillars for texture */
     static const int pillars[][2] = { {12,16},{35,16},{12,24},{35,24},{24,28} };
     for (int i = 0; i < 5; i++) terrain[pillars[i][1]][pillars[i][0]] = TER_WALL;
 
-    /* stairs back to the surface, bottom-centre */
-    stairs_x = 24; stairs_y = 32;
-    object[stairs_y][stairs_x] = OBJ_STAIRS_UP;
-    obj_orig[stairs_y][stairs_x] = OBJ_STAIRS_UP;
+    /* up-stairs (to the level above), bottom-centre */
+    up_x = 24; up_y = 32;
+    object[up_y][up_x] = OBJ_STAIRS_UP;
+    obj_orig[up_y][up_x] = OBJ_STAIRS_UP;
 
-    /* skeletons roam the hall */
-    static const int skel[][2] = {
-        {6,14},{40,14},{18,18},{30,18},{10,22},{38,22},{24,24},{16,30},{32,30}
-    };
-    for (int i = 0; i < 9; i++) spawn_mob(MOB_SKELETON, skel[i][0], skel[i][1]);
-    /* the Warlord waits in the chamber beyond the doorway */
-    spawn_mob(MOB_BOSS, 24, 5);
+    if (floor == 1) {
+        /* a stair deeper down sits in the Warlord's chamber */
+        down_x = 10; down_y = 4;
+        object[down_y][down_x] = OBJ_STAIRS_DOWN;
+        obj_orig[down_y][down_x] = OBJ_STAIRS_DOWN;
+        static const int skel[][2] = {
+            {6,14},{40,14},{18,18},{30,18},{10,22},{38,22},{24,24},{16,30},{32,30}
+        };
+        for (int i = 0; i < 9; i++) spawn_mob(MOB_SKELETON, skel[i][0], skel[i][1]);
+        spawn_mob(MOB_BOSS, 24, 5);
+    } else {
+        down_x = down_y = -1;          /* the deepest floor */
+        static const int wt[][2] = {
+            {8,14},{38,14},{16,17},{30,17},{12,21},{34,21},{20,24},{28,24},
+            {10,30},{36,30}
+        };
+        for (int i = 0; i < 10; i++) spawn_mob(MOB_WIGHT, wt[i][0], wt[i][1]);
+        spawn_mob(MOB_DEMON, 24, 5);
+    }
 }
 
 static void load_map(int which)
 {
     cur_map = which;
-    if (which == MAP_DUNGEON) build_dungeon();
+    if (which == MAP_DUNGEON) build_dungeon(dungeon_floor);
     else load_overworld();
 }
 
@@ -731,19 +756,43 @@ static void place_player(int x, int y)
 
 static void enter_dungeon(void)
 {
+    dungeon_floor = 1;
     load_map(MAP_DUNGEON);
-    place_player(stairs_x, stairs_y + 1);   /* arrive below the up-stairs */
+    place_player(up_x, up_y + 1);    /* arrive below the up-stairs */
     pl.facing = 0;
     msg("You descend into the gloom of the dungeon.");
     msg("Something large stirs beyond the doorway...");
 }
 
+static void descend_floor(void)      /* floor 1 -> floor 2 */
+{
+    dungeon_floor = 2;
+    load_map(MAP_DUNGEON);
+    place_player(up_x, up_y + 1);
+    pl.facing = 0;
+    msg("You climb down into the deep dark.");
+    msg("The air reeks of brimstone - a Demon prowls here...");
+}
+
 static void exit_dungeon(void)
 {
     load_map(MAP_OVERWORLD);
-    place_player(stairs_x, stairs_y + 1);    /* step out of the cave mouth */
+    place_player(down_x, down_y + 1);   /* step out of the cave mouth */
     pl.facing = 0;
     msg("You climb back into the daylight.");
+}
+
+static void ascend_floor(void)       /* up one level from the up-stairs */
+{
+    if (dungeon_floor == 2) {
+        dungeon_floor = 1;
+        load_map(MAP_DUNGEON);
+        place_player(down_x, down_y + 1);   /* back beside the descent stair */
+        pl.facing = 0;
+        msg("You climb back up to the dungeon's first floor.");
+    } else {
+        exit_dungeon();
+    }
 }
 
 static bool tile_walkable(int x, int y)
@@ -759,7 +808,7 @@ static bool tile_walkable(int x, int y)
 /* ------------------------------------------------------------ saves (EEPROM 4K) */
 
 #define SAVE_MAGIC 0x52563634u     /* 'RV64' */
-#define SAVE_VERSION 8
+#define SAVE_VERSION 9
 
 typedef struct __attribute__((packed)) {
     uint32_t magic;
@@ -773,11 +822,11 @@ typedef struct __attribute__((packed)) {
     uint32_t gp;
     uint8_t  run_energy;
     uint8_t  quest_state, quest_kills;
-    uint8_t  wquest;
+    uint8_t  wquest, dquest;
     uint8_t  equipped[NUM_SLOTS];
     uint8_t  pad;
     uint16_t checksum;
-    uint8_t  pad2[7];          /* keeps sizeof a multiple of the 8-byte block */
+    uint8_t  pad2[6];          /* keeps sizeof a multiple of the 8-byte block */
 } save_t;
 
 _Static_assert(sizeof(save_t) % 8 == 0, "save_t must be EEPROM-block aligned");
@@ -810,6 +859,7 @@ static void save_game(void)
     s.quest_state = quest_state;
     s.quest_kills = quest_kills;
     s.wquest = wquest;
+    s.dquest = dquest;
     for (int i = 0; i < NUM_SLOTS; i++) s.equipped[i] = equipped[i];
     s.checksum = save_checksum(&s);
 
@@ -857,6 +907,7 @@ static void load_game(void)
     quest_state = s.quest_state <= QUEST_DONE ? s.quest_state : QUEST_NONE;
     quest_kills = s.quest_kills <= QUEST_KILLS_NEEDED ? s.quest_kills : 0;
     wquest = s.wquest <= WQ_DONE ? s.wquest : WQ_NONE;
+    dquest = s.dquest <= DQ_DONE ? s.dquest : DQ_NONE;
     for (int i = 0; i < NUM_SLOTS; i++) {
         int it = s.equipped[i];
         /* only restore if it really belongs in this slot */
@@ -886,12 +937,16 @@ static void player_die(void)
     save_game();
 }
 
+/* death is deferred to the end of the tick: calling player_die() mid-combat
+   would reload the map under the goblin loop and let auto-retaliate re-engage */
+static bool pending_death = false;
+
 static void hurt_player(int dmg)
 {
     pl.hp -= dmg;
     pl.hitsplat = dmg;
     pl.hitsplat_t = 40;
-    if (pl.hp <= 0) player_die();
+    if (pl.hp <= 0) pending_death = true;
 }
 
 /* ---- monster drop tables (weighted; an IT_NONE entry means "nothing") ---- */
@@ -910,6 +965,15 @@ static const drop_t boss_drops[] = {   /* no "nothing": the boss always pays */
     { IT_COINS, 350, 20 }, { IT_STAFF, 1, 14 }, { IT_WIZ_ROBE, 1, 12 },
     { IT_WIZ_HAT, 1, 10 }, { IT_FIRE_RUNE, 15, 10 },
     { IT_STEEL_BODY, 1, 14 }, { IT_MITH_HELM, 1, 12 }, { IT_MITH_SWORD, 1, 8 },
+};
+static const drop_t wight_drops[] = {
+    { IT_COINS, 60, 26 }, { IT_FIRE_RUNE, 5, 18 }, { IT_IRON_BAR, 1, 14 },
+    { IT_SHRIMP, 2, 14 }, { IT_MITH_HELM, 1, 4 }, { IT_NONE, 0, 24 },
+};
+static const drop_t demon_drops[] = {  /* the deepest boss pays the richest */
+    { IT_COINS, 800, 22 }, { IT_RUNE_SWORD, 1, 14 }, { IT_RUNE_HELM, 1, 14 },
+    { IT_RUNE_SHIELD, 1, 12 }, { IT_RUNE_BODY, 1, 8 }, { IT_FIRE_RUNE, 30, 14 },
+    { IT_MITH_BODY, 1, 16 },
 };
 
 static void give_drop(int item, int qty)
@@ -954,6 +1018,18 @@ static void mob_die(gob_t *g)
         add_xp(SK_DEF, 4000, false);
         add_xp(SK_HP,  3000, false);
         gratz_timer = 4;
+    } else if (g->type == MOB_DEMON) {
+        msg("The Demon shrieks and crumbles to ash!");
+        sfx_ui(SND_LEVELUP);
+        if (dquest == DQ_STARTED) {
+            dquest = DQ_SLAIN;
+            msg("The Demon is destroyed! Return to Sir Garrick.");
+        }
+        add_xp(SK_ATT, 9000, false);
+        add_xp(SK_STR, 9000, false);
+        add_xp(SK_DEF, 9000, false);
+        add_xp(SK_HP,  7000, false);
+        gratz_timer = 4;
     } else {
         msg("You have defeated the %s!", mi->name);
     }
@@ -963,12 +1039,14 @@ static void mob_die(gob_t *g)
         msg("Goblin bashed for the Chef! (%d/%d)", quest_kills, QUEST_KILLS_NEEDED);
     }
     /* always-bones, plus a roll on this monster's table */
-    int bones = (g->type == MOB_BOSS) ? 2 : 1;
+    int bones = (g->type == MOB_BOSS || g->type == MOB_DEMON) ? 2 : 1;
     for (int i = 0; i < bones; i++) if (!inv_full()) add_item(IT_BONES);
     switch (g->type) {
     case MOB_GOBLIN:   roll_drops(goblin_drops,   NDROPS(goblin_drops));   break;
     case MOB_SKELETON: roll_drops(skeleton_drops, NDROPS(skeleton_drops)); break;
     case MOB_BOSS:     roll_drops(boss_drops,     NDROPS(boss_drops));     break;
+    case MOB_WIGHT:    roll_drops(wight_drops,    NDROPS(wight_drops));    break;
+    case MOB_DEMON:    roll_drops(demon_drops,    NDROPS(demon_drops));    break;
     }
     if (pl.state == ST_FIGHT) pl.state = ST_IDLE;
 }
@@ -1006,6 +1084,7 @@ static void mob_attack(gob_t *g)
     int dmg = chance(p_hit) ? (rand() % (mobinfo[g->type].max_dmg + 1)) : 0;
     sfx(SND_HIT);
     hurt_player(dmg);
+    if (pending_death) return;          /* dead - don't fight on */
     /* auto-retaliate */
     if (pl.state == ST_IDLE && pl.hp > 0) {
         pl.state = ST_FIGHT;
@@ -1663,6 +1742,13 @@ static void game_tick(void)
     tick_goblins();
     if (cur_map == MAP_OVERWORLD) tick_bots();   /* bots stay on the surface */
 
+    /* resolve a death now that the combat loops are done (safe to reload map) */
+    if (pending_death) {
+        pending_death = false;
+        player_die();
+        return;
+    }
+
     /* hp regen: 1 per minute */
     if (pl.hp < level_of(SK_HP) && ++pl.regen >= 100) {
         pl.regen = 0;
@@ -1877,9 +1963,54 @@ static void knight_talk(void)
         msg("Quest complete: The Warlord's Bane!");
         msg("Sir Garrick rewards you with 2000 coins.");
         break;
-    default:
-        dlg_line("You'll be a legend in Rune Valley for");
-        dlg_line("an age, champion. The Bane is yours.");
+    default:   /* WQ_DONE - now the follow-up quest, The Demon Below */
+        switch (dquest) {
+        case DQ_NONE:
+            if (level_of(SK_ATT) < DQ_REQ_ATT || level_of(SK_DEF) < DQ_REQ_DEF ||
+                level_of(SK_HP) < DQ_REQ_HP) {
+                char b[44];
+                dlg_line("The Warlord guarded a sealed stair. A");
+                dlg_line("Demon stirs below - but only a master");
+                snprintf(b, sizeof b, "may face it. Need Att %d, Def %d, HP %d.",
+                         DQ_REQ_ATT, DQ_REQ_DEF, DQ_REQ_HP);
+                dlg_line(b);
+                snprintf(b, sizeof b, "You: Att %d, Def %d, HP %d.",
+                         level_of(SK_ATT), level_of(SK_DEF), level_of(SK_HP));
+                dlg_line(b);
+                break;
+            }
+            dlg_line("With the Warlord gone, a sealed stair");
+            dlg_line("lies open in his chamber - and a Demon");
+            dlg_line("rises from the deep. Descend and destroy");
+            dlg_line("it, champion. This is the true test.");
+            dquest = DQ_STARTED;
+            msg("Quest started: The Demon Below.");
+            break;
+        case DQ_STARTED:
+            dlg_line("The Demon yet lives. Take the stair in");
+            dlg_line("the Warlord's chamber down to the depths");
+            dlg_line("and end its reign of brimstone.");
+            break;
+        case DQ_SLAIN:
+            dquest = DQ_DONE;
+            dlg_line("The Demon, destroyed! No darkness remains");
+            dlg_line("in these lands that you have not bested.");
+            dlg_line("Take this fortune - you have more than");
+            dlg_line("earned it, greatest of Rune Valley.");
+            sfx_ui(SND_LEVELUP);
+            gp += 5000;
+            add_xp(SK_ATT, 12000, false);
+            add_xp(SK_DEF, 12000, false);
+            add_xp(SK_HP,  10000, false);
+            msg("Quest complete: The Demon Below!");
+            msg("Sir Garrick rewards you with 5000 coins.");
+            break;
+        default:
+            dlg_line("Warlord and Demon both fallen to your");
+            dlg_line("blade. Rune Valley will sing of you for");
+            dlg_line("a hundred years, champion.");
+            break;
+        }
         break;
     }
     ui_mode = UI_DIALOG;
@@ -1992,13 +2123,20 @@ static void interact(void)
         knight_talk();
         break;
     case OBJ_STAIRS_DOWN:
-        if (wquest == WQ_NONE)
-            msg("The dungeon is perilous. Speak with Sir Garrick first.");
-        else
-            enter_dungeon();
+        if (cur_map == MAP_OVERWORLD) {
+            if (wquest == WQ_NONE)
+                msg("The dungeon is perilous. Speak with Sir Garrick first.");
+            else
+                enter_dungeon();
+        } else {                       /* floor 1 -> floor 2 */
+            if (dquest == DQ_NONE)
+                msg("A sealed stair. Sir Garrick must know of this.");
+            else
+                descend_floor();
+        }
         break;
     case OBJ_STAIRS_UP:
-        exit_dungeon();
+        ascend_floor();
         break;
     case OBJ_SHOP_GENERAL: case OBJ_SHOP_WEAPON:
     case OBJ_SHOP_ARMOR:   case OBJ_SHOP_MAGIC:
@@ -2036,10 +2174,13 @@ static const char *context_hint(void)
     case OBJ_ANVIL:       return "A: Smith at Anvil";
     case OBJ_CHEF:        return "A: Talk to Chef Bouillon";
     case OBJ_KNIGHT:      return "A: Talk to Sir Garrick";
-    case OBJ_STAIRS_DOWN: return wquest == WQ_NONE
-                                 ? "A: Dungeon (barred - see Sir Garrick)"
-                                 : "A: Descend into the dungeon";
-    case OBJ_STAIRS_UP:   return "A: Climb back to the surface";
+    case OBJ_STAIRS_DOWN:
+        if (cur_map == MAP_OVERWORLD)
+            return wquest == WQ_NONE ? "A: Dungeon (barred - see Sir Garrick)"
+                                     : "A: Descend into the dungeon";
+        return dquest == DQ_NONE ? "A: Deeper stair (sealed)"
+                                 : "A: Descend to the depths";
+    case OBJ_STAIRS_UP:   return "A: Climb up";
     case OBJ_SHOP_GENERAL:return "A: Browse the General Store";
     case OBJ_SHOP_WEAPON: return "A: Browse the Weapon Shop";
     case OBJ_SHOP_ARMOR:  return "A: Browse the Armoury";
@@ -2922,8 +3063,8 @@ static void render(void)
         draw_text(0, px0 + 8, py0 + 66, "C-rt:skills C-up:worn C-lf:spells");
         draw_text(0, px0 + 8, py0 + 80, "Chop, mine, fish, cook, smith, wear");
         draw_text(0, px0 + 8, py0 + 90, "gear, sling spells, shop the bazaar.");
-        draw_text(3, px0 + 8, py0 + 102, "A dungeon lurks SW of the mine -");
-        draw_text(3, px0 + 8, py0 + 112, "skeletons and the Warlord await!");
+        draw_text(3, px0 + 8, py0 + 102, "A two-floor dungeon lurks SW: the");
+        draw_text(3, px0 + 8, py0 + 112, "Warlord, then the Demon below!");
         draw_text(1, px0 + 8, py0 + 132, "(A) Quest Journal   (B) close");
     }
     else if (ui_mode == UI_QUEST) {
@@ -2952,8 +3093,23 @@ static void render(void)
         }
         draw_text(wquest >= WQ_DONE ? 6 : 0, px0 + 14, py0 + 76, "%s", wl);
         if (wquest == WQ_NONE)
-            draw_text(6, px0 + 14, py0 + 88, "(needs Att %d, Def %d, Smith %d)",
+            draw_text(6, px0 + 14, py0 + 86, "(needs Att %d, Def %d, Smith %d)",
                       WQ_REQ_ATT, WQ_REQ_DEF, WQ_REQ_SMITH);
+
+        if (wquest >= WQ_DONE) {
+            draw_text(4, px0 + 8, py0 + 100, "The Demon Below");
+            const char *dl;
+            switch (dquest) {
+            case DQ_NONE:    dl = "Sir Garrick has a deeper task..."; break;
+            case DQ_STARTED: dl = "Slay the Demon on dungeon floor 2."; break;
+            case DQ_SLAIN:   dl = "Return to Sir Garrick for reward."; break;
+            default:         dl = "Complete - the Demon is destroyed!"; break;
+            }
+            draw_text(dquest >= DQ_DONE ? 6 : 0, px0 + 14, py0 + 112, "%s", dl);
+            if (dquest == DQ_NONE)
+                draw_text(6, px0 + 14, py0 + 122, "(needs Att %d, Def %d, HP %d)",
+                          DQ_REQ_ATT, DQ_REQ_DEF, DQ_REQ_HP);
+        }
 
         draw_text(6, px0 + 8, py0 + 138, "(A) back   (B) close");
     }
@@ -3192,7 +3348,8 @@ int main(void)
     for (int i = 0; i < NUM_SLOTS; i++) equipped[i] = IT_NONE;
     cast_spell = SPELL_MELEE;
     gp = 25;                      /* a few starter coins */
-    quest_state = QUEST_NONE; quest_kills = 0; wquest = WQ_NONE;
+    quest_state = QUEST_NONE; quest_kills = 0; wquest = WQ_NONE; dquest = DQ_NONE;
+    dungeon_floor = 1;
     memset(bank, 0, sizeof bank);
     for (int i = 0; i < CHAT_LINES; i++) chat[i][0] = 0;
 

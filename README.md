@@ -61,12 +61,17 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   Bane*, a multi-stage epic: Sir Garrick by the cave mouth sends you to scout
   the dungeon (gather 5 bones), forge the legendary **Warlord's Bane** blade
   (2 iron bars + 300 coins), slay the Goblin Warlord with it, and return for
-  2000 coins and a mountain of combat xp. You keep the Bane
-- **A dungeon** — find the cave stairs in the open field southwest of the
-  mine and descend into the gloom. Tougher **skeletons** roam the hall, and
-  the hulking **Goblin Warlord** (45 HP, hits hard) waits in the chamber
-  beyond the doorway. Slaying him pours out combat xp. Come armed, armoured,
-  and fed — and if you fall, you wake safely back on the surface
+  2000 coins and a mountain of combat xp. You keep the Bane. Then *The Demon
+  Below* — a follow-up gated behind it (Attack/Defence/Hitpoints 30): descend
+  to the dungeon's second floor and destroy the Demon for 5000 coins and a
+  fortune in xp. Track them all in the Quest Journal (Start, then A)
+- **A two-floor dungeon** — find the cave stairs in the open field southwest
+  of the mine and descend into the gloom. **Floor 1**: tougher **skeletons**
+  and the hulking **Goblin Warlord** (45 HP) in the chamber beyond the doorway.
+  A sealed stair in his chamber leads to **Floor 2**: undead **wights** and the
+  fearsome **Demon** (80 HP, hits for 8), the deepest boss and the richest
+  drops. Each boss pours out combat xp. Come armed, armoured, and fed — and if
+  you fall, you wake safely back on the surface
 - **Banking** — a bank with deposit-all and per-item withdrawal sits at the
   north end of the path
 - **Hitpoints** start at level 10, regenerate 1 per minute, and shrimp heal 3

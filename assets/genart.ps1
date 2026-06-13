@@ -1265,6 +1265,34 @@ Save-Sprite 'skeleton_b' $skPal @(
     '...ww....ww.....',
     '................')
 
+# Demon: floor-2 boss (24x24, single frame, red with horns and fangs)
+$dmPal = @{ 'r'='#b03028'; 'd'='#7a1c18'; 'e'='#f8d030'; 'w'='#e8e4d8'; 'k'='#1a1a1a'; 'h'='#9a9088'; 'l'='#4a1a16' }
+Save-Sprite 'demon' $dmPal @(
+    '......h..........h......',
+    '......h..........h......',
+    '......hrrrrrrrrrrh......',
+    '.......rrrrrrrrrr.......',
+    '.......rddddddddr.......',
+    '.......reeddddeer.......',
+    '.......rrwwwwwwrr.......',
+    '........rkkkkkkr........',
+    '....dddrrrrrrrrrrddd....',
+    '...drrrrrrrrrrrrrrrrd...',
+    '...rrrrrrrrrrrrrrrrrr...',
+    '...rrrrrddrrrrddrrrrr...',
+    '...rrrrrrrrrrrrrrrrrr...',
+    '...rrrrrrrrrrrrrrrrrr...',
+    '....llllllllllllllll....',
+    '....rrrrrr....rrrrrr....',
+    '....rrrrrr....rrrrrr....',
+    '....rrrrrr....rrrrrr....',
+    '....rrrrr......rrrrr....',
+    '....rrrr......rrrr......',
+    '...kkkkk......kkkkk.....',
+    '........................',
+    '........................',
+    '........................')
+
 # Boss: Goblin Warlord (24x24, single frame, hulking and green)
 $bsPal = @{ 'g'='#5a8a32'; 'd'='#46702a'; 'e'='#c83c1e'; 'w'='#e8e4d8'; 'k'='#1a1a1a'; 'l'='#6b4a2a' }
 Save-Sprite 'boss' $bsPal @(
@@ -1336,6 +1364,9 @@ foreach ($set in 'bota','botb','botc') {
 New-Recolor 'pl_down_a' 'chef_down_a' @{ '#3e5e7e' = '#f0eee8'; '#4a3320' = '#f8f8f4' }
 # Knight NPC: steel plate body + helm (grey)
 New-Recolor 'pl_down_a' 'knight_down_a' @{ '#3e5e7e' = '#8a92a0'; '#4a3320' = '#c0c8d4' }
+# Wight: an undead-green recolour of the skeleton (floor-2 fodder)
+New-Recolor 'skeleton_a' 'wight_a' @{ '#e8e4d8' = '#8aa89a'; '#b8b4a4' = '#5e7a6c' }
+New-Recolor 'skeleton_b' 'wight_b' @{ '#e8e4d8' = '#8aa89a'; '#b8b4a4' = '#5e7a6c' }
 
 # Left-facing variants: copy-mode blits cannot mirror (reversed S range is
 # undefined on real RDP hardware), so bake flipped sprites instead
