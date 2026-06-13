@@ -56,9 +56,12 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   are bought at the bazaar or won from the Warlord. Each tier hits harder and
   defends better but demands a higher Attack (weapons) or Defence (armour)
   level to wield — rune needs 40. A full rune set is the late-game coin sink
-- **A quest!** — *The Chef's Little Problem*: Chef Bouillon by the bank path
-  needs 3 goblins bashed and 2 cooked shrimp delivered. Chunky xp rewards,
-  as is right and proper
+- **Quests** — *The Chef's Little Problem*: Chef Bouillon by the bank path
+  needs 3 goblins bashed and 2 cooked shrimp delivered. And *The Warlord's
+  Bane*, a multi-stage epic: Sir Garrick by the cave mouth sends you to scout
+  the dungeon (gather 5 bones), forge the legendary **Warlord's Bane** blade
+  (2 iron bars + 300 coins), slay the Goblin Warlord with it, and return for
+  2000 coins and a mountain of combat xp. You keep the Bane
 - **A dungeon** — find the cave stairs in the open field southwest of the
   mine and descend into the gloom. Tougher **skeletons** roam the hall, and
   the hulking **Goblin Warlord** (45 HP, hits hard) waits in the chamber

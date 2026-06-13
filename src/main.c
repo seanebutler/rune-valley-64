@@ -42,7 +42,8 @@ enum { OBJ_NONE, OBJ_TREE, OBJ_OAK, OBJ_STUMP, OBJ_ROCK_COPPER, OBJ_ROCK_TIN,
        OBJ_ROCK_IRON, OBJ_ROCK_EMPTY, OBJ_FISH, OBJ_BOOTH, OBJ_FIRE,
        OBJ_ESSENCE, OBJ_ALTAR_AIR, OBJ_ALTAR_FIRE,
        OBJ_FURNACE, OBJ_ANVIL, OBJ_CHEF, OBJ_STAIRS_DOWN, OBJ_STAIRS_UP,
-       OBJ_SHOP_GENERAL, OBJ_SHOP_WEAPON, OBJ_SHOP_ARMOR, OBJ_SHOP_MAGIC };
+       OBJ_SHOP_GENERAL, OBJ_SHOP_WEAPON, OBJ_SHOP_ARMOR, OBJ_SHOP_MAGIC,
+       OBJ_KNIGHT };
 
 enum { MAP_OVERWORLD, MAP_DUNGEON };
 
@@ -76,7 +77,7 @@ static const char *map_rows[MAP_H] = {
     "T.................1...2...3...4.....ss~~~~.....T",
     "T...................................ssF~~~.....T",
     "T......I..I......O..................ss~~~~.....T",
-    "T.....X.............................ss~~~~.....T",
+    "T.....X......K......................ss~~~~.....T",
     "T.............................O.....ss~~~~..R..T",
     "T...................................ssF~~~.....T",
     "T...................T...............ss~~~~.....T",
@@ -134,7 +135,7 @@ enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_STEEL_SWORD, IT_STEEL_HELM, IT_STEEL_SHIELD, IT_STEEL_BODY,
        IT_MITH_SWORD,  IT_MITH_HELM,  IT_MITH_SHIELD,  IT_MITH_BODY,
        IT_RUNE_SWORD,  IT_RUNE_HELM,  IT_RUNE_SHIELD,  IT_RUNE_BODY,
-       NUM_ITEMS };
+       IT_BANE, NUM_ITEMS };
 
 /* worn equipment slots; SLOT_NONE = item is not equippable */
 enum { SLOT_NONE, SLOT_WEAPON, SLOT_SHIELD, SLOT_HELM, SLOT_BODY };
@@ -173,7 +174,8 @@ enum {
     SPR_LOGO_4, SPR_LOGO_5, SPR_LOGO_6, SPR_LOGO_7,
     SPR_LOGO_8, SPR_LOGO_9, SPR_LOGO_10, SPR_LOGO_11,
     SPR_LOGO_12, SPR_LOGO_13, SPR_LOGO_14, SPR_LOGO_15,
-    SPR_FURNACE, SPR_ANVIL, SPR_CHEF,
+    SPR_FURNACE, SPR_ANVIL, SPR_CHEF, SPR_KNIGHT,
+    SPR_I_BANE, SPR_EQ_BANE_WEP_D, SPR_EQ_BANE_WEP_U, SPR_EQ_BANE_WEP_S, SPR_EQ_BANE_WEP_SL,
     SPR_I_BRONZE_BAR, SPR_I_IRON_BAR, SPR_I_HAMMER,
     SPR_I_BRONZE_SWORD, SPR_I_IRON_SWORD, SPR_I_IRON_AXE, SPR_I_IRON_PICK,
     SPR_I_BRONZE_HELM, SPR_I_IRON_HELM, SPR_I_BRONZE_SHIELD, SPR_I_IRON_SHIELD,
@@ -236,7 +238,8 @@ static const char *spr_files[NUM_SPR] = {
     "ui_logo_04", "ui_logo_05", "ui_logo_06", "ui_logo_07",
     "ui_logo_08", "ui_logo_09", "ui_logo_10", "ui_logo_11",
     "ui_logo_12", "ui_logo_13", "ui_logo_14", "ui_logo_15",
-    "obj_furnace", "obj_anvil", "chef_down_a",
+    "obj_furnace", "obj_anvil", "chef_down_a", "knight_down_a",
+    "item_bane", "eq_bane_wep_d", "eq_bane_wep_u", "eq_bane_wep_s", "eq_bane_wep_sl",
     "item_bronze_bar", "item_iron_bar", "item_hammer",
     "item_bronze_sword", "item_iron_sword", "item_iron_axe", "item_iron_pick",
     "item_bronze_helm", "item_iron_helm", "item_bronze_shield",
@@ -321,6 +324,7 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     [IT_RUNE_HELM]    ={ "Rune helm",    SPR_I_RUNE_HELM,   0,false, SLOT_HELM,  0,0,14,40 },
     [IT_RUNE_SHIELD]  ={ "Rune shield",  SPR_I_RUNE_SHIELD, 0,false, SLOT_SHIELD,4,0,20,40 },
     [IT_RUNE_BODY]    ={ "Rune body",    SPR_I_RUNE_BODY,   0,false, SLOT_BODY,  0,0,40,40 },
+    [IT_BANE]         ={ "Warlord's Bane",SPR_I_BANE,       0,false, SLOT_WEAPON,18,17,0,30 },
 };
 
 /* shop value in coins; buy price = value, sell price = value/2 (min 1).
@@ -490,6 +494,13 @@ static int quest_kills = 0;
 #define QUEST_KILLS_NEEDED 3
 #define QUEST_SHRIMP_NEEDED 2
 
+/* The Warlord's Bane - a multi-stage quest from the Knight */
+enum { WQ_NONE, WQ_STARTED, WQ_SCOUTED, WQ_ARMED, WQ_SLAIN, WQ_DONE };
+static int wquest = WQ_NONE;
+#define WQ_BONES_NEEDED 5
+#define WQ_BARS_NEEDED  2
+#define WQ_COIN_COST    300
+
 /* dialog box */
 static const char *dlg_title = "";
 static char dlg_buf[4][44];
@@ -650,6 +661,7 @@ static void load_overworld(void)
             case 'V': obj = OBJ_ANVIL;      break;
             case 'H': obj = OBJ_CHEF;       break;
             case 'X': obj = OBJ_STAIRS_DOWN; stairs_x = x; stairs_y = y; break;
+            case 'K': obj = OBJ_KNIGHT;     break;
             case '1': obj = OBJ_SHOP_GENERAL; break;
             case '2': obj = OBJ_SHOP_WEAPON;  break;
             case '3': obj = OBJ_SHOP_ARMOR;   break;
@@ -743,7 +755,7 @@ static bool tile_walkable(int x, int y)
 /* ------------------------------------------------------------ saves (EEPROM 4K) */
 
 #define SAVE_MAGIC 0x52563634u     /* 'RV64' */
-#define SAVE_VERSION 7
+#define SAVE_VERSION 8
 
 typedef struct __attribute__((packed)) {
     uint32_t magic;
@@ -757,10 +769,11 @@ typedef struct __attribute__((packed)) {
     uint32_t gp;
     uint8_t  run_energy;
     uint8_t  quest_state, quest_kills;
+    uint8_t  wquest;
     uint8_t  equipped[NUM_SLOTS];
     uint8_t  pad;
     uint16_t checksum;
-    uint8_t  pad2[2];          /* keeps sizeof a multiple of the 8-byte block */
+    uint8_t  pad2[7];          /* keeps sizeof a multiple of the 8-byte block */
 } save_t;
 
 _Static_assert(sizeof(save_t) % 8 == 0, "save_t must be EEPROM-block aligned");
@@ -792,6 +805,7 @@ static void save_game(void)
     s.run_energy = pl.run_energy;
     s.quest_state = quest_state;
     s.quest_kills = quest_kills;
+    s.wquest = wquest;
     for (int i = 0; i < NUM_SLOTS; i++) s.equipped[i] = equipped[i];
     s.checksum = save_checksum(&s);
 
@@ -838,6 +852,7 @@ static void load_game(void)
     pl.run_energy = s.run_energy <= 100 ? s.run_energy : 100;
     quest_state = s.quest_state <= QUEST_DONE ? s.quest_state : QUEST_NONE;
     quest_kills = s.quest_kills <= QUEST_KILLS_NEEDED ? s.quest_kills : 0;
+    wquest = s.wquest <= WQ_DONE ? s.wquest : WQ_NONE;
     for (int i = 0; i < NUM_SLOTS; i++) {
         int it = s.equipped[i];
         /* only restore if it really belongs in this slot */
@@ -925,6 +940,10 @@ static void mob_die(gob_t *g)
     if (g->type == MOB_BOSS) {
         msg("With a final roar, the Goblin Warlord falls!");
         sfx_ui(SND_LEVELUP);
+        if (wquest == WQ_ARMED) {
+            wquest = WQ_SLAIN;
+            msg("The Warlord is slain! Return to Sir Garrick.");
+        }
         /* a hero's bounty of combat experience */
         add_xp(SK_ATT, 4000, false);
         add_xp(SK_STR, 4000, false);
@@ -1770,6 +1789,85 @@ static void chef_talk(void)
     ui_mode = UI_DIALOG;
 }
 
+static void knight_talk(void)
+{
+    dlg_title = "Sir Garrick";
+    dlg_count = 0;
+    switch (wquest) {
+    case WQ_NONE:
+        dlg_line("The Goblin Warlord festers in the dungeon");
+        dlg_line("and I am too grey to make the descent.");
+        dlg_line("Prove your nerve: bring me 5 bones from");
+        dlg_line("the creatures that haunt those depths.");
+        wquest = WQ_STARTED;
+        msg("Quest started: The Warlord's Bane.");
+        break;
+    case WQ_STARTED:
+        if (inv_count(IT_BONES) >= WQ_BONES_NEEDED) {
+            for (int i = 0; i < WQ_BONES_NEEDED; i++) remove_item(IT_BONES);
+            wquest = WQ_SCOUTED;
+            dlg_line("Steady hands. Now, the Warlord's hide");
+            dlg_line("turns aside common steel. Bring me 2");
+            dlg_line("iron bars and 300 coins, and I'll forge");
+            dlg_line("you a blade with a keener bite.");
+            msg("You hand over the bones.");
+        } else {
+            char b[44];
+            snprintf(b, sizeof b, "Bring me %d bones (you have %d).",
+                     WQ_BONES_NEEDED, inv_count(IT_BONES));
+            dlg_line(b);
+            dlg_line("The dungeon lies past the cave mouth");
+            dlg_line("southwest of the mine.");
+        }
+        break;
+    case WQ_SCOUTED:
+        if (inv_count(IT_IRON_BAR) >= WQ_BARS_NEEDED && gp >= WQ_COIN_COST) {
+            for (int i = 0; i < WQ_BARS_NEEDED; i++) remove_item(IT_IRON_BAR);
+            gp -= WQ_COIN_COST;
+            add_item(IT_BANE);
+            wquest = WQ_ARMED;
+            dlg_line("Take it - the Warlord's Bane. Wield it");
+            dlg_line("well. Now descend, and do not return");
+            dlg_line("until the beast lies cold. Go!");
+            sfx_ui(SND_LEVELUP);
+            msg("Sir Garrick gives you the Warlord's Bane!");
+        } else {
+            char b[44];
+            snprintf(b, sizeof b, "I need %d iron bars (you have %d)",
+                     WQ_BARS_NEEDED, inv_count(IT_IRON_BAR));
+            dlg_line(b);
+            snprintf(b, sizeof b, "and %d coins (you have %d).",
+                     WQ_COIN_COST, gp);
+            dlg_line(b);
+            dlg_line("Smelt iron at the furnace by the mine.");
+        }
+        break;
+    case WQ_ARMED:
+        dlg_line("The Warlord still draws breath! Take the");
+        dlg_line("Bane into the dungeon and end him.");
+        break;
+    case WQ_SLAIN:
+        wquest = WQ_DONE;
+        dlg_line("Slain! You've lifted a shadow from the");
+        dlg_line("whole valley. Take this purse, and my");
+        dlg_line("deepest thanks, champion.");
+        sfx_ui(SND_LEVELUP);
+        gp += 2000;
+        add_xp(SK_ATT, 6000, false);
+        add_xp(SK_STR, 6000, false);
+        add_xp(SK_DEF, 6000, false);
+        add_xp(SK_HP,  5000, false);
+        msg("Quest complete: The Warlord's Bane!");
+        msg("Sir Garrick rewards you with 2000 coins.");
+        break;
+    default:
+        dlg_line("You'll be a legend in Rune Valley for");
+        dlg_line("an age, champion. The Bane is yours.");
+        break;
+    }
+    ui_mode = UI_DIALOG;
+}
+
 static void interact(void)
 {
     /* with a spell selected, A targets a monster from range */
@@ -1873,6 +1971,9 @@ static void interact(void)
     case OBJ_CHEF:
         chef_talk();
         break;
+    case OBJ_KNIGHT:
+        knight_talk();
+        break;
     case OBJ_STAIRS_DOWN:
         enter_dungeon();
         break;
@@ -1914,6 +2015,7 @@ static const char *context_hint(void)
     case OBJ_FURNACE:     return "A: Smelt ore at Furnace";
     case OBJ_ANVIL:       return "A: Smith at Anvil";
     case OBJ_CHEF:        return "A: Talk to Chef Bouillon";
+    case OBJ_KNIGHT:      return "A: Talk to Sir Garrick";
     case OBJ_STAIRS_DOWN: return "A: Descend into the dungeon";
     case OBJ_STAIRS_UP:   return "A: Climb back to the surface";
     case OBJ_SHOP_GENERAL:return "A: Browse the General Store";
@@ -2306,6 +2408,7 @@ static int equip_overlay_base(int item)
     case IT_RUNE_HELM:     return SPR_EQ_RU_HELM_D;
     case IT_RUNE_SHIELD:   return SPR_EQ_RU_SHD_D;
     case IT_RUNE_BODY:     return SPR_EQ_RU_BODY_D;
+    case IT_BANE:          return SPR_EQ_BANE_WEP_D;
     default:               return -1;
     }
 }
@@ -2445,6 +2548,7 @@ static void render(void)
             case OBJ_FURNACE:    rdpq_sprite_blit(spr[SPR_FURNACE], sx, sy, NULL); break;
             case OBJ_ANVIL:      rdpq_sprite_blit(spr[SPR_ANVIL], sx, sy, NULL); break;
             case OBJ_CHEF:       rdpq_sprite_blit(spr[SPR_CHEF], sx, sy - 8, NULL); break;
+            case OBJ_KNIGHT:     rdpq_sprite_blit(spr[SPR_KNIGHT], sx, sy - 8, NULL); break;
             case OBJ_STAIRS_DOWN:rdpq_sprite_blit(spr[SPR_STAIRS_DOWN], sx, sy, NULL); break;
             case OBJ_STAIRS_UP:  rdpq_sprite_blit(spr[SPR_STAIRS_UP], sx, sy, NULL); break;
             case OBJ_SHOP_GENERAL:rdpq_sprite_blit(spr[SPR_STALL_GENERAL], sx, sy - 4, NULL); break;
@@ -2798,11 +2902,13 @@ static void render(void)
         draw_text(0, px0 + 8, py0 + 90, "gear, sling spells, shop the bazaar.");
         draw_text(3, px0 + 8, py0 + 102, "A dungeon lurks SW of the mine -");
         draw_text(3, px0 + 8, py0 + 112, "skeletons and the Warlord await!");
-        draw_text(1, px0 + 8, py0 + 126, "Quest: The Chef's Little Problem");
-        draw_text(0, px0 + 8, py0 + 136, "%s",
-                  quest_state == QUEST_NONE ? "Not started - talk to the Chef." :
-                  quest_state == QUEST_ACTIVE ? "In progress - see the Chef." :
-                  "Complete. The valley eats well.");
+        draw_text(1, px0 + 8, py0 + 124, "Quests");
+        draw_text(0, px0 + 8, py0 + 134, "Chef: %s",
+                  quest_state == QUEST_NONE ? "talk to Chef Bouillon" :
+                  quest_state == QUEST_ACTIVE ? "in progress" : "complete");
+        draw_text(0, px0 + 8, py0 + 144, "Warlord's Bane: %s",
+                  wquest == WQ_NONE ? "see Sir Garrick" :
+                  wquest >= WQ_DONE ? "complete!" : "in progress");
     }
 
     rdpq_detach_show();
@@ -3033,6 +3139,7 @@ int main(void)
     for (int i = 0; i < NUM_SLOTS; i++) equipped[i] = IT_NONE;
     cast_spell = SPELL_MELEE;
     gp = 25;                      /* a few starter coins */
+    quest_state = QUEST_NONE; quest_kills = 0; wquest = WQ_NONE;
     memset(bank, 0, sizeof bank);
     for (int i = 0; i < CHAT_LINES; i++) chat[i][0] = 0;
 

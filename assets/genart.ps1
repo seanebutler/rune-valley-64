@@ -1334,6 +1334,8 @@ foreach ($set in 'bota','botb','botc') {
 
 # Chef NPC: white apron + chef hat (white "hair")
 New-Recolor 'pl_down_a' 'chef_down_a' @{ '#3e5e7e' = '#f0eee8'; '#4a3320' = '#f8f8f4' }
+# Knight NPC: steel plate body + helm (grey)
+New-Recolor 'pl_down_a' 'knight_down_a' @{ '#3e5e7e' = '#8a92a0'; '#4a3320' = '#c0c8d4' }
 
 # Left-facing variants: copy-mode blits cannot mirror (reversed S range is
 # undefined on real RDP hardware), so bake flipped sprites instead
@@ -1440,6 +1442,12 @@ foreach ($t in 'st','mi','ru') {
         New-FlipX "eq_${t}_${slot}_s" "eq_${t}_${slot}_sl"
     }
 }
+
+# Warlord's Bane: a legendary gold sword (quest reward), icon + worn overlay
+$baneMap = @{ '#b87f4e'='#f0d050'; '#94633a'='#c0a030'; '#d8a070'='#fff0a0' }
+New-Recolor 'item_bronze_sword' 'item_bane' $baneMap
+foreach ($dir in 'd','u','s') { New-Recolor "eq_bz_wep_$dir" "eq_bane_wep_$dir" $baneMap }
+New-FlipX 'eq_bane_wep_s' 'eq_bane_wep_sl'
 
 Write-Host "Generating title logo..."
 
