@@ -22,6 +22,12 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   (never burn again at 34)
 - **Combat** — level-2 goblins roam east of the bridge; they are aggressive,
   they hit 1s, and they drop bones
+- **The training pasture** — just east of where you wash up, **Sergeant Hardy**
+  keeps a fenced field of **cows**. Talk to him for a one-time jumpstart of
+  combat experience, then chain-kill the herd: cows are plentiful, never
+  aggressive, barely scratch back, and respawn fast, so they level your Attack,
+  Strength and Defence far quicker (and more safely) than goblins. A gentle
+  on-ramp before the Warlord and Demon quests ask for higher combat levels
 - **Prayer** — bury bones for Prayer xp, then spend it: open the prayer book
   (C-down) and toggle combat boosts across four categories — Attack, Strength,
   Defence and Magic. Each category has a basic prayer (Thick Skin, Burst of

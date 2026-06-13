@@ -43,7 +43,7 @@ enum { OBJ_NONE, OBJ_TREE, OBJ_OAK, OBJ_STUMP, OBJ_ROCK_COPPER, OBJ_ROCK_TIN,
        OBJ_ESSENCE, OBJ_ALTAR_AIR, OBJ_ALTAR_FIRE,
        OBJ_FURNACE, OBJ_ANVIL, OBJ_CHEF, OBJ_STAIRS_DOWN, OBJ_STAIRS_UP,
        OBJ_SHOP_GENERAL, OBJ_SHOP_WEAPON, OBJ_SHOP_ARMOR, OBJ_SHOP_MAGIC,
-       OBJ_KNIGHT };
+       OBJ_KNIGHT, OBJ_FENCE, OBJ_TUTOR };
 
 enum { MAP_OVERWORLD, MAP_DUNGEON };
 
@@ -59,12 +59,12 @@ static const char *map_rows[MAP_H] = {
     "T.................wwwwwpppwwwww.......~~~~.....T",
     "T......................ppp............~~~~.....T",
     "T....T.................ppp.H..........~~~~.....T",
-    "T.............T........ppp.....T......~~~~.....T",
-    "T......................p@p............~~~~.....T",
-    "T..T...................ppp.......T....~~~~.....T",
-    "T............O.........ppp............~~~~.....T",
-    "T.......pppppppppppppppppp............~~~~.....T",
-    "T.......pp.............ppp............~~~~.....T",
+    "T.............T........ppp..LLLLLLLLL.~~~~.....T",
+    "T......................p@p..L.M...M.L.~~~~.....T",
+    "T..T...................pppY.....M...L.~~~~.....T",
+    "T............O.........ppp..L.M...M.L.~~~~.....T",
+    "T.......pppppppppppppppppp..L...M...L.~~~~.....T",
+    "T.......pp.............ppp..LLLLLLLLL.~~~~.....T",
     "T.......pp.............ppp......T.....~~~~.G...T",
     "T.......pp.............ppppppppppppppp====ppp..T",
     "T.......pp..U.V.......................~~~~.....T",
@@ -211,6 +211,7 @@ enum {
     SPR_EQ_RU_BODY_D, SPR_EQ_RU_BODY_U, SPR_EQ_RU_BODY_S, SPR_EQ_RU_BODY_SL,
     SPR_EQ_RU_WEP_D,  SPR_EQ_RU_WEP_U,  SPR_EQ_RU_WEP_S,  SPR_EQ_RU_WEP_SL,
     SPR_EQ_RU_SHD_D,  SPR_EQ_RU_SHD_U,  SPR_EQ_RU_SHD_S,  SPR_EQ_RU_SHD_SL,
+    SPR_COW_A, SPR_COW_B, SPR_FENCE, SPR_TUTOR,
     NUM_SPR
 };
 
@@ -274,7 +275,8 @@ static const char *spr_files[NUM_SPR] = {
     "eq_ru_helm_d", "eq_ru_helm_u", "eq_ru_helm_s", "eq_ru_helm_sl",
     "eq_ru_body_d", "eq_ru_body_u", "eq_ru_body_s", "eq_ru_body_sl",
     "eq_ru_wep_d",  "eq_ru_wep_u",  "eq_ru_wep_s",  "eq_ru_wep_sl",
-    "eq_ru_shd_d",  "eq_ru_shd_u",  "eq_ru_shd_s",  "eq_ru_shd_sl"
+    "eq_ru_shd_d",  "eq_ru_shd_u",  "eq_ru_shd_s",  "eq_ru_shd_sl",
+    "mob_cow_a", "mob_cow_b", "obj_fence", "obj_tutor"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -453,7 +455,7 @@ static int num_gob = 0;
 
 /* monster types: stats, sprite, size, drop. mob_def lowers player accuracy;
    hit_base is the mob's chance to land before the player's defence. */
-enum { MOB_GOBLIN, MOB_SKELETON, MOB_BOSS, MOB_WIGHT, MOB_DEMON, NUM_MOBS };
+enum { MOB_GOBLIN, MOB_SKELETON, MOB_BOSS, MOB_WIGHT, MOB_DEMON, MOB_COW, NUM_MOBS };
 typedef struct {
     const char *name; int max_hp; int max_dmg; int mob_def; int hit_base;
     int aggro; int respawn; int spr_a, spr_b; int w, h;
@@ -464,6 +466,9 @@ static const mobinfo_t mobinfo[NUM_MOBS] = {
     [MOB_BOSS]     = { "Goblin Warlord",45, 5, 15, 75, 6, 80, SPR_BOSS,    SPR_BOSS,    24, 24 },
     [MOB_WIGHT]    = { "wight",         14, 3, 10, 64, 4, 25, SPR_WIGHT_A, SPR_WIGHT_B, 16, 16 },
     [MOB_DEMON]    = { "Demon",         80, 8, 25, 85, 7,100, SPR_DEMON,   SPR_DEMON,   24, 24 },
+    /* a placid training target: lots of HP for the xp, defence 0 so you hit
+       almost every swing, never aggressive, barely scratches back, respawns fast */
+    [MOB_COW]      = { "cow",            8, 1,  0, 25, 0,  8, SPR_COW_A,   SPR_COW_B,   16, 16 },
 };
 
 /* ------------------------------------------------------------ UI state */
@@ -740,6 +745,9 @@ static void load_overworld(void)
             case 'H': obj = OBJ_CHEF;       break;
             case 'X': obj = OBJ_STAIRS_DOWN; down_x = x; down_y = y; break;
             case 'K': obj = OBJ_KNIGHT;     break;
+            case 'L': obj = OBJ_FENCE;      break;
+            case 'Y': obj = OBJ_TUTOR;      break;
+            case 'M': spawn_mob(MOB_COW, x, y); break;
             case '1': obj = OBJ_SHOP_GENERAL; break;
             case '2': obj = OBJ_SHOP_WEAPON;  break;
             case '3': obj = OBJ_SHOP_ARMOR;   break;
@@ -1042,6 +1050,9 @@ static const drop_t demon_drops[] = {  /* the deepest boss pays the richest */
     { IT_RUNE_SHIELD, 1, 12 }, { IT_RUNE_BODY, 1, 8 }, { IT_FIRE_RUNE, 30, 14 },
     { IT_MITH_BODY, 1, 16 },
 };
+static const drop_t cow_drops[] = {   /* a few coins, the odd shrimp to keep you fed */
+    { IT_COINS, 6, 42 }, { IT_RAW_SHRIMP, 1, 12 }, { IT_NONE, 0, 46 },
+};
 
 static void give_drop(int item, int qty)
 {
@@ -1097,6 +1108,12 @@ static void mob_die(gob_t *g)
         add_xp(SK_DEF, 9000, false);
         add_xp(SK_HP,  7000, false);
         gratz_timer = 4;
+    } else if (g->type == MOB_COW) {
+        /* a brisk training reward on top of the in-fight combat xp */
+        msg("You fell the cow.");
+        add_xp(SK_ATT, 60, false);
+        add_xp(SK_STR, 60, false);
+        add_xp(SK_DEF, 60, false);
     } else {
         msg("You have defeated the %s!", mi->name);
     }
@@ -1114,6 +1131,7 @@ static void mob_die(gob_t *g)
     case MOB_BOSS:     roll_drops(boss_drops,     NDROPS(boss_drops));     break;
     case MOB_WIGHT:    roll_drops(wight_drops,    NDROPS(wight_drops));    break;
     case MOB_DEMON:    roll_drops(demon_drops,    NDROPS(demon_drops));    break;
+    case MOB_COW:      roll_drops(cow_drops,      NDROPS(cow_drops));      break;
     }
     if (pl.state == ST_FIGHT) pl.state = ST_IDLE;
 }
@@ -2125,6 +2143,33 @@ static void knight_talk(void)
     ui_mode = UI_DIALOG;
 }
 
+/* Sergeant Hardy: the combat tutor by the cow pasture. His first lesson is a
+   one-time jumpstart of combat xp; the gate (Attack under 10) makes it a
+   one-shot, since the grant pushes you past it. */
+static void tutor_talk(void)
+{
+    dlg_title = "Sergeant Hardy";
+    if (level_of(SK_ATT) < 10) {
+        add_xp(SK_ATT, 2000, false);
+        add_xp(SK_STR, 2000, false);
+        add_xp(SK_DEF, 2000, false);
+        add_xp(SK_HP,   800, false);
+        sfx_ui(SND_LEVELUP);
+        gratz_timer = 4;
+        dlg_line("New blood? Then here's a soldier's");
+        dlg_line("start - I've drilled some fight into");
+        dlg_line("you. Now bash these cows till it");
+        dlg_line("sticks; the goblins won't trouble you.");
+        msg("Sergeant Hardy teaches you the basics of combat.");
+    } else {
+        dlg_line("Keep at the cows, recruit - plenty of");
+        dlg_line("practice here and they barely kick back.");
+        dlg_line("Come back hardened and Sir Garrick by");
+        dlg_line("the cave may have real work for you.");
+    }
+    ui_mode = UI_DIALOG;
+}
+
 static void interact(void)
 {
     /* with a spell selected, A targets a monster from range */
@@ -2241,6 +2286,9 @@ static void interact(void)
     case OBJ_KNIGHT:
         knight_talk();
         break;
+    case OBJ_TUTOR:
+        tutor_talk();
+        break;
     case OBJ_STAIRS_DOWN:
         if (cur_map == MAP_OVERWORLD) {
             if (wquest == WQ_NONE)
@@ -2293,6 +2341,7 @@ static const char *context_hint(void)
     case OBJ_ANVIL:       return "A: Smith at Anvil";
     case OBJ_CHEF:        return "A: Talk to Chef Bouillon";
     case OBJ_KNIGHT:      return "A: Talk to Sir Garrick";
+    case OBJ_TUTOR:       return "A: Talk to Sergeant Hardy";
     case OBJ_STAIRS_DOWN:
         if (cur_map == MAP_OVERWORLD)
             return wquest == WQ_NONE ? "A: Dungeon (barred - see Sir Garrick)"
@@ -2831,6 +2880,8 @@ static void render(void)
             case OBJ_ANVIL:      rdpq_sprite_blit(spr[SPR_ANVIL], sx, sy, NULL); break;
             case OBJ_CHEF:       rdpq_sprite_blit(spr[SPR_CHEF], sx, sy - 8, NULL); break;
             case OBJ_KNIGHT:     rdpq_sprite_blit(spr[SPR_KNIGHT], sx, sy - 8, NULL); break;
+            case OBJ_FENCE:      rdpq_sprite_blit(spr[SPR_FENCE], sx, sy, NULL); break;
+            case OBJ_TUTOR:      rdpq_sprite_blit(spr[SPR_TUTOR], sx, sy - 8, NULL); break;
             case OBJ_STAIRS_DOWN:rdpq_sprite_blit(spr[SPR_STAIRS_DOWN], sx, sy, NULL); break;
             case OBJ_STAIRS_UP:  rdpq_sprite_blit(spr[SPR_STAIRS_UP], sx, sy, NULL); break;
             case OBJ_SHOP_GENERAL:rdpq_sprite_blit(spr[SPR_STALL_GENERAL], sx, sy - 4, NULL); break;

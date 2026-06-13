@@ -1368,6 +1368,66 @@ New-Recolor 'pl_down_a' 'knight_down_a' @{ '#3e5e7e' = '#8a92a0'; '#4a3320' = '#
 New-Recolor 'skeleton_a' 'wight_a' @{ '#e8e4d8' = '#8aa89a'; '#b8b4a4' = '#5e7a6c' }
 New-Recolor 'skeleton_b' 'wight_b' @{ '#e8e4d8' = '#8aa89a'; '#b8b4a4' = '#5e7a6c' }
 
+# Cow: placid training fodder. Side view, head left, 16x16, 2 frames (legs shuffle)
+$cowPal = @{ 'w'='#f0ece0'; 'p'='#3a342e'; 'k'='#1c1813'; 'n'='#d98a8a'; 'h'='#d8c49a'; 'e'='#1c1813' }
+Save-Sprite 'mob_cow_a' $cowPal @(
+    '................',
+    '................',
+    '..hh........kk..',
+    '.kwwwwwwwwwwwk..',
+    'nwewwwwwwwwwwk..',
+    'nwppwwwwwppwwk..',
+    '.wwwwwwwwwwwwk..',
+    '.wwppwwwwwppww..',
+    '..wwwwwwwwwww...',
+    '..wwwwwwwwwww...',
+    '..k.kk...kk.k...',
+    '..k.kk...kk.k...',
+    '................',
+    '................',
+    '................',
+    '................')
+Save-Sprite 'mob_cow_b' $cowPal @(
+    '................',
+    '................',
+    '..hh........kk..',
+    '.kwwwwwwwwwwwk..',
+    'nwewwwwwwwwwwk..',
+    'nwppwwwwwppwwk..',
+    '.wwwwwwwwwwwwk..',
+    '.wwppwwwwwppww..',
+    '..wwwwwwwwwww...',
+    '..wwwwwwwwwww...',
+    '..kk.k...k.kk...',
+    '..kk.k...k.kk...',
+    '................',
+    '................',
+    '................',
+    '................')
+
+# Post-and-rail fence: encloses the cow pasture (solid object)
+$fencePal = @{ 'w'='#9a6a3a'; 'd'='#6e4a26' }
+Save-Sprite 'obj_fence' $fencePal @(
+    '................',
+    '.d..d..d..d..d..',
+    '.w..w..w..w..w..',
+    'wwwwwwwwwwwwwwww',
+    '.w..w..w..w..w..',
+    '.w..w..w..w..w..',
+    'wwwwwwwwwwwwwwww',
+    '.w..w..w..w..w..',
+    '.d..d..d..d..d..',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................')
+
+# Combat Tutor (Sergeant Hardy): red tunic + bronze helm recolour of the player
+New-Recolor 'pl_down_a' 'obj_tutor' @{ '#3e5e7e' = '#8a3a2a'; '#4a3320' = '#b8923a' }
+
 # Left-facing variants: copy-mode blits cannot mirror (reversed S range is
 # undefined on real RDP hardware), so bake flipped sprites instead
 foreach ($set in 'pl','bota','botb','botc') {
