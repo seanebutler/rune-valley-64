@@ -54,7 +54,7 @@ static const char *map_rows[MAP_H] = {
     "T.................wwwwwwwwwwwww.......~~~~.....T",
     "T...E.E...........wfffffffffffw.......~~~~.....T",
     "T.................wfffffffffffw.......~~~~.....T",
-    "T....A..W..D..Q...wfffffffffffw.......~~~~.....T",
+    "T....A..W..D......wfffffffffffw.......~~~~.....T",
     "T.................wfBBBBBBBBBfw.......~~~~.....T",
     "T.................wfffffffffffw.......~~~~.....T",
     "T.................wwwwwpppwwwww.......~~~~.....T",
@@ -804,7 +804,6 @@ static void load_overworld(void)
             case 'A': obj = OBJ_ALTAR_AIR;  break;
             case 'W': obj = OBJ_ALTAR_WATER; break;
             case 'D': obj = OBJ_ALTAR_EARTH; break;
-            case 'Q': obj = OBJ_ALTAR_CHAOS; break;
             case 'R': obj = OBJ_ALTAR_FIRE; break;
             case 'U': obj = OBJ_FURNACE;    break;
             case 'V': obj = OBJ_ANVIL;      break;
@@ -861,9 +860,9 @@ static void build_dungeon(int floor)
         };
         for (int i = 0; i < 9; i++) spawn_mob(MOB_SKELETON, skel[i][0], skel[i][1]);
         spawn_mob(MOB_BOSS, 24, 5);
-        /* the Law altar hides in the hall, guarded by the skeletons */
-        object[16][40] = OBJ_ALTAR_LAW;
-        obj_orig[16][40] = OBJ_ALTAR_LAW;
+        /* the Chaos and Law altars hide in the hall, guarded by the skeletons */
+        object[16][8]  = OBJ_ALTAR_CHAOS;  obj_orig[16][8]  = OBJ_ALTAR_CHAOS;
+        object[16][40] = OBJ_ALTAR_LAW;    obj_orig[16][40] = OBJ_ALTAR_LAW;
     } else if (floor == 2) {
         /* a final stair opens in the Demon's chamber once it is bested */
         if (dquest == DQ_DONE) {
