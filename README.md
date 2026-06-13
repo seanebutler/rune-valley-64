@@ -39,20 +39,22 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   Pray at any rune altar — with no essence on you — to top them back up
 - **Runecraft** — mine rune essence from the glittering rock in the northwest
   ruins (it never depletes) and bind it at one of the altars there: **Air**
-  (level 1), **Water** (5), **Earth** (9) and the violet **Law** altar (25,
-  for teleport runes), or brave the goblin camp to reach the **Fire** altar
-  (14). Runes **stack** in a single inventory slot, with the count drawn over
-  the icon
+  (level 1), **Water** (5), **Earth** (9) and the red **Chaos** altar (20, for
+  bolt runes), or brave the goblin camp to reach the **Fire** altar (14). The
+  violet **Law** altar (25, for teleport runes) hides deep in the **dungeon**,
+  guarded by the skeletons — bring essence and fight your way in. Runes
+  **stack** in a single inventory slot, with the count drawn over the icon
 - **Magic** — open the spellbook (C-left) and pick an attack spell. The element
   strikes ladder up — **Wind** (air, lvl 1), **Water** (water, 5), **Earth**
   (earth, 9), **Fire** (fire, 13) — then the heavy bolts: **Earth Bolt**
-  (3 earth, 29) and **Fire Bolt** (3 fire, 35). With a spell chosen, A flings a
-  bolt at the nearest goblin from up to five tiles away, spending its runes and
-  earning Magic xp. The book also holds three **teleports**: **Home** (1 air,
-  your dungeon escape to the surface spawn), and — powered by the unique **Law
-  rune** — **Bank** (lvl 20) and **Cave** (lvl 25) for fast travel to the bank
-  and the dungeon mouth. You start with 25 air runes; craft more at the altars
-  or buy any rune (laws included) at the Magic Shop.
+  (lvl 29) and **Fire Bolt** (lvl 35), each needing **3 of its element plus a
+  Chaos rune**. With a spell chosen, A flings a bolt at the nearest goblin from
+  up to five tiles away, spending its runes and earning Magic xp. The book also
+  holds three **teleports**: **Home** (1 air, your dungeon escape to the surface
+  spawn), and — powered by the unique **Law rune** — **Bank** (lvl 20) and
+  **Cave** (lvl 25) for fast travel to the bank and the dungeon mouth. You start
+  with 25 air runes; craft more at the altars or buy any rune (chaos and law
+  included) at the Magic Shop.
   **Wizard gear** — a staff, hat and robe carry a Magic bonus that boosts your
   spell accuracy and max hit (worn in the weapon/helm/body slots, drawn on your
   character). Win them as **monster drops**

@@ -778,6 +778,7 @@ New-Altar 'obj_altar_fire'  '#f08030' '#ffe8a0'
 New-Altar 'obj_altar_water' '#4a90e0' '#d0e8ff'
 New-Altar 'obj_altar_earth' '#6aa83a' '#dceaa0'
 New-Altar 'obj_altar_law'   '#b060e0' '#f0d8ff'
+New-Altar 'obj_altar_chaos' '#c83838' '#ffd0d0'
 
 # Item icons
 Save-Sprite 'item_essence' @{ 'a'='#aebed8'; 'b'='#8a9ab4'; 'w'='#e8f8ff' } @(
@@ -1375,6 +1376,7 @@ New-Recolor 'skeleton_b' 'wight_b' @{ '#e8e4d8' = '#8aa89a'; '#b8b4a4' = '#5e7a6
 New-Recolor 'item_air_rune' 'item_water_rune' @{ '#48b8d8' = '#3a78d0' }
 New-Recolor 'item_air_rune' 'item_earth_rune' @{ '#48b8d8' = '#5a9a3a' }
 New-Recolor 'item_air_rune' 'item_law_rune'   @{ '#48b8d8' = '#b050e0' }
+New-Recolor 'item_air_rune' 'item_chaos_rune' @{ '#48b8d8' = '#9a3060' }
 
 # Cow: placid training fodder. Side view, head left, 16x16, 2 frames (legs shuffle)
 $cowPal = @{ 'w'='#f0ece0'; 'p'='#3a342e'; 'k'='#1c1813'; 'n'='#d98a8a'; 'h'='#d8c49a'; 'e'='#1c1813' }

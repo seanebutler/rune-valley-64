@@ -44,7 +44,7 @@ enum { OBJ_NONE, OBJ_TREE, OBJ_OAK, OBJ_STUMP, OBJ_ROCK_COPPER, OBJ_ROCK_TIN,
        OBJ_FURNACE, OBJ_ANVIL, OBJ_CHEF, OBJ_STAIRS_DOWN, OBJ_STAIRS_UP,
        OBJ_SHOP_GENERAL, OBJ_SHOP_WEAPON, OBJ_SHOP_ARMOR, OBJ_SHOP_MAGIC,
        OBJ_KNIGHT, OBJ_FENCE, OBJ_TUTOR,
-       OBJ_ALTAR_WATER, OBJ_ALTAR_EARTH, OBJ_ALTAR_LAW };
+       OBJ_ALTAR_WATER, OBJ_ALTAR_EARTH, OBJ_ALTAR_LAW, OBJ_ALTAR_CHAOS };
 
 enum { MAP_OVERWORLD, MAP_DUNGEON };
 
@@ -54,7 +54,7 @@ static const char *map_rows[MAP_H] = {
     "T.................wwwwwwwwwwwww.......~~~~.....T",
     "T...E.E...........wfffffffffffw.......~~~~.....T",
     "T.................wfffffffffffw.......~~~~.....T",
-    "T....A..W..D..Z...wfffffffffffw.......~~~~.....T",
+    "T....A..W..D..Q...wfffffffffffw.......~~~~.....T",
     "T.................wfBBBBBBBBBfw.......~~~~.....T",
     "T.................wfffffffffffw.......~~~~.....T",
     "T.................wwwwwpppwwwww.......~~~~.....T",
@@ -137,7 +137,7 @@ enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_MITH_SWORD,  IT_MITH_HELM,  IT_MITH_SHIELD,  IT_MITH_BODY,
        IT_RUNE_SWORD,  IT_RUNE_HELM,  IT_RUNE_SHIELD,  IT_RUNE_BODY,
        IT_BANE, IT_DRAGONSTONE, IT_DRAGONFIRE,
-       IT_WATER_RUNE, IT_EARTH_RUNE, IT_LAW_RUNE, NUM_ITEMS };
+       IT_WATER_RUNE, IT_EARTH_RUNE, IT_LAW_RUNE, IT_CHAOS_RUNE, NUM_ITEMS };
 
 /* worn equipment slots; SLOT_NONE = item is not equippable */
 enum { SLOT_NONE, SLOT_WEAPON, SLOT_SHIELD, SLOT_HELM, SLOT_BODY };
@@ -219,6 +219,7 @@ enum {
     SPR_EQ_DF_WEP_D, SPR_EQ_DF_WEP_U, SPR_EQ_DF_WEP_S, SPR_EQ_DF_WEP_SL,
     SPR_I_WATER_RUNE, SPR_I_EARTH_RUNE, SPR_I_LAW_RUNE,
     SPR_ALTAR_WATER, SPR_ALTAR_EARTH, SPR_ALTAR_LAW,
+    SPR_I_CHAOS_RUNE, SPR_ALTAR_CHAOS,
     NUM_SPR
 };
 
@@ -288,7 +289,8 @@ static const char *spr_files[NUM_SPR] = {
     "item_dragonfire",
     "eq_df_wep_d", "eq_df_wep_u", "eq_df_wep_s", "eq_df_wep_sl",
     "item_water_rune", "item_earth_rune", "item_law_rune",
-    "obj_altar_water", "obj_altar_earth", "obj_altar_law"
+    "obj_altar_water", "obj_altar_earth", "obj_altar_law",
+    "item_chaos_rune", "obj_altar_chaos"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -314,6 +316,7 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     [IT_WATER_RUNE] = { "Water rune",  SPR_I_WATER_RUNE, 0, false, 0,0,0,0,0, true },
     [IT_EARTH_RUNE] = { "Earth rune",  SPR_I_EARTH_RUNE, 0, false, 0,0,0,0,0, true },
     [IT_LAW_RUNE]   = { "Law rune",    SPR_I_LAW_RUNE,   0, false, 0,0,0,0,0, true },
+    [IT_CHAOS_RUNE] = { "Chaos rune",  SPR_I_CHAOS_RUNE, 0, false, 0,0,0,0,0, true },
     [IT_BRONZE_BAR] = { "Bronze bar",  SPR_I_BRONZE_BAR, 0, false },
     [IT_IRON_BAR]   = { "Iron bar",    SPR_I_IRON_BAR,   0, false },
     [IT_HAMMER]     = { "Hammer",      SPR_I_HAMMER,     0, true  },
@@ -355,7 +358,7 @@ static const int item_value[NUM_ITEMS] = {
     [IT_LOGS]=4, [IT_OAK_LOGS]=15, [IT_COPPER]=8, [IT_TIN]=8, [IT_IRON]=25,
     [IT_RAW_SHRIMP]=3, [IT_SHRIMP]=8, [IT_ESSENCE]=2, [IT_BONES]=1,
     [IT_AIR_RUNE]=4, [IT_FIRE_RUNE]=5, [IT_WATER_RUNE]=6, [IT_EARTH_RUNE]=7,
-    [IT_LAW_RUNE]=30, [IT_BRONZE_BAR]=20, [IT_IRON_BAR]=40,
+    [IT_LAW_RUNE]=30, [IT_CHAOS_RUNE]=12, [IT_BRONZE_BAR]=20, [IT_IRON_BAR]=40,
     [IT_AXE]=16, [IT_PICK]=16, [IT_NET]=10, [IT_TINDER]=12, [IT_HAMMER]=14,
     [IT_BRONZE_SWORD]=32, [IT_IRON_SWORD]=80, [IT_IRON_AXE]=70, [IT_IRON_PICK]=70,
     [IT_BRONZE_HELM]=26, [IT_IRON_HELM]=70, [IT_BRONZE_SHIELD]=40, [IT_IRON_SHIELD]=100,
@@ -524,18 +527,21 @@ static int almanac_scroll = 0;
    spell, so it never becomes the standing cast_spell. */
 enum { SPELL_MELEE, SPELL_AIR, SPELL_WATER, SPELL_EARTH, SPELL_FIRE,
        SPELL_EBOLT, SPELL_FBOLT, SPELL_HOME, SPELL_BANK, SPELL_CAVE, NUM_SPELLS };
-static const struct { const char *name; int rune; int runes; int maxhit; int lvl; int xp_x10; }
+/* rune2/runes2 is a second required rune (IT_NONE = none): bolts need a
+   Chaos rune on top of their element. */
+static const struct { const char *name; int rune; int runes; int rune2; int runes2;
+                      int maxhit; int lvl; int xp_x10; }
 spellinfo[NUM_SPELLS] = {
-    { "Melee",         IT_NONE,       0, 0,  1,   0 },
-    { "Wind Strike",   IT_AIR_RUNE,   1, 2,  1,  55 },
-    { "Water Strike",  IT_WATER_RUNE, 1, 3,  5,  76 },
-    { "Earth Strike",  IT_EARTH_RUNE, 1, 4,  9,  95 },
-    { "Fire Strike",   IT_FIRE_RUNE,  1, 5, 13, 100 },
-    { "Earth Bolt",    IT_EARTH_RUNE, 3, 7, 29, 190 },
-    { "Fire Bolt",     IT_FIRE_RUNE,  3, 8, 35, 225 },
-    { "Home Teleport", IT_AIR_RUNE,   1, 0,  1,  35 },
-    { "Bank Teleport", IT_LAW_RUNE,   1, 0, 20,  90 },
-    { "Cave Teleport", IT_LAW_RUNE,   1, 0, 25, 110 },
+    { "Melee",         IT_NONE,       0, IT_NONE,       0, 0,  1,   0 },
+    { "Wind Strike",   IT_AIR_RUNE,   1, IT_NONE,       0, 2,  1,  55 },
+    { "Water Strike",  IT_WATER_RUNE, 1, IT_NONE,       0, 3,  5,  76 },
+    { "Earth Strike",  IT_EARTH_RUNE, 1, IT_NONE,       0, 4,  9,  95 },
+    { "Fire Strike",   IT_FIRE_RUNE,  1, IT_NONE,       0, 5, 13, 100 },
+    { "Earth Bolt",    IT_EARTH_RUNE, 3, IT_CHAOS_RUNE, 1, 7, 29, 190 },
+    { "Fire Bolt",     IT_FIRE_RUNE,  3, IT_CHAOS_RUNE, 1, 8, 35, 225 },
+    { "Home Teleport", IT_AIR_RUNE,   1, IT_NONE,       0, 0,  1,  35 },
+    { "Bank Teleport", IT_LAW_RUNE,   1, IT_NONE,       0, 0, 20,  90 },
+    { "Cave Teleport", IT_LAW_RUNE,   1, IT_NONE,       0, 0, 25, 110 },
 };
 static int cast_spell = SPELL_MELEE;
 static int spell_cursor = 0;
@@ -798,7 +804,7 @@ static void load_overworld(void)
             case 'A': obj = OBJ_ALTAR_AIR;  break;
             case 'W': obj = OBJ_ALTAR_WATER; break;
             case 'D': obj = OBJ_ALTAR_EARTH; break;
-            case 'Z': obj = OBJ_ALTAR_LAW;  break;
+            case 'Q': obj = OBJ_ALTAR_CHAOS; break;
             case 'R': obj = OBJ_ALTAR_FIRE; break;
             case 'U': obj = OBJ_FURNACE;    break;
             case 'V': obj = OBJ_ANVIL;      break;
@@ -855,6 +861,9 @@ static void build_dungeon(int floor)
         };
         for (int i = 0; i < 9; i++) spawn_mob(MOB_SKELETON, skel[i][0], skel[i][1]);
         spawn_mob(MOB_BOSS, 24, 5);
+        /* the Law altar hides in the hall, guarded by the skeletons */
+        object[16][40] = OBJ_ALTAR_LAW;
+        obj_orig[16][40] = OBJ_ALTAR_LAW;
     } else if (floor == 2) {
         /* a final stair opens in the Demon's chamber once it is bested */
         if (dquest == DQ_DONE) {
@@ -955,7 +964,7 @@ static bool tile_walkable(int x, int y)
 /* ------------------------------------------------------------ saves (EEPROM 4K) */
 
 #define SAVE_MAGIC 0x52563634u     /* 'RV64' */
-#define SAVE_VERSION 13
+#define SAVE_VERSION 14
 
 typedef struct __attribute__((packed)) {
     uint32_t magic;
@@ -974,7 +983,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  equipped[NUM_SLOTS];
     uint8_t  pad;
     uint16_t checksum;
-    uint8_t  pad2[2];          /* keeps sizeof a multiple of the 8-byte block */
+    uint8_t  pad2[8];          /* keeps sizeof a multiple of the 8-byte block */
 } save_t;
 
 _Static_assert(sizeof(save_t) % 8 == 0, "save_t must be EEPROM-block aligned");
@@ -1382,18 +1391,27 @@ static bool player_cast(gob_t *g)
 {
     int rune = spellinfo[cast_spell].rune;
     int need = spellinfo[cast_spell].runes;
+    int rune2 = spellinfo[cast_spell].rune2;
+    int need2 = spellinfo[cast_spell].runes2;
     if (level_of(SK_MAGIC) < spellinfo[cast_spell].lvl) {
         msg("You need a Magic level of %d for that spell.",
             spellinfo[cast_spell].lvl);
         cast_spell = SPELL_MELEE;
         return false;
     }
+    /* check every required rune before spending any */
     if (inv_count(rune) < need) {
         msg("You do not have enough %s.", iteminfo[rune].name);
         cast_spell = SPELL_MELEE;
         return false;
     }
+    if (need2 > 0 && inv_count(rune2) < need2) {
+        msg("You do not have enough %s.", iteminfo[rune2].name);
+        cast_spell = SPELL_MELEE;
+        return false;
+    }
     for (int k = 0; k < need; k++) remove_item(rune);
+    for (int k = 0; k < need2; k++) remove_item(rune2);
     spawn_proj(pl.px, pl.py - 8, g->px, g->py - 8,
                rune == IT_FIRE_RUNE ? SPR_BOLT_FIRE : SPR_BOLT_AIR);
     sfx(SND_CRAFT);
@@ -2475,12 +2493,13 @@ static void interact(void)
         msg("You swing your pick at the rock.");
         break;
     case OBJ_ALTAR_AIR:   case OBJ_ALTAR_WATER: case OBJ_ALTAR_EARTH:
-    case OBJ_ALTAR_FIRE:  case OBJ_ALTAR_LAW: {
+    case OBJ_ALTAR_FIRE:  case OBJ_ALTAR_CHAOS: case OBJ_ALTAR_LAW: {
         int rune, rcreq, rcxp; const char *rname;
         switch (t.obj) {
         case OBJ_ALTAR_WATER: rune=IT_WATER_RUNE; rcreq=5;  rcxp=55;  rname="water"; break;
         case OBJ_ALTAR_EARTH: rune=IT_EARTH_RUNE; rcreq=9;  rcxp=60;  rname="earth"; break;
         case OBJ_ALTAR_FIRE:  rune=IT_FIRE_RUNE;  rcreq=14; rcxp=70;  rname="fire";  break;
+        case OBJ_ALTAR_CHAOS: rune=IT_CHAOS_RUNE; rcreq=20; rcxp=90;  rname="chaos"; break;
         case OBJ_ALTAR_LAW:   rune=IT_LAW_RUNE;   rcreq=25; rcxp=100; rname="law";   break;
         default:              rune=IT_AIR_RUNE;   rcreq=1;  rcxp=50;  rname="air";   break;
         }
@@ -2608,6 +2627,7 @@ static const char *context_hint(void)
     case OBJ_ALTAR_WATER: return "A: Craft runes at Water altar";
     case OBJ_ALTAR_EARTH: return "A: Craft runes at Earth altar";
     case OBJ_ALTAR_FIRE:  return "A: Craft runes at Fire altar";
+    case OBJ_ALTAR_CHAOS: return "A: Craft runes at Chaos altar";
     case OBJ_ALTAR_LAW:   return "A: Craft runes at Law altar";
     case OBJ_FURNACE:     return "A: Smelt ore at Furnace";
     case OBJ_ANVIL:       return "A: Smith at Anvil";
@@ -2720,6 +2740,7 @@ static void use_inv_item(int slot)
     case IT_WATER_RUNE:msg("Water runes - for Water Strike."); break;
     case IT_EARTH_RUNE:msg("Earth runes - for Earth spells."); break;
     case IT_LAW_RUNE:  msg("Law runes bend space - they power teleports."); break;
+    case IT_CHAOS_RUNE:msg("Chaos runes - bolt spells need one to fire."); break;
     case IT_AXE:    msg("A woodcutter's best friend."); break;
     case IT_PICK:   msg("Used for mining rocks."); break;
     case IT_NET:    msg("Used to catch shrimp at fishing spots."); break;
@@ -2812,8 +2833,8 @@ static const int shop_stock[NUM_SHOPS][20] = {
       IT_STEEL_HELM, IT_STEEL_SHIELD, IT_STEEL_BODY,
       IT_MITH_HELM, IT_MITH_SHIELD, IT_MITH_BODY,
       IT_RUNE_HELM, IT_RUNE_SHIELD, IT_RUNE_BODY, IT_NONE },
-    { IT_AIR_RUNE, IT_WATER_RUNE, IT_EARTH_RUNE, IT_FIRE_RUNE, IT_LAW_RUNE,
-      IT_STAFF, IT_WIZ_HAT, IT_WIZ_ROBE, IT_NONE },
+    { IT_AIR_RUNE, IT_WATER_RUNE, IT_EARTH_RUNE, IT_FIRE_RUNE, IT_CHAOS_RUNE,
+      IT_LAW_RUNE, IT_STAFF, IT_WIZ_HAT, IT_WIZ_ROBE, IT_NONE },
 };
 static int shop_sell_list[NUM_ITEMS];
 
@@ -3159,6 +3180,7 @@ static void render(void)
             case OBJ_ALTAR_WATER:rdpq_sprite_blit(spr[SPR_ALTAR_WATER], sx, sy, NULL); break;
             case OBJ_ALTAR_EARTH:rdpq_sprite_blit(spr[SPR_ALTAR_EARTH], sx, sy, NULL); break;
             case OBJ_ALTAR_FIRE: rdpq_sprite_blit(spr[SPR_ALTAR_FIRE], sx, sy, NULL); break;
+            case OBJ_ALTAR_CHAOS:rdpq_sprite_blit(spr[SPR_ALTAR_CHAOS], sx, sy, NULL); break;
             case OBJ_ALTAR_LAW:  rdpq_sprite_blit(spr[SPR_ALTAR_LAW], sx, sy, NULL); break;
             case OBJ_FURNACE:    rdpq_sprite_blit(spr[SPR_FURNACE], sx, sy, NULL); break;
             case OBJ_ANVIL:      rdpq_sprite_blit(spr[SPR_ANVIL], sx, sy, NULL); break;
@@ -3480,7 +3502,7 @@ static void render(void)
     }
     else if (ui_mode == UI_SPELL) {
         int px0 = SCREEN_W - 166, py0 = 18;
-        draw_panel(px0, py0, px0 + 158, py0 + 166);
+        draw_panel(px0, py0, px0 + 158, py0 + 172);
         draw_text(1, px0 + 6, py0 + 12, "Spellbook");
         draw_text(6, px0 + 6, py0 + 22, "A: select   B: close");
         for (int i = 0; i < NUM_SPELLS; i++) {
@@ -3496,10 +3518,15 @@ static void render(void)
         }
         if (cast_spell == SPELL_MELEE)
             draw_text(0, px0 + 6, py0 + 150, "Style: melee");
-        else
-            draw_text(0, px0 + 6, py0 + 150, "Cost %dx, have %d",
+        else {
+            draw_text(0, px0 + 6, py0 + 150, "Need %dx %s",
                       spellinfo[cast_spell].runes,
-                      inv_count(spellinfo[cast_spell].rune));
+                      iteminfo[spellinfo[cast_spell].rune].name);
+            if (spellinfo[cast_spell].runes2 > 0)
+                draw_text(0, px0 + 6, py0 + 160, " + %dx %s",
+                          spellinfo[cast_spell].runes2,
+                          iteminfo[spellinfo[cast_spell].rune2].name);
+        }
     }
     else if (ui_mode == UI_PRAYER) {
         static const char *catname[NUM_PCAT] = { "Def", "Str", "Atk", "Mag" };
