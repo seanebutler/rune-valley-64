@@ -137,7 +137,10 @@ enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_MITH_SWORD,  IT_MITH_HELM,  IT_MITH_SHIELD,  IT_MITH_BODY,
        IT_RUNE_SWORD,  IT_RUNE_HELM,  IT_RUNE_SHIELD,  IT_RUNE_BODY,
        IT_BANE, IT_DRAGONSTONE, IT_DRAGONFIRE,
-       IT_WATER_RUNE, IT_EARTH_RUNE, IT_LAW_RUNE, IT_CHAOS_RUNE, NUM_ITEMS };
+       IT_WATER_RUNE, IT_EARTH_RUNE, IT_LAW_RUNE, IT_CHAOS_RUNE,
+       IT_ROD, IT_LOBSTER_POT, IT_HARPOON,
+       IT_RAW_TROUT, IT_TROUT, IT_RAW_LOBSTER, IT_LOBSTER,
+       IT_RAW_SWORDFISH, IT_SWORDFISH, NUM_ITEMS };
 
 /* worn equipment slots; SLOT_NONE = item is not equippable */
 enum { SLOT_NONE, SLOT_WEAPON, SLOT_SHIELD, SLOT_HELM, SLOT_BODY };
@@ -220,6 +223,9 @@ enum {
     SPR_I_WATER_RUNE, SPR_I_EARTH_RUNE, SPR_I_LAW_RUNE,
     SPR_ALTAR_WATER, SPR_ALTAR_EARTH, SPR_ALTAR_LAW,
     SPR_I_CHAOS_RUNE, SPR_ALTAR_CHAOS,
+    SPR_I_ROD, SPR_I_LOBSTER_POT, SPR_I_HARPOON,
+    SPR_I_RAW_TROUT, SPR_I_TROUT, SPR_I_RAW_LOBSTER, SPR_I_LOBSTER,
+    SPR_I_RAW_SWORDFISH, SPR_I_SWORDFISH,
     NUM_SPR
 };
 
@@ -290,7 +296,10 @@ static const char *spr_files[NUM_SPR] = {
     "eq_df_wep_d", "eq_df_wep_u", "eq_df_wep_s", "eq_df_wep_sl",
     "item_water_rune", "item_earth_rune", "item_law_rune",
     "obj_altar_water", "obj_altar_earth", "obj_altar_law",
-    "item_chaos_rune", "obj_altar_chaos"
+    "item_chaos_rune", "obj_altar_chaos",
+    "item_rod", "item_lobster_pot", "item_harpoon",
+    "item_raw_trout", "item_trout", "item_raw_lobster", "item_lobster",
+    "item_raw_swordfish", "item_swordfish"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -350,6 +359,17 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     [IT_DRAGONSTONE]  ={ "Dragonstone",  SPR_I_DRAGONSTONE, 0,false },
     /* the Dragon's rare unique: a hybrid blade strong in melee AND magic */
     [IT_DRAGONFIRE]   ={ "Dragonfire blade",SPR_I_DRAGONFIRE,0,false, SLOT_WEAPON,22,21,2,40,false,18 },
+    /* fishing tackle: each tool lands a better fish at the spots */
+    [IT_ROD]          ={ "Fishing rod",   SPR_I_ROD,          0, true },
+    [IT_LOBSTER_POT]  ={ "Lobster pot",   SPR_I_LOBSTER_POT,  0, true },
+    [IT_HARPOON]      ={ "Harpoon",       SPR_I_HARPOON,      0, true },
+    /* the catch (cooked fish heal more the better they are) */
+    [IT_RAW_TROUT]    ={ "Raw trout",     SPR_I_RAW_TROUT,    0, false },
+    [IT_TROUT]        ={ "Trout",         SPR_I_TROUT,        7, false },
+    [IT_RAW_LOBSTER]  ={ "Raw lobster",   SPR_I_RAW_LOBSTER,  0, false },
+    [IT_LOBSTER]      ={ "Lobster",       SPR_I_LOBSTER,     12, false },
+    [IT_RAW_SWORDFISH]={ "Raw swordfish", SPR_I_RAW_SWORDFISH,0, false },
+    [IT_SWORDFISH]    ={ "Swordfish",     SPR_I_SWORDFISH,   16, false },
 };
 
 /* shop value in coins; buy price = value, sell price = value/2 (min 1).
@@ -368,8 +388,25 @@ static const int item_value[NUM_ITEMS] = {
     [IT_MITH_SWORD]=500, [IT_MITH_HELM]=400, [IT_MITH_SHIELD]=600, [IT_MITH_BODY]=1000,
     [IT_RUNE_SWORD]=1500, [IT_RUNE_HELM]=1200, [IT_RUNE_SHIELD]=2000, [IT_RUNE_BODY]=3500,
     [IT_DRAGONSTONE]=2000,
+    [IT_ROD]=20, [IT_LOBSTER_POT]=40, [IT_HARPOON]=80,
+    [IT_RAW_TROUT]=10, [IT_TROUT]=25, [IT_RAW_LOBSTER]=30, [IT_LOBSTER]=60,
+    [IT_RAW_SWORDFISH]=50, [IT_SWORDFISH]=100,
 };
 static int sell_price(int item) { int v = item_value[item]; return v ? (v / 2 < 1 ? 1 : v / 2) : 0; }
+
+/* fishing tiers: the tackle you carry (and your Fishing level) decides the
+   catch at a fishing spot. Cooked fish heal per iteminfo[].heal, and burn
+   until you reach cook_lvl. */
+enum { FISH_SHRIMP, FISH_TROUT, FISH_LOBSTER, FISH_SWORD, NUM_FISH };
+static const struct {
+    const char *name; int raw, cooked, tool;
+    int fish_lvl, cook_lvl, base_p, fish_xp, cook_xp;
+} fishinfo[NUM_FISH] = {
+    { "shrimp",    IT_RAW_SHRIMP,    IT_SHRIMP,    IT_NET,          1, 34, 20, 100,  300 },
+    { "trout",     IT_RAW_TROUT,     IT_TROUT,     IT_ROD,         20, 40, 12, 175,  500 },
+    { "lobster",   IT_RAW_LOBSTER,   IT_LOBSTER,   IT_LOBSTER_POT, 40, 55,  8, 300,  900 },
+    { "swordfish", IT_RAW_SWORDFISH, IT_SWORDFISH, IT_HARPOON,     50, 70,  6, 400, 1200 },
+};
 
 static int gp = 0;     /* the player's coins */
 
@@ -1567,6 +1604,23 @@ static void do_teleport(int spell, int tx, int ty, const char *where)
 
 static void stop_action(void) { pl.state = ST_IDLE; }
 
+/* the best fish the held tackle + Fishing level can land (-1 = no tackle) */
+static int pick_fish(void)
+{
+    for (int f = NUM_FISH - 1; f >= 0; f--)
+        if (has_item(fishinfo[f].tool) && level_of(SK_FISH) >= fishinfo[f].fish_lvl)
+            return f;
+    return -1;
+}
+
+/* the first raw fish in the pack, for cooking (-1 = none) */
+static int raw_fish_kind(void)
+{
+    for (int f = 0; f < NUM_FISH; f++)
+        if (has_item(fishinfo[f].raw)) return f;
+    return -1;
+}
+
 static void tick_skilling(void)
 {
     int ax = pl.act_x, ay = pl.act_y;
@@ -1643,42 +1697,43 @@ static void tick_skilling(void)
     }
     case ST_FISH: {
         if (object[ay][ax] != OBJ_FISH) { stop_action(); break; }
+        int f = pick_fish();
+        if (f < 0) { stop_action(); break; }
         if (--pl.act_timer > 0) break;
         pl.act_timer = 5;
         if (inv_full()) { msg("Your inventory is too full to carry any more."); stop_action(); break; }
-        int fs = level_of(SK_FISH);
-        int p = 20 + fs * 2;
+        int p = fishinfo[f].base_p + level_of(SK_FISH) * 2;
         if (p > 85) p = 85;
+        sfx(SND_SPLASH);
         if (chance(p)) {
-            sfx(SND_SPLASH);
-            add_item(IT_RAW_SHRIMP);
-            msg("You catch some shrimp.");
-            add_xp(SK_FISH, 100, true);
-        } else {
-            sfx(SND_SPLASH);
+            add_item(fishinfo[f].raw);
+            msg("You catch some %s.", fishinfo[f].name);
+            add_xp(SK_FISH, fishinfo[f].fish_xp, true);
         }
         break;
     }
     case ST_COOK: {
         if (object[ay][ax] != OBJ_FIRE) { stop_action(); break; }
-        if (!has_item(IT_RAW_SHRIMP)) { stop_action(); break; }
+        int f = raw_fish_kind();
+        if (f < 0) { stop_action(); break; }
         if (--pl.act_timer > 0) break;
         pl.act_timer = 4;
-        remove_item(IT_RAW_SHRIMP);
+        remove_item(fishinfo[f].raw);
         int ck = level_of(SK_COOK);
-        int p_burn = 45 - ck;
-        if (ck >= 34) p_burn = 0;
-        if (p_burn < 5 && ck < 34) p_burn = 5;
+        int p_burn = fishinfo[f].cook_lvl + 11 - ck;   /* burns until cook_lvl */
+        if (ck >= fishinfo[f].cook_lvl) p_burn = 0;
+        else if (p_burn > 50) p_burn = 50;
+        else if (p_burn < 4) p_burn = 4;
         sfx(SND_COOK);
         if (chance(p_burn)) {
             add_item(IT_BURNT);
-            msg("You accidentally burn the shrimp.");
+            msg("You accidentally burn the %s.", fishinfo[f].name);
         } else {
-            add_item(IT_SHRIMP);
-            msg("You successfully cook some shrimp.");
-            add_xp(SK_COOK, 300, true);
+            add_item(fishinfo[f].cooked);
+            msg("You successfully cook the %s.", fishinfo[f].name);
+            add_xp(SK_COOK, fishinfo[f].cook_xp, true);
         }
-        if (!has_item(IT_RAW_SHRIMP)) stop_action();
+        if (raw_fish_kind() < 0) stop_action();
         break;
     }
     case ST_LIGHT: {
@@ -2640,18 +2695,21 @@ static void interact(void)
         msg("There is no ore currently available in this rock.");
         break;
     case OBJ_FISH:
-        if (!has_item(IT_NET)) { msg("You need a net to catch these fish."); return; }
+        if (pick_fish() < 0) {
+            msg("You need fishing tackle - a net, rod, pot or harpoon.");
+            return;
+        }
         pl.state = ST_FISH; pl.act_timer = 3;
-        msg("You cast out your net...");
+        msg("You cast out your line...");
         break;
     case OBJ_BOOTH:
         ui_mode = UI_BANK;
         bank_cursor = 0;
         break;
     case OBJ_FIRE:
-        if (has_item(IT_RAW_SHRIMP)) {
+        if (raw_fish_kind() >= 0) {
             pl.state = ST_COOK; pl.act_timer = 2;
-            msg("You cook the shrimp on the fire.");
+            msg("You set your catch over the fire.");
         } else {
             msg("The fire is nice and warm.");
         }
@@ -2727,7 +2785,7 @@ static const char *context_hint(void)
     case OBJ_ROCK_COPPER: return "A: Mine Copper rock";
     case OBJ_ROCK_TIN:    return "A: Mine Tin rock";
     case OBJ_ROCK_IRON:   return "A: Mine Iron rock";
-    case OBJ_FISH:        return "A: Net Fishing spot";
+    case OBJ_FISH:        return "A: Fish here";
     case OBJ_BOOTH:       return "A: Use Bank booth";
     case OBJ_FIRE:        return "A: Cook on Fire";
     case OBJ_ESSENCE:     return "A: Mine Essence rock";
@@ -2798,16 +2856,18 @@ static void use_inv_item(int slot)
     if (iteminfo[it].slot) { equip_from_inv(slot); return; }
     switch (it) {
     case IT_NONE: break;
-    case IT_SHRIMP:
+    case IT_SHRIMP: case IT_TROUT: case IT_LOBSTER: case IT_SWORDFISH: {
         if (pl.eat_cd > 0) break;
-        inv[slot] = IT_NONE;
+        int food = inv[slot];
+        inv[slot] = IT_NONE; inv_qty[slot] = 0;
         pl.eat_cd = 3;
-        pl.hp += iteminfo[IT_SHRIMP].heal;
+        pl.hp += iteminfo[food].heal;
         int maxhp = level_of(SK_HP);
         if (pl.hp > maxhp) pl.hp = maxhp;
         sfx_ui(SND_EAT);
-        msg("You eat the shrimp. It heals some health.");
+        msg("You eat the %s. It heals %d HP.", iteminfo[food].name, iteminfo[food].heal);
         break;
+    }
     case IT_BONES:
         inv[slot] = IT_NONE;
         add_xp(SK_PRAY, 45, true);
@@ -2827,7 +2887,7 @@ static void use_inv_item(int slot)
         msg("You attempt to light the logs.");
         break;
     }
-    case IT_RAW_SHRIMP:
+    case IT_RAW_SHRIMP: case IT_RAW_TROUT: case IT_RAW_LOBSTER: case IT_RAW_SWORDFISH:
         msg("You should cook this on a fire first.");
         break;
     case IT_BURNT:
@@ -2851,7 +2911,10 @@ static void use_inv_item(int slot)
     case IT_CHAOS_RUNE:msg("Chaos runes - bolt spells need one to fire."); break;
     case IT_AXE:    msg("A woodcutter's best friend."); break;
     case IT_PICK:   msg("Used for mining rocks."); break;
-    case IT_NET:    msg("Used to catch shrimp at fishing spots."); break;
+    case IT_NET:    msg("Net the shrimp at fishing spots."); break;
+    case IT_ROD:    msg("A fishing rod - lands trout at the spots (Fishing 20)."); break;
+    case IT_LOBSTER_POT: msg("A lobster pot - catches lobster (Fishing 40)."); break;
+    case IT_HARPOON: msg("A harpoon - spears swordfish (Fishing 50)."); break;
     case IT_TINDER: msg("Useful for lighting fires."); break;
     }
 }
@@ -2934,7 +2997,8 @@ static const char *shop_names[NUM_SHOPS] = {
     "General Store", "Weapon Shop", "Armoury", "Magic Shop"
 };
 static const int shop_stock[NUM_SHOPS][20] = {
-    { IT_AXE, IT_PICK, IT_NET, IT_TINDER, IT_HAMMER, IT_RAW_SHRIMP, IT_SHRIMP, IT_NONE },
+    { IT_AXE, IT_PICK, IT_NET, IT_ROD, IT_LOBSTER_POT, IT_HARPOON,
+      IT_TINDER, IT_HAMMER, IT_RAW_SHRIMP, IT_SHRIMP, IT_NONE },
     { IT_BRONZE_SWORD, IT_IRON_SWORD, IT_STEEL_SWORD, IT_MITH_SWORD, IT_RUNE_SWORD, IT_NONE },
     { IT_BRONZE_HELM, IT_BRONZE_SHIELD, IT_BRONZE_BODY,
       IT_IRON_HELM, IT_IRON_SHIELD, IT_IRON_BODY,

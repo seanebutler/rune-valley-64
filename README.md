@@ -15,11 +15,18 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   and respawn
 - **Mining** — copper and tin near the west path, iron (level 15) further out;
   rocks deplete and respawn
-- **Fishing** — net shrimp at the rippling spots along the river
+- **Fishing** — the **tackle you carry** decides the catch at the rippling
+  river spots: a **net** lands shrimp (level 1), a **fishing rod** trout
+  (20), a **lobster pot** lobster (40), and a **harpoon** swordfish (50). Buy
+  rod, pot and harpoon at the General Store; you bring up the best fish your
+  gear and level allow
 - **Firemaking** — use logs from the inventory with a tinderbox in your pack;
   your character steps politely to the west as the fire catches
-- **Cooking** — cook raw shrimp on a fire; burn rates drop as you level
-  (never burn again at 34)
+- **Cooking** — cook your catch on a fire; each fish burns until you reach its
+  cooking level (shrimp 34, trout 40, lobster 55, swordfish 70). Eating the
+  cooked fish heals more the better it is — shrimp 3, trout 7, lobster 12,
+  swordfish 16 HP — so a harpooned, well-cooked swordfish is serious healing
+  for the dungeon
 - **Combat** — level-2 goblins roam east of the bridge; they are aggressive,
   they hit 1s, and they drop bones
 - **The training pasture** — just east of where you wash up, **Sergeant Hardy**
@@ -117,7 +124,8 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   if you fall, you wake safely back on the surface
 - **Banking** — a bank with deposit-all and per-item withdrawal sits at the
   north end of the path
-- **Hitpoints** start at level 10, regenerate 1 per minute, and shrimp heal 3
+- **Hitpoints** start at level 10, regenerate 1 per minute, and cooked fish
+  heal 3–16 depending on the catch
 - The **XP table is the real one** (level 99 = 13,034,431 xp — good luck on a
   cartridge)
 - Run energy drains while running and recharges while you walk or stand

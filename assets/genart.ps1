@@ -645,6 +645,128 @@ New-ShrimpIcon 'item_raw_shrimp'   '#e8b8b0' '#c08a84'
 New-ShrimpIcon 'item_shrimp'       '#e87a5a' '#b85a40'
 New-ShrimpIcon 'item_burnt_shrimp' '#3a3a3a' '#222222'
 
+# Fish: a generic fish shape (trout); raw vs cooked differ by palette
+function New-FishIcon([string]$name, [string]$body, [string]$dark) {
+    Save-Sprite $name @{ 'p'=$body; 'q'=$dark } @(
+        '................',
+        '................',
+        '.......pp.......',
+        '.....pppppp.....',
+        '...pppppppppp...',
+        '..qpppppppppppq.',
+        '.qpppppppppppqqq',
+        '..qpppppppppppq.',
+        '...pppppppppp...',
+        '.....pppppp.....',
+        '.......pp.......',
+        '................',
+        '................',
+        '................',
+        '................',
+        '................')
+}
+New-FishIcon 'item_raw_trout' '#9aa6b0' '#5a6670'
+New-FishIcon 'item_trout'     '#c88838' '#8a5a20'
+
+# Lobster: claws up top, body, tail fan
+function New-LobsterIcon([string]$name, [string]$body, [string]$dark) {
+    Save-Sprite $name @{ 'p'=$body; 'q'=$dark } @(
+        '................',
+        '..p.........p...',
+        '..pp.......pp...',
+        '...pp.....pp....',
+        '....pppppppp....',
+        '...pppppppppp...',
+        '...pqpppppqpp...',
+        '....pppppppp....',
+        '.....pppppp.....',
+        '......p..p......',
+        '................',
+        '................',
+        '................',
+        '................',
+        '................',
+        '................')
+}
+New-LobsterIcon 'item_raw_lobster' '#4a6a8a' '#2a4a6a'
+New-LobsterIcon 'item_lobster'     '#d83820' '#a02010'
+
+# Swordfish: a long fish with a pointed bill
+function New-SwordfishIcon([string]$name, [string]$body, [string]$dark) {
+    Save-Sprite $name @{ 'p'=$body; 'q'=$dark } @(
+        '................',
+        '................',
+        '................',
+        '.....ppppppp....',
+        '....ppppppppppq.',
+        'ppppppppppppppqq',
+        '....ppppppppppq.',
+        '.....ppppppp....',
+        '................',
+        '................',
+        '................',
+        '................',
+        '................',
+        '................',
+        '................',
+        '................')
+}
+New-SwordfishIcon 'item_raw_swordfish' '#aeb6be' '#6a727a'
+New-SwordfishIcon 'item_swordfish'     '#d09838' '#9a6820'
+
+# Fishing tackle
+Save-Sprite 'item_rod' @{ 'w'='#c8a060'; 'h'='#6a4a28' } @(
+    '.............ww.',
+    '............ww..',
+    '...........ww...',
+    '..........ww....',
+    '.........ww.....',
+    '........ww......',
+    '.......ww.......',
+    '......ww........',
+    '.....ww.........',
+    '....ww..........',
+    '...hh...........',
+    '..hh............',
+    '.h..............',
+    '................',
+    '................',
+    '................')
+Save-Sprite 'item_lobster_pot' @{ 'w'='#a07840' } @(
+    '................',
+    '................',
+    '...wwwwwwwww....',
+    '..w.w.w.w.w.w...',
+    '..wwwwwwwwwww...',
+    '..w.w.w.w.w.w...',
+    '..wwwwwwwwwww...',
+    '..w.w.w.w.w.w...',
+    '..wwwwwwwwwww...',
+    '...wwwwwwwww....',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................')
+Save-Sprite 'item_harpoon' @{ 'w'='#b8c0c8'; 'h'='#7a5a30' } @(
+    '.......w........',
+    '......www.......',
+    '.....w.w.w......',
+    '.......w........',
+    '.......w........',
+    '.......w........',
+    '.......w........',
+    '.......w........',
+    '.......w........',
+    '.......w........',
+    '.......w........',
+    '.......w........',
+    '......hhh.......',
+    '................',
+    '................',
+    '................')
+
 Save-Sprite 'item_axe' @{ 'h'='#6e5230'; 'b'='#b87f4e'; 'd'='#94633a' } @(
     '................',
     '....bbb.........',
