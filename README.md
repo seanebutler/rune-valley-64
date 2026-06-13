@@ -39,7 +39,8 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   your inventory to equip it. Four slots — weapon, shield, helm, body — each
   with Attack/Strength/Defence bonuses that feed straight into the combat
   formulas. Bronze gear wears at level 1, iron at Defence 10. You start with a
-  bronze sword in your pack to wield
+  bronze sword in your pack to wield. **Worn gear is drawn on your character** —
+  helm, platebody, sword and shield all show on the sprite in every facing
 - **A quest!** — *The Chef's Little Problem*: Chef Bouillon by the bank path
   needs 3 goblins bashed and 2 cooked shrimp delivered. Chunky xp rewards,
   as is right and proper

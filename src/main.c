@@ -169,6 +169,15 @@ enum {
     SPR_I_BRONZE_HELM, SPR_I_IRON_HELM, SPR_I_BRONZE_SHIELD, SPR_I_IRON_SHIELD,
     SPR_I_BRONZE_BODY, SPR_I_IRON_BODY,
     SPR_BOLT_AIR, SPR_BOLT_FIRE,
+    /* worn-equipment overlays: 4 facings (down,up,side,side-left) per slot */
+    SPR_EQ_BZ_HELM_D, SPR_EQ_BZ_HELM_U, SPR_EQ_BZ_HELM_S, SPR_EQ_BZ_HELM_SL,
+    SPR_EQ_BZ_BODY_D, SPR_EQ_BZ_BODY_U, SPR_EQ_BZ_BODY_S, SPR_EQ_BZ_BODY_SL,
+    SPR_EQ_BZ_WEP_D,  SPR_EQ_BZ_WEP_U,  SPR_EQ_BZ_WEP_S,  SPR_EQ_BZ_WEP_SL,
+    SPR_EQ_BZ_SHD_D,  SPR_EQ_BZ_SHD_U,  SPR_EQ_BZ_SHD_S,  SPR_EQ_BZ_SHD_SL,
+    SPR_EQ_IR_HELM_D, SPR_EQ_IR_HELM_U, SPR_EQ_IR_HELM_S, SPR_EQ_IR_HELM_SL,
+    SPR_EQ_IR_BODY_D, SPR_EQ_IR_BODY_U, SPR_EQ_IR_BODY_S, SPR_EQ_IR_BODY_SL,
+    SPR_EQ_IR_WEP_D,  SPR_EQ_IR_WEP_U,  SPR_EQ_IR_WEP_S,  SPR_EQ_IR_WEP_SL,
+    SPR_EQ_IR_SHD_D,  SPR_EQ_IR_SHD_U,  SPR_EQ_IR_SHD_S,  SPR_EQ_IR_SHD_SL,
     NUM_SPR
 };
 
@@ -201,7 +210,15 @@ static const char *spr_files[NUM_SPR] = {
     "item_bronze_sword", "item_iron_sword", "item_iron_axe", "item_iron_pick",
     "item_bronze_helm", "item_iron_helm", "item_bronze_shield",
     "item_iron_shield", "item_bronze_body", "item_iron_body",
-    "obj_bolt_air", "obj_bolt_fire"
+    "obj_bolt_air", "obj_bolt_fire",
+    "eq_bz_helm_d", "eq_bz_helm_u", "eq_bz_helm_s", "eq_bz_helm_sl",
+    "eq_bz_body_d", "eq_bz_body_u", "eq_bz_body_s", "eq_bz_body_sl",
+    "eq_bz_wep_d",  "eq_bz_wep_u",  "eq_bz_wep_s",  "eq_bz_wep_sl",
+    "eq_bz_shd_d",  "eq_bz_shd_u",  "eq_bz_shd_s",  "eq_bz_shd_sl",
+    "eq_ir_helm_d", "eq_ir_helm_u", "eq_ir_helm_s", "eq_ir_helm_sl",
+    "eq_ir_body_d", "eq_ir_body_u", "eq_ir_body_s", "eq_ir_body_sl",
+    "eq_ir_wep_d",  "eq_ir_wep_u",  "eq_ir_wep_s",  "eq_ir_wep_sl",
+    "eq_ir_shd_d",  "eq_ir_shd_u",  "eq_ir_shd_s",  "eq_ir_shd_sl"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -1934,6 +1951,48 @@ static int actor_sprite(int facing, bool moving, float walk_anim)
     return idx;
 }
 
+/* worn-gear overlays: base sprite (the _D facing) for an equipped item, or -1.
+   the 4 facings (down,up,side,side-left) are consecutive after the base. */
+static int equip_overlay_base(int item)
+{
+    switch (item) {
+    case IT_BRONZE_HELM:   return SPR_EQ_BZ_HELM_D;
+    case IT_IRON_HELM:     return SPR_EQ_IR_HELM_D;
+    case IT_BRONZE_BODY:   return SPR_EQ_BZ_BODY_D;
+    case IT_IRON_BODY:     return SPR_EQ_IR_BODY_D;
+    case IT_BRONZE_SWORD:  return SPR_EQ_BZ_WEP_D;
+    case IT_IRON_SWORD:    return SPR_EQ_IR_WEP_D;
+    case IT_BRONZE_SHIELD: return SPR_EQ_BZ_SHD_D;
+    case IT_IRON_SHIELD:   return SPR_EQ_IR_SHD_D;
+    default:               return -1;
+    }
+}
+
+/* facing (0 down,1 up,2 left,3 right) -> overlay dir (0 down,1 up,2 side,3 side-left) */
+static int overlay_dir(int facing)
+{
+    switch (facing) {
+    case 0:  return 0;
+    case 1:  return 1;
+    case 2:  return 3;   /* left uses the baked flip */
+    default: return 2;   /* right */
+    }
+}
+
+static void draw_player_equipment(int px, int py, int facing)
+{
+    /* draw order: body, helm, shield, then weapon on top */
+    static const int order[4] = { SLOT_BODY, SLOT_HELM, SLOT_SHIELD, SLOT_WEAPON };
+    int dir = overlay_dir(facing);
+    for (int i = 0; i < 4; i++) {
+        int item = equipped[order[i] - 1];
+        if (item == IT_NONE) continue;
+        int base = equip_overlay_base(item);
+        if (base < 0) continue;
+        rdpq_sprite_blit(spr[base + dir], px, py, NULL);
+    }
+}
+
 static void draw_entity_hpbar(float sx, float sy, int hp, int maxhp)
 {
     int w = 16;
@@ -2071,9 +2130,10 @@ static void render(void)
         /* player */
         if (pl_row == y) {
             int idx = actor_sprite(pl.facing, pl.moving, pl.walk_anim);
-            rdpq_sprite_blit(spr[SPR_PL_DOWN_A + idx],
-                             ((int)(pl.px - 8) - cam_x) & ~1,
-                             (int)(pl.py - 20) - cam_y, NULL);
+            int px = ((int)(pl.px - 8) - cam_x) & ~1;
+            int py = (int)(pl.py - 20) - cam_y;
+            rdpq_sprite_blit(spr[SPR_PL_DOWN_A + idx], px, py, NULL);
+            draw_player_equipment(px, py, pl.facing);
         }
     }
 
