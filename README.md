@@ -38,16 +38,21 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   prayers steadily **drain your prayer points** (you have one per Prayer level).
   Pray at any rune altar — with no essence on you — to top them back up
 - **Runecraft** — mine rune essence from the glittering rock in the northwest
-  ruins (it never depletes) and bind it at the Air altar beside it, or brave
-  the goblin camp to reach the Fire altar (level 14). Runes **stack** in a
-  single inventory slot, with the count drawn over the icon
-- **Magic** — open the spellbook (C-left) and pick an attack spell: Wind Strike
-  (1 air rune), Fire Strike (1 fire rune, Magic 13) or the hard-hitting **Fire
-  Bolt** (3 fire runes, Magic 35). With a spell chosen, A flings a bolt at the
-  nearest goblin from up to five tiles away, spending its runes and earning
-  Magic xp. The spellbook also holds **Home Teleport** (1 air rune) — select it
-  to whisk yourself straight back to the surface spawn, your escape hatch from
-  the dungeon. You start with 25 air runes to get going; craft more at the altar.
+  ruins (it never depletes) and bind it at one of the altars there: **Air**
+  (level 1), **Water** (5), **Earth** (9) and the violet **Law** altar (25,
+  for teleport runes), or brave the goblin camp to reach the **Fire** altar
+  (14). Runes **stack** in a single inventory slot, with the count drawn over
+  the icon
+- **Magic** — open the spellbook (C-left) and pick an attack spell. The element
+  strikes ladder up — **Wind** (air, lvl 1), **Water** (water, 5), **Earth**
+  (earth, 9), **Fire** (fire, 13) — then the heavy bolts: **Earth Bolt**
+  (3 earth, 29) and **Fire Bolt** (3 fire, 35). With a spell chosen, A flings a
+  bolt at the nearest goblin from up to five tiles away, spending its runes and
+  earning Magic xp. The book also holds three **teleports**: **Home** (1 air,
+  your dungeon escape to the surface spawn), and — powered by the unique **Law
+  rune** — **Bank** (lvl 20) and **Cave** (lvl 25) for fast travel to the bank
+  and the dungeon mouth. You start with 25 air runes; craft more at the altars
+  or buy any rune (laws included) at the Magic Shop.
   **Wizard gear** — a staff, hat and robe carry a Magic bonus that boosts your
   spell accuracy and max hit (worn in the weapon/helm/body slots, drawn on your
   character). Win them as **monster drops**

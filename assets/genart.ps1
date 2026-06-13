@@ -773,8 +773,11 @@ function New-Altar([string]$name, [string]$glow, [string]$core) {
         '................',
         '................')
 }
-New-Altar 'obj_altar_air'  '#7ae0f0' '#e8ffff'
-New-Altar 'obj_altar_fire' '#f08030' '#ffe8a0'
+New-Altar 'obj_altar_air'   '#7ae0f0' '#e8ffff'
+New-Altar 'obj_altar_fire'  '#f08030' '#ffe8a0'
+New-Altar 'obj_altar_water' '#4a90e0' '#d0e8ff'
+New-Altar 'obj_altar_earth' '#6aa83a' '#dceaa0'
+New-Altar 'obj_altar_law'   '#b060e0' '#f0d8ff'
 
 # Item icons
 Save-Sprite 'item_essence' @{ 'a'='#aebed8'; 'b'='#8a9ab4'; 'w'='#e8f8ff' } @(
@@ -1367,6 +1370,11 @@ New-Recolor 'pl_down_a' 'knight_down_a' @{ '#3e5e7e' = '#8a92a0'; '#4a3320' = '#
 # Wight: an undead-green recolour of the skeleton (floor-2 fodder)
 New-Recolor 'skeleton_a' 'wight_a' @{ '#e8e4d8' = '#8aa89a'; '#b8b4a4' = '#5e7a6c' }
 New-Recolor 'skeleton_b' 'wight_b' @{ '#e8e4d8' = '#8aa89a'; '#b8b4a4' = '#5e7a6c' }
+
+# Water/earth/law runes: recolour the air rune's glyph to each element
+New-Recolor 'item_air_rune' 'item_water_rune' @{ '#48b8d8' = '#3a78d0' }
+New-Recolor 'item_air_rune' 'item_earth_rune' @{ '#48b8d8' = '#5a9a3a' }
+New-Recolor 'item_air_rune' 'item_law_rune'   @{ '#48b8d8' = '#b050e0' }
 
 # Cow: placid training fodder. Side view, head left, 16x16, 2 frames (legs shuffle)
 $cowPal = @{ 'w'='#f0ece0'; 'p'='#3a342e'; 'k'='#1c1813'; 'n'='#d98a8a'; 'h'='#d8c49a'; 'e'='#1c1813' }
