@@ -133,7 +133,10 @@ runs through the front door and light campfires you can cook on.
 
 The game opens on a **title screen** (the valley lives behind it) and saves
 to **cartridge EEPROM**: silent autosave every minute, plus saves on bank
-visits and death. The title offers Continue when a valid save exists.
+visits and death. The title offers Continue when a valid save exists. The save
+format is **forward-compatible** — new gear, skills and content slot into
+reserved space, so updates no longer wipe your progress (and the old fixed
+layout is migrated automatically on first load).
 
 ## Controls
 

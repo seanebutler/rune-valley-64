@@ -962,46 +962,84 @@ static bool tile_walkable(int x, int y)
 
 /* ------------------------------------------------------------ saves (EEPROM 4K) */
 
-#define SAVE_MAGIC 0x52563634u     /* 'RV64' */
-#define SAVE_VERSION 14
+#define SAVE_MAGIC   0x52563634u   /* 'RV64' */
+#define SAVE_VERSION 15            /* current save format */
+#define SAVE_VER_MIN 15            /* oldest forward-compatible format we read */
+#define SAVE_VER_V14 14            /* the last fixed-layout save; auto-migrated */
+
+/* Forward-compatible save. Arrays use generous fixed caps so adding items,
+   skills or slots never shifts the layout, and new scalar fields are carved
+   from reserved[] - so future content no longer wipes saves. Only raise a cap
+   (and re-test) if the game ever exceeds one. */
+#define SAVE_CAP_SKILLS 24
+#define SAVE_CAP_INV    32
+#define SAVE_CAP_SLOTS  8
+#define SAVE_CAP_ITEMS  96
 
 typedef struct __attribute__((packed)) {
     uint32_t magic;
     uint8_t  version;
     uint8_t  hp;
     uint8_t  tx, ty;
-    int32_t  xp[NUM_SKILLS];
-    uint8_t  inv[INV_SIZE];
-    uint8_t  inv_qty[INV_SIZE];
-    uint16_t bank[NUM_ITEMS];
+    uint8_t  run_energy;
+    uint8_t  quest_state, quest_kills;
+    uint8_t  wquest, dquest;
+    uint8_t  cquest, cow_kills;
+    uint32_t gp;
+    int32_t  xp[SAVE_CAP_SKILLS];
+    uint8_t  inv[SAVE_CAP_INV];
+    uint8_t  inv_qty[SAVE_CAP_INV];
+    uint8_t  equipped[SAVE_CAP_SLOTS];
+    uint16_t bank[SAVE_CAP_ITEMS];
+    uint8_t  reserved[32];         /* future scalar fields; zero in older saves */
+    uint16_t checksum;
+    uint8_t  pad2[3];              /* align sizeof to the 8-byte EEPROM block */
+} save_t;
+_Static_assert(sizeof(save_t) % 8 == 0, "save_t must be EEPROM-block aligned");
+_Static_assert(sizeof(save_t) <= 512,   "save_t must fit EEPROM 4k");
+_Static_assert(NUM_SKILLS <= SAVE_CAP_SKILLS, "raise SAVE_CAP_SKILLS");
+_Static_assert(INV_SIZE   <= SAVE_CAP_INV,    "raise SAVE_CAP_INV");
+_Static_assert(NUM_SLOTS  <= SAVE_CAP_SLOTS,  "raise SAVE_CAP_SLOTS");
+_Static_assert(NUM_ITEMS  <= SAVE_CAP_ITEMS,  "raise SAVE_CAP_ITEMS");
+
+/* v14: the previous fixed-layout save, dimensions frozen. Loaded once and
+   migrated so existing progress survives. Do NOT use the live constants here. */
+typedef struct __attribute__((packed)) {
+    uint32_t magic;
+    uint8_t  version, hp, tx, ty;
+    int32_t  xp[13];
+    uint8_t  inv[28];
+    uint8_t  inv_qty[28];
+    uint16_t bank[53];
     uint32_t gp;
     uint8_t  run_energy;
     uint8_t  quest_state, quest_kills;
     uint8_t  wquest, dquest;
-    uint8_t  cquest, cow_kills;   /* v10: Basic Training quest */
-    uint8_t  equipped[NUM_SLOTS];
+    uint8_t  cquest, cow_kills;
+    uint8_t  equipped[4];
     uint8_t  pad;
     uint16_t checksum;
-    uint8_t  pad2[8];          /* keeps sizeof a multiple of the 8-byte block */
-} save_t;
-
-_Static_assert(sizeof(save_t) % 8 == 0, "save_t must be EEPROM-block aligned");
+    uint8_t  pad2[8];
+} save_v14_t;
+_Static_assert(sizeof(save_v14_t) == 248, "v14 layout is frozen");
 
 static int save_timer = 0;
 
-static uint16_t save_checksum(const save_t *s)
+static uint16_t csum_bytes(const void *p, size_t n)
 {
-    const uint8_t *p = (const uint8_t *)s;
+    const uint8_t *b = (const uint8_t *)p;
     uint16_t sum = 0;
-    for (size_t i = 0; i < offsetof(save_t, checksum); i++)
-        sum += p[i];
+    for (size_t i = 0; i < n; i++) sum += b[i];
     return sum;
 }
 
 static void save_game(void)
 {
     if (!eeprom_present()) return;
-    save_t s = { .magic = SAVE_MAGIC, .version = SAVE_VERSION };
+    save_t s;
+    memset(&s, 0, sizeof s);       /* zero reserved[] + unused array tails */
+    s.magic = SAVE_MAGIC;
+    s.version = SAVE_VERSION;
     s.hp = pl.hp;
     s.tx = pl.tx; s.ty = pl.ty;
     for (int i = 0; i < NUM_SKILLS; i++) s.xp[i] = xp[i];
@@ -1019,7 +1057,7 @@ static void save_game(void)
     s.cquest = cquest;
     s.cow_kills = cow_kills;
     for (int i = 0; i < NUM_SLOTS; i++) s.equipped[i] = equipped[i];
-    s.checksum = save_checksum(&s);
+    s.checksum = csum_bytes(&s, offsetof(save_t, checksum));
 
     /* write only the blocks that changed, and keep the audio mixer fed
        between block writes: a long blocking EEPROM burst starves the
@@ -1039,48 +1077,102 @@ static void save_game(void)
     save_found = true;
 }
 
-static bool save_peek(save_t *s)
+/* is there a save we can load - current format, or the migratable v14? */
+static bool save_present(void)
 {
     if (!eeprom_present()) return false;
-    eeprom_read_bytes((uint8_t *)s, 0, sizeof *s);
-    if (s->magic != SAVE_MAGIC || s->version != SAVE_VERSION) return false;
-    if (s->checksum != save_checksum(s)) return false;
-    return true;
+    uint8_t hdr[8];
+    eeprom_read_bytes(hdr, 0, sizeof hdr);
+    uint32_t magic;
+    memcpy(&magic, hdr, 4);
+    if (magic != SAVE_MAGIC) return false;
+    uint8_t ver = hdr[4];
+    if (ver == SAVE_VER_V14) {
+        save_v14_t o;
+        eeprom_read_bytes((uint8_t *)&o, 0, sizeof o);
+        return o.checksum == csum_bytes(&o, offsetof(save_v14_t, checksum));
+    }
+    if (ver >= SAVE_VER_MIN) {
+        save_t s;
+        eeprom_read_bytes((uint8_t *)&s, 0, sizeof s);
+        return s.checksum == csum_bytes(&s, offsetof(save_t, checksum));
+    }
+    return false;
 }
 
-static void load_game(void)
+/* migrate the frozen v14 layout into the current struct */
+static void v14_to_v15(const save_v14_t *o, save_t *n)
 {
-    save_t s;
-    if (!save_peek(&s)) return;
-    for (int i = 0; i < NUM_SKILLS; i++) xp[i] = s.xp[i];
+    memset(n, 0, sizeof *n);
+    n->magic = SAVE_MAGIC; n->version = SAVE_VERSION;
+    n->hp = o->hp; n->tx = o->tx; n->ty = o->ty;
+    n->run_energy = o->run_energy;
+    n->quest_state = o->quest_state; n->quest_kills = o->quest_kills;
+    n->wquest = o->wquest; n->dquest = o->dquest;
+    n->cquest = o->cquest; n->cow_kills = o->cow_kills;
+    n->gp = o->gp;
+    for (int i = 0; i < 13; i++) n->xp[i] = o->xp[i];
+    for (int i = 0; i < 28; i++) { n->inv[i] = o->inv[i]; n->inv_qty[i] = o->inv_qty[i]; }
+    for (int i = 0; i < 4;  i++) n->equipped[i] = o->equipped[i];
+    for (int i = 0; i < 53; i++) n->bank[i] = o->bank[i];
+}
+
+/* copy a (validated, current-format) save into the live game state */
+static void apply_save(const save_t *s)
+{
+    for (int i = 0; i < NUM_SKILLS; i++) xp[i] = s->xp[i];
     for (int i = 0; i < INV_SIZE; i++) {
-        inv[i] = s.inv[i] < NUM_ITEMS ? s.inv[i] : IT_NONE;
-        inv_qty[i] = (inv[i] == IT_NONE) ? 0 : (s.inv_qty[i] < 1 ? 1 : s.inv_qty[i]);
+        inv[i] = s->inv[i] < NUM_ITEMS ? s->inv[i] : IT_NONE;
+        inv_qty[i] = (inv[i] == IT_NONE) ? 0 : (s->inv_qty[i] < 1 ? 1 : s->inv_qty[i]);
     }
-    for (int i = 0; i < NUM_ITEMS; i++) bank[i] = s.bank[i];
-    gp = s.gp;
+    for (int i = 0; i < NUM_ITEMS; i++) bank[i] = s->bank[i];
+    gp = s->gp;
     int maxhp = level_of(SK_HP);
-    pl.hp = (s.hp >= 1 && s.hp <= maxhp) ? s.hp : maxhp;
-    pl.run_energy = s.run_energy <= 100 ? s.run_energy : 100;
-    quest_state = s.quest_state <= QUEST_DONE ? s.quest_state : QUEST_NONE;
-    quest_kills = s.quest_kills <= QUEST_KILLS_NEEDED ? s.quest_kills : 0;
-    wquest = s.wquest <= WQ_DONE ? s.wquest : WQ_NONE;
-    dquest = s.dquest <= DQ_DONE ? s.dquest : DQ_NONE;
-    cquest = s.cquest <= CQ_DONE ? s.cquest : CQ_NONE;
-    cow_kills = s.cow_kills <= CQ_COWS_NEEDED ? s.cow_kills : 0;
+    pl.hp = (s->hp >= 1 && s->hp <= maxhp) ? s->hp : maxhp;
+    pl.run_energy = s->run_energy <= 100 ? s->run_energy : 100;
+    quest_state = s->quest_state <= QUEST_DONE ? s->quest_state : QUEST_NONE;
+    quest_kills = s->quest_kills <= QUEST_KILLS_NEEDED ? s->quest_kills : 0;
+    wquest = s->wquest <= WQ_DONE ? s->wquest : WQ_NONE;
+    dquest = s->dquest <= DQ_DONE ? s->dquest : DQ_NONE;
+    cquest = s->cquest <= CQ_DONE ? s->cquest : CQ_NONE;
+    cow_kills = s->cow_kills <= CQ_COWS_NEEDED ? s->cow_kills : 0;
     for (int i = 0; i < NUM_SLOTS; i++) {
-        int it = s.equipped[i];
+        int it = s->equipped[i];
         /* only restore if it really belongs in this slot */
         equipped[i] = (it > 0 && it < NUM_ITEMS && iteminfo[it].slot == i + 1)
                       ? it : IT_NONE;
     }
-    if (tile_walkable(s.tx, s.ty)) { pl.tx = s.tx; pl.ty = s.ty; }
+    if (tile_walkable(s->tx, s->ty)) { pl.tx = s->tx; pl.ty = s->ty; }
     pl.mtx = pl.tx; pl.mty = pl.ty;
     pl.px = pl.tx * TILE + 8; pl.py = pl.ty * TILE + 12;
     /* prayer points are transient; you reload with a full prayer pool */
     deactivate_all_prayers();
     pray_pts = pray_max();
     pray_drain_acc = pray_regen = 0;
+}
+
+static void load_game(void)
+{
+    if (!eeprom_present()) return;
+    uint8_t hdr[8];
+    eeprom_read_bytes(hdr, 0, sizeof hdr);
+    uint32_t magic;
+    memcpy(&magic, hdr, 4);
+    if (magic != SAVE_MAGIC) return;
+    uint8_t ver = hdr[4];
+    save_t s;
+    if (ver == SAVE_VER_V14) {                 /* migrate the old layout */
+        save_v14_t o;
+        eeprom_read_bytes((uint8_t *)&o, 0, sizeof o);
+        if (o.checksum != csum_bytes(&o, offsetof(save_v14_t, checksum))) return;
+        v14_to_v15(&o, &s);
+    } else if (ver >= SAVE_VER_MIN) {           /* current/forward-compatible */
+        eeprom_read_bytes((uint8_t *)&s, 0, sizeof s);
+        if (s.checksum != csum_bytes(&s, offsetof(save_t, checksum))) return;
+    } else {
+        return;
+    }
+    apply_save(&s);
 }
 
 /* ------------------------------------------------------------ combat & death */
@@ -1244,6 +1336,23 @@ static void build_almanac(void)
                        iteminfo[t[i].item].name, t[i].qty, pct);
             else
                 al_add(6, "  %-21s %d%%", iteminfo[t[i].item].name, pct);
+        }
+    }
+
+    al_add(1, "== SPELLS ==  (spellbook, C-left)");
+    for (int sp = 1; sp < NUM_SPELLS; sp++) {   /* skip Melee */
+        al_add(4, "%s (Magic %d)", spellinfo[sp].name, spellinfo[sp].lvl);
+        if (spellinfo[sp].maxhit > 0) {
+            if (spellinfo[sp].runes2 > 0)
+                al_add(6, "  max hit %d - %dx %s + %dx %s", spellinfo[sp].maxhit,
+                       spellinfo[sp].runes,  iteminfo[spellinfo[sp].rune].name,
+                       spellinfo[sp].runes2, iteminfo[spellinfo[sp].rune2].name);
+            else
+                al_add(6, "  max hit %d - %dx %s", spellinfo[sp].maxhit,
+                       spellinfo[sp].runes, iteminfo[spellinfo[sp].rune].name);
+        } else {
+            al_add(6, "  teleport - %dx %s",
+                   spellinfo[sp].runes, iteminfo[spellinfo[sp].rune].name);
         }
     }
 }
@@ -3941,10 +4050,7 @@ int main(void)
         update_movement(dt_ms / 1000.0f);
 
         frame_counter++;
-        if (frame_counter == 10) {
-            save_t probe;
-            save_found = save_peek(&probe);
-        }
+        if (frame_counter == 10) save_found = save_present();
         render();
 
         if (audio_can_write()) {

@@ -45,6 +45,21 @@ foreach ($m in [regex]::Matches($src, '\[MOB_(\w+)\]\s*=\s*\{\s*"([^"]+)"\s*,\s*
     }
 }
 
+# --- spells: { "name", rune, runes, rune2, runes2, maxhit, lvl, xp } ---
+$spells = @()
+$mSpellBlock = [regex]::Match($src, 'spellinfo\[NUM_SPELLS\]\s*=\s*\{(.*?)\};', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+if ($mSpellBlock.Success) {
+    $rxS = '\{\s*"([^"]+)"\s*,\s*(IT_\w+)\s*,\s*(\d+)\s*,\s*(IT_\w+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\}'
+    foreach ($m in [regex]::Matches($mSpellBlock.Groups[1].Value, $rxS)) {
+        if ($m.Groups[1].Value -eq 'Melee') { continue }
+        $spells += [pscustomobject]@{
+            Name=$m.Groups[1].Value; Rune=$m.Groups[2].Value; Runes=[int]$m.Groups[3].Value
+            Rune2=$m.Groups[4].Value; Runes2=[int]$m.Groups[5].Value
+            MaxHit=[int]$m.Groups[6].Value; Lvl=[int]$m.Groups[7].Value
+        }
+    }
+}
+
 # --- mob -> drop-table name (parsed from the mob_drops() switch) ---
 $mobTable = @{}
 foreach ($m in [regex]::Matches($src, 'case\s+MOB_(\w+):\s*\*n\s*=\s*NDROPS\((\w+)\)')) {
@@ -143,6 +158,22 @@ foreach ($id in $mobOrder) {
     }
     W ''
 }
+W '---'
+W ''
+W '## Spells'
+W ''
+W 'Cast from the spellbook (C-left). Bolts need a Chaos rune on top of their'
+W 'element; teleports are powered by Law runes (Home uses an Air rune).'
+W ''
+W '| Spell | Magic level | Runes | Max hit |'
+W '|---|--:|---|--:|'
+foreach ($sp in $spells) {
+    $cost = "$($sp.Runes)x $(Item-Label $sp.Rune)"
+    if ($sp.Runes2 -gt 0) { $cost += " + $($sp.Runes2)x $(Item-Label $sp.Rune2)" }
+    $hit = if ($sp.MaxHit -gt 0) { "$($sp.MaxHit)" } else { 'teleport' }
+    W ("| {0} | {1} | {2} | {3} |" -f $sp.Name, $sp.Lvl, $cost, $hit)
+}
+W ''
 W '---'
 W ''
 W '## Notes'

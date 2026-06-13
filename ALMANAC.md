@@ -164,6 +164,25 @@ Hitpoints **150** | max hit **12** | defence **35**.
 
 ---
 
+## Spells
+
+Cast from the spellbook (C-left). Bolts need a Chaos rune on top of their
+element; teleports are powered by Law runes (Home uses an Air rune).
+
+| Spell | Magic level | Runes | Max hit |
+|---|--:|---|--:|
+| Wind Strike | 1 | 1x Air rune | 2 |
+| Water Strike | 5 | 1x Water rune | 3 |
+| Earth Strike | 9 | 1x Earth rune | 4 |
+| Fire Strike | 13 | 1x Fire rune | 5 |
+| Earth Bolt | 29 | 3x Earth rune + 1x Chaos rune | 7 |
+| Fire Bolt | 35 | 3x Fire rune + 1x Chaos rune | 8 |
+| Home Teleport | 1 | 1x Air rune | teleport |
+| Bank Teleport | 20 | 1x Law rune | teleport |
+| Cave Teleport | 25 | 1x Law rune | teleport |
+
+---
+
 ## Notes
 
 - **Dragonstone** is a trophy gem worth ~1000 coins at any shop's Sell tab.
