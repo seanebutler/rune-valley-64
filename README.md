@@ -35,9 +35,14 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   spell accuracy and max hit (worn in the weapon/helm/body slots, drawn on your
   character). Win them as **monster drops**
 - **Drop tables** — every monster drops bones plus a weighted roll: goblins
-  give runes and shrimp, skeletons drop runes, ore and the odd wizard hat, and
-  the **Goblin Warlord always pays out** — a staff, robe, hat, bars or a fat
-  pile of fire runes. Loot drops straight into your pack
+  give coins, runes and shrimp, skeletons drop coins, runes, ore and the odd
+  wizard hat, and the **Goblin Warlord always pays out** — coins, a staff,
+  robe, hat, bars or a fat pile of fire runes. Loot drops straight into your pack
+- **The Bazaar** — four market stalls (General Store, Weapon Shop, Armoury,
+  Magic Shop) stand in the open field south of the central path. Spend the
+  **coins** you earn from drops to buy gear and supplies, or flip to the Sell
+  tab (Z) to offload loot for half its value. Your coin balance shows on the
+  inventory and shop screens
 - **Smithing** — smelt copper + tin into bronze bars at the furnace by the
   mine (iron smelts at 15, and fails half the time, as is tradition), then
   hammer out swords, helms, shields, and platebodies at the anvil. Iron tools

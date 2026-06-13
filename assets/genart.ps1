@@ -1146,6 +1146,46 @@ Save-Sprite 'eq_bz_shd_s' $eqPal @(
     '................','................','................','................',
     '................','................','................','................')
 
+Write-Host "Generating shops..."
+
+# Coin pile icon
+Save-Sprite 'item_coins' @{ 'g'='#c8a23c'; 'y'='#f8d86c'; 'd'='#8a6a1c' } @(
+    '................',
+    '................',
+    '................',
+    '......gggg......',
+    '.....gyyyyg.....',
+    '.....gyyyyg.....',
+    '.....dggggd.....',
+    '...gggg..gggg...',
+    '..gyyyyggyyyyg..',
+    '..gyyyyggyyyyg..',
+    '..dggggddggggd..',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................')
+
+# Market stall (awning 'a' recolored per shop)
+Save-Sprite 'obj_stall_general' @{ 'a'='#8a4a2a'; 'b'='#f0ece0'; 'w'='#6b4a2a'; 'c'='#a07840'; 'g'='#c8a23c' } @(
+    '..aaaaaaaaaaaa..',
+    '..abbaabbaabba..',
+    '..aaaaaaaaaaaa..',
+    '..cccccccccccc..',
+    '..cggggggggggc..',
+    '..cggggggggggc..',
+    '..cccccccccccc..',
+    '..w..........w..',
+    '..w..........w..',
+    '..w..........w..',
+    '..w..........w..',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................')
+
 Write-Host "Generating dungeon..."
 
 # Cave floor: dark stone noise
@@ -1375,6 +1415,11 @@ Save-Sprite 'eq_staff_s' $ovPal @(
     '..........t.....','................','................','................',
     '................','................','................','................')
 New-FlipX 'eq_staff_s' 'eq_staff_sl'
+
+# Shop stalls: recolor the awning per shop type
+New-Recolor 'obj_stall_general' 'obj_stall_weapon' @{ '#8a4a2a' = '#b03030' }
+New-Recolor 'obj_stall_general' 'obj_stall_armor'  @{ '#8a4a2a' = '#3a6a9a' }
+New-Recolor 'obj_stall_general' 'obj_stall_magic'  @{ '#8a4a2a' = '#7a3a9a' }
 
 Write-Host "Generating title logo..."
 

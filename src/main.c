@@ -41,7 +41,8 @@ enum { TER_GRASS, TER_PATH, TER_SAND, TER_WATER, TER_BRIDGE, TER_WALL, TER_FLOOR
 enum { OBJ_NONE, OBJ_TREE, OBJ_OAK, OBJ_STUMP, OBJ_ROCK_COPPER, OBJ_ROCK_TIN,
        OBJ_ROCK_IRON, OBJ_ROCK_EMPTY, OBJ_FISH, OBJ_BOOTH, OBJ_FIRE,
        OBJ_ESSENCE, OBJ_ALTAR_AIR, OBJ_ALTAR_FIRE,
-       OBJ_FURNACE, OBJ_ANVIL, OBJ_CHEF, OBJ_STAIRS_DOWN, OBJ_STAIRS_UP };
+       OBJ_FURNACE, OBJ_ANVIL, OBJ_CHEF, OBJ_STAIRS_DOWN, OBJ_STAIRS_UP,
+       OBJ_SHOP_GENERAL, OBJ_SHOP_WEAPON, OBJ_SHOP_ARMOR, OBJ_SHOP_MAGIC };
 
 enum { MAP_OVERWORLD, MAP_DUNGEON };
 
@@ -72,7 +73,7 @@ static const char *map_rows[MAP_H] = {
     "T.....C.pp...N......................ss~~~~.G...T",
     "T.......pp..........................ss~~~~.....T",
     "T.......C...N.......................ss~~~~.....T",
-    "T...................................ss~~~~...G.T",
+    "T.................1...2...3...4.....ss~~~~.....T",
     "T...................................ssF~~~.....T",
     "T......I..I......O..................ss~~~~.....T",
     "T.....X.............................ss~~~~.....T",
@@ -129,7 +130,7 @@ enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_IRON_AXE, IT_IRON_PICK,
        IT_BRONZE_HELM, IT_IRON_HELM, IT_BRONZE_SHIELD, IT_IRON_SHIELD,
        IT_BRONZE_BODY, IT_IRON_BODY,
-       IT_STAFF, IT_WIZ_HAT, IT_WIZ_ROBE, NUM_ITEMS };
+       IT_STAFF, IT_WIZ_HAT, IT_WIZ_ROBE, IT_COINS, NUM_ITEMS };
 
 /* worn equipment slots; SLOT_NONE = item is not equippable */
 enum { SLOT_NONE, SLOT_WEAPON, SLOT_SHIELD, SLOT_HELM, SLOT_BODY };
@@ -173,7 +174,8 @@ enum {
     SPR_I_BRONZE_SWORD, SPR_I_IRON_SWORD, SPR_I_IRON_AXE, SPR_I_IRON_PICK,
     SPR_I_BRONZE_HELM, SPR_I_IRON_HELM, SPR_I_BRONZE_SHIELD, SPR_I_IRON_SHIELD,
     SPR_I_BRONZE_BODY, SPR_I_IRON_BODY,
-    SPR_I_STAFF, SPR_I_WIZ_HAT, SPR_I_WIZ_ROBE,
+    SPR_I_STAFF, SPR_I_WIZ_HAT, SPR_I_WIZ_ROBE, SPR_I_COINS,
+    SPR_STALL_GENERAL, SPR_STALL_WEAPON, SPR_STALL_ARMOR, SPR_STALL_MAGIC,
     SPR_BOLT_AIR, SPR_BOLT_FIRE,
     /* worn-equipment overlays: 4 facings (down,up,side,side-left) per slot */
     SPR_EQ_BZ_HELM_D, SPR_EQ_BZ_HELM_U, SPR_EQ_BZ_HELM_S, SPR_EQ_BZ_HELM_SL,
@@ -220,7 +222,8 @@ static const char *spr_files[NUM_SPR] = {
     "item_bronze_sword", "item_iron_sword", "item_iron_axe", "item_iron_pick",
     "item_bronze_helm", "item_iron_helm", "item_bronze_shield",
     "item_iron_shield", "item_bronze_body", "item_iron_body",
-    "item_staff", "item_wizard_hat", "item_wizard_robe",
+    "item_staff", "item_wizard_hat", "item_wizard_robe", "item_coins",
+    "obj_stall_general", "obj_stall_weapon", "obj_stall_armor", "obj_stall_magic",
     "obj_bolt_air", "obj_bolt_fire",
     "eq_bz_helm_d", "eq_bz_helm_u", "eq_bz_helm_s", "eq_bz_helm_sl",
     "eq_bz_body_d", "eq_bz_body_u", "eq_bz_body_s", "eq_bz_body_sl",
@@ -271,7 +274,24 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     [IT_STAFF]        ={ "Wizard staff", SPR_I_STAFF,    0,false, SLOT_WEAPON,1,2,0,1, false,12 },
     [IT_WIZ_HAT]      ={ "Wizard hat",   SPR_I_WIZ_HAT,  0,false, SLOT_HELM,  0,0,1,1, false, 3 },
     [IT_WIZ_ROBE]     ={ "Wizard robe",  SPR_I_WIZ_ROBE, 0,false, SLOT_BODY,  0,0,2,1, false, 5 },
+    [IT_COINS]        ={ "Coins",        SPR_I_COINS,    0,false },
 };
+
+/* shop value in coins; buy price = value, sell price = value/2 (min 1).
+   value 0 means the item can't be sold */
+static const int item_value[NUM_ITEMS] = {
+    [IT_LOGS]=4, [IT_OAK_LOGS]=15, [IT_COPPER]=8, [IT_TIN]=8, [IT_IRON]=25,
+    [IT_RAW_SHRIMP]=3, [IT_SHRIMP]=8, [IT_ESSENCE]=2, [IT_BONES]=1,
+    [IT_AIR_RUNE]=4, [IT_FIRE_RUNE]=5, [IT_BRONZE_BAR]=20, [IT_IRON_BAR]=40,
+    [IT_AXE]=16, [IT_PICK]=16, [IT_NET]=10, [IT_TINDER]=12, [IT_HAMMER]=14,
+    [IT_BRONZE_SWORD]=32, [IT_IRON_SWORD]=80, [IT_IRON_AXE]=70, [IT_IRON_PICK]=70,
+    [IT_BRONZE_HELM]=26, [IT_IRON_HELM]=70, [IT_BRONZE_SHIELD]=40, [IT_IRON_SHIELD]=100,
+    [IT_BRONZE_BODY]=60, [IT_IRON_BODY]=150,
+    [IT_STAFF]=200, [IT_WIZ_HAT]=80, [IT_WIZ_ROBE]=120,
+};
+static int sell_price(int item) { int v = item_value[item]; return v ? (v / 2 < 1 ? 1 : v / 2) : 0; }
+
+static int gp = 0;     /* the player's coins */
 
 /* worn equipment: equipped[slot-1] holds an item id (IT_NONE = empty) */
 static int equipped[NUM_SLOTS];
@@ -392,10 +412,11 @@ static const mobinfo_t mobinfo[NUM_MOBS] = {
 /* ------------------------------------------------------------ UI state */
 
 typedef enum { UI_NONE, UI_INV, UI_SKILLS, UI_BANK, UI_HELP, UI_SMITH,
-               UI_DIALOG, UI_EQUIP, UI_SPELL } ui_t;
+               UI_DIALOG, UI_EQUIP, UI_SPELL, UI_SHOP } ui_t;
 static ui_t ui_mode = UI_NONE;
 static int smith_cursor = 0;
 static int equip_cursor = 0;
+static int shop_id = 0, shop_mode = 0, shop_cursor = 0;   /* mode: 0 buy, 1 sell */
 
 /* magic: the selected combat spell (SPELL_MELEE = ordinary melee) */
 enum { SPELL_MELEE, SPELL_AIR, SPELL_FIRE, NUM_SPELLS };
@@ -580,6 +601,10 @@ static void load_overworld(void)
             case 'V': obj = OBJ_ANVIL;      break;
             case 'H': obj = OBJ_CHEF;       break;
             case 'X': obj = OBJ_STAIRS_DOWN; stairs_x = x; stairs_y = y; break;
+            case '1': obj = OBJ_SHOP_GENERAL; break;
+            case '2': obj = OBJ_SHOP_WEAPON;  break;
+            case '3': obj = OBJ_SHOP_ARMOR;   break;
+            case '4': obj = OBJ_SHOP_MAGIC;   break;
             case 'G': spawn_mob(MOB_GOBLIN, x, y); break;
             case '@': ter = TER_PATH; pl.spawn_x = x; pl.spawn_y = y; break;
             }
@@ -669,7 +694,7 @@ static bool tile_walkable(int x, int y)
 /* ------------------------------------------------------------ saves (EEPROM 4K) */
 
 #define SAVE_MAGIC 0x52563634u     /* 'RV64' */
-#define SAVE_VERSION 5
+#define SAVE_VERSION 6
 
 typedef struct __attribute__((packed)) {
     uint32_t magic;
@@ -680,11 +705,13 @@ typedef struct __attribute__((packed)) {
     uint8_t  inv[INV_SIZE];
     uint8_t  inv_qty[INV_SIZE];
     uint16_t bank[NUM_ITEMS];
+    uint32_t gp;
     uint8_t  run_energy;
     uint8_t  quest_state, quest_kills;
     uint8_t  equipped[NUM_SLOTS];
-    uint8_t  pad;              /* keeps sizeof a multiple of the 8-byte block */
+    uint8_t  pad;
     uint16_t checksum;
+    uint8_t  pad2[2];          /* keeps sizeof a multiple of the 8-byte block */
 } save_t;
 
 _Static_assert(sizeof(save_t) % 8 == 0, "save_t must be EEPROM-block aligned");
@@ -712,6 +739,7 @@ static void save_game(void)
         s.inv_qty[i] = inv_qty[i] > 255 ? 255 : inv_qty[i];
     }
     for (int i = 0; i < NUM_ITEMS; i++) s.bank[i] = bank[i];
+    s.gp = gp;
     s.run_energy = pl.run_energy;
     s.quest_state = quest_state;
     s.quest_kills = quest_kills;
@@ -755,6 +783,7 @@ static void load_game(void)
         inv_qty[i] = (inv[i] == IT_NONE) ? 0 : (s.inv_qty[i] < 1 ? 1 : s.inv_qty[i]);
     }
     for (int i = 0; i < NUM_ITEMS; i++) bank[i] = s.bank[i];
+    gp = s.gp;
     int maxhp = level_of(SK_HP);
     pl.hp = (s.hp >= 1 && s.hp <= maxhp) ? s.hp : maxhp;
     pl.run_energy = s.run_energy <= 100 ? s.run_energy : 100;
@@ -802,21 +831,22 @@ typedef struct { int item, qty, weight; } drop_t;
 #define NDROPS(t) ((int)(sizeof(t) / sizeof(t[0])))
 
 static const drop_t goblin_drops[] = {
-    { IT_AIR_RUNE, 3, 30 }, { IT_RAW_SHRIMP, 1, 20 },
-    { IT_COPPER, 1, 15 }, { IT_NONE, 0, 35 },
+    { IT_COINS, 12, 28 }, { IT_AIR_RUNE, 3, 24 }, { IT_RAW_SHRIMP, 1, 16 },
+    { IT_COPPER, 1, 12 }, { IT_NONE, 0, 20 },
 };
 static const drop_t skeleton_drops[] = {
-    { IT_FIRE_RUNE, 2, 25 }, { IT_AIR_RUNE, 4, 18 }, { IT_IRON, 1, 15 },
-    { IT_SHRIMP, 1, 15 }, { IT_WIZ_HAT, 1, 5 }, { IT_NONE, 0, 22 },
+    { IT_COINS, 30, 25 }, { IT_FIRE_RUNE, 2, 20 }, { IT_AIR_RUNE, 4, 15 },
+    { IT_IRON, 1, 13 }, { IT_SHRIMP, 1, 12 }, { IT_WIZ_HAT, 1, 5 }, { IT_NONE, 0, 10 },
 };
 static const drop_t boss_drops[] = {   /* no "nothing": the boss always pays */
-    { IT_STAFF, 1, 20 }, { IT_WIZ_ROBE, 1, 22 }, { IT_WIZ_HAT, 1, 18 },
-    { IT_IRON_BAR, 5, 22 }, { IT_FIRE_RUNE, 15, 18 },
+    { IT_COINS, 350, 22 }, { IT_STAFF, 1, 18 }, { IT_WIZ_ROBE, 1, 18 },
+    { IT_WIZ_HAT, 1, 14 }, { IT_IRON_BAR, 5, 16 }, { IT_FIRE_RUNE, 15, 12 },
 };
 
 static void give_drop(int item, int qty)
 {
     if (item == IT_NONE || qty <= 0) return;
+    if (item == IT_COINS) { gp += qty; msg("Drop: %d coins.", qty); return; }
     for (int i = 0; i < qty; i++)
         if (!add_item(item)) { msg("You have no room for all the loot!"); return; }
     if (qty > 1) msg("Drop: %s x%d.", iteminfo[item].name, qty);
@@ -1799,6 +1829,12 @@ static void interact(void)
     case OBJ_STAIRS_UP:
         exit_dungeon();
         break;
+    case OBJ_SHOP_GENERAL: case OBJ_SHOP_WEAPON:
+    case OBJ_SHOP_ARMOR:   case OBJ_SHOP_MAGIC:
+        shop_id = t.obj - OBJ_SHOP_GENERAL;
+        shop_mode = 0; shop_cursor = 0;
+        ui_mode = UI_SHOP;
+        break;
     }
 }
 
@@ -1830,6 +1866,10 @@ static const char *context_hint(void)
     case OBJ_CHEF:        return "A: Talk to Chef Bouillon";
     case OBJ_STAIRS_DOWN: return "A: Descend into the dungeon";
     case OBJ_STAIRS_UP:   return "A: Climb back to the surface";
+    case OBJ_SHOP_GENERAL:return "A: Browse the General Store";
+    case OBJ_SHOP_WEAPON: return "A: Browse the Weapon Shop";
+    case OBJ_SHOP_ARMOR:  return "A: Browse the Armoury";
+    case OBJ_SHOP_MAGIC:  return "A: Browse the Magic Shop";
     }
     return NULL;
 }
@@ -1994,6 +2034,59 @@ static void bank_withdraw(int row)
     if (inv_full()) { msg("Your inventory is too full."); return; }
     bank[item]--;
     add_item(item);
+}
+
+/* ------------------------------------------------------------ shops */
+
+enum { SHOP_GENERAL, SHOP_WEAPON, SHOP_ARMOR, SHOP_MAGIC, NUM_SHOPS };
+static const char *shop_names[NUM_SHOPS] = {
+    "General Store", "Weapon Shop", "Armoury", "Magic Shop"
+};
+static const int shop_stock[NUM_SHOPS][8] = {
+    { IT_AXE, IT_PICK, IT_NET, IT_TINDER, IT_HAMMER, IT_RAW_SHRIMP, IT_SHRIMP, IT_NONE },
+    { IT_BRONZE_SWORD, IT_IRON_SWORD, IT_NONE },
+    { IT_BRONZE_HELM, IT_BRONZE_SHIELD, IT_BRONZE_BODY,
+      IT_IRON_HELM, IT_IRON_SHIELD, IT_IRON_BODY, IT_NONE },
+    { IT_AIR_RUNE, IT_FIRE_RUNE, IT_STAFF, IT_WIZ_HAT, IT_WIZ_ROBE, IT_NONE },
+};
+static int shop_sell_list[NUM_ITEMS];
+
+static int shop_stock_count(int s)
+{
+    int n = 0;
+    while (n < 8 && shop_stock[s][n] != IT_NONE) n++;
+    return n;
+}
+
+static int shop_sell_count(void)
+{
+    int n = 0;
+    for (int it = 1; it < NUM_ITEMS; it++)
+        if (it != IT_COINS && item_value[it] > 0 && inv_count(it) > 0)
+            shop_sell_list[n++] = it;
+    return n;
+}
+
+static void shop_buy(int item)
+{
+    int price = item_value[item];
+    if (price <= 0) return;
+    if (gp < price) { msg("You don't have enough coins."); return; }
+    if (inv_full() && !(iteminfo[item].stackable && has_item(item))) {
+        msg("Your inventory is full."); return;
+    }
+    gp -= price;
+    add_item(item);
+    msg("Bought %s for %d coins.", iteminfo[item].name, price);
+}
+
+static void shop_sell(int item)
+{
+    int price = sell_price(item);
+    if (price <= 0 || inv_count(item) <= 0) return;
+    remove_item(item);
+    gp += price;
+    msg("Sold %s for %d coins.", iteminfo[item].name, price);
 }
 
 /* ------------------------------------------------------------ movement */
@@ -2289,6 +2382,10 @@ static void render(void)
             case OBJ_CHEF:       rdpq_sprite_blit(spr[SPR_CHEF], sx, sy - 8, NULL); break;
             case OBJ_STAIRS_DOWN:rdpq_sprite_blit(spr[SPR_STAIRS_DOWN], sx, sy, NULL); break;
             case OBJ_STAIRS_UP:  rdpq_sprite_blit(spr[SPR_STAIRS_UP], sx, sy, NULL); break;
+            case OBJ_SHOP_GENERAL:rdpq_sprite_blit(spr[SPR_STALL_GENERAL], sx, sy - 4, NULL); break;
+            case OBJ_SHOP_WEAPON: rdpq_sprite_blit(spr[SPR_STALL_WEAPON], sx, sy - 4, NULL); break;
+            case OBJ_SHOP_ARMOR:  rdpq_sprite_blit(spr[SPR_STALL_ARMOR], sx, sy - 4, NULL); break;
+            case OBJ_SHOP_MAGIC:  rdpq_sprite_blit(spr[SPR_STALL_MAGIC], sx, sy - 4, NULL); break;
             }
         }
 
@@ -2451,7 +2548,8 @@ static void render(void)
     if (ui_mode == UI_INV) {
         int px0 = SCREEN_W - 88, py0 = 30;
         draw_panel(px0, py0, px0 + 82, py0 + 152);
-        draw_text(1, px0 + 6, py0 + 12, "Inventory");
+        draw_text(1, px0 + 6, py0 + 12, "Inv");
+        draw_text(5, px0 + 34, py0 + 12, "%d gp", gp);
         /* slots: one fill pass, then the cursor highlight */
         rdpq_set_mode_fill(RGBA32(70, 60, 45, 255));
         for (int i = 0; i < INV_SIZE; i++) {
@@ -2511,6 +2609,30 @@ static void render(void)
             draw_text(i == bank_cursor ? 1 : 0, px0 + 6, py0 + 36 + i * 10,
                       "%c %-14s x%d", i == bank_cursor ? '>' : ' ',
                       iteminfo[it].name, bank[it]);
+        }
+    }
+    else if (ui_mode == UI_SHOP) {
+        int px0 = 50, py0 = 28;
+        draw_panel(px0, py0, px0 + 220, py0 + 150);
+        draw_text(1, px0 + 6, py0 + 12, "%s", shop_names[shop_id]);
+        draw_text(5, px0 + 150, py0 + 12, "%d gp", gp);
+        draw_text(6, px0 + 6, py0 + 22, "%s   A:%s  Z:swap  B:close",
+                  shop_mode ? "[SELL]" : "[BUY]", shop_mode ? "sell" : "buy");
+        int n = shop_mode ? shop_sell_count() : shop_stock_count(shop_id);
+        if (shop_cursor >= n) shop_cursor = n ? n - 1 : 0;
+        if (n == 0)
+            draw_text(0, px0 + 6, py0 + 44, "Nothing to sell here.");
+        for (int i = 0; i < n && i < 11; i++) {
+            int it = shop_mode ? shop_sell_list[i] : shop_stock[shop_id][i];
+            int price = shop_mode ? sell_price(it) : item_value[it];
+            if (shop_mode)
+                draw_text(i == shop_cursor ? 1 : 0, px0 + 6, py0 + 40 + i * 10,
+                          "%c %-14s x%d   %dgp", i == shop_cursor ? '>' : ' ',
+                          iteminfo[it].name, inv_count(it), price);
+            else
+                draw_text(i == shop_cursor ? 1 : (gp >= price ? 0 : 6),
+                          px0 + 6, py0 + 40 + i * 10, "%c %-16s %dgp",
+                          i == shop_cursor ? '>' : ' ', iteminfo[it].name, price);
         }
     }
     else if (ui_mode == UI_SMITH) {
@@ -2604,7 +2726,7 @@ static void render(void)
         draw_text(0, px0 + 8, py0 + 54, "B: inventory (A: use/equip, C-dn: drop)");
         draw_text(0, px0 + 8, py0 + 66, "C-rt:skills C-up:worn C-lf:spells");
         draw_text(0, px0 + 8, py0 + 80, "Chop, mine, fish, cook, smith, wear");
-        draw_text(0, px0 + 8, py0 + 90, "gear, craft runes, sling spells.");
+        draw_text(0, px0 + 8, py0 + 90, "gear, sling spells, shop the bazaar.");
         draw_text(3, px0 + 8, py0 + 102, "A dungeon lurks SW of the mine -");
         draw_text(3, px0 + 8, py0 + 112, "skeletons and the Warlord await!");
         draw_text(1, px0 + 8, py0 + 126, "Quest: The Chef's Little Problem");
@@ -2697,6 +2819,18 @@ static void handle_input(void)
         if (pressed.d_down && bank_cursor < n - 1) bank_cursor++;
         if (pressed.a) bank_withdraw(bank_cursor);
         if (pressed.z) bank_deposit_all();
+        return;
+    }
+    if (ui_mode == UI_SHOP) {
+        if (pressed.b) { ui_mode = UI_NONE; return; }
+        if (pressed.z) { shop_mode ^= 1; shop_cursor = 0; }
+        int n = shop_mode ? shop_sell_count() : shop_stock_count(shop_id);
+        if (pressed.d_up && shop_cursor > 0) shop_cursor--;
+        if (pressed.d_down && shop_cursor < n - 1) shop_cursor++;
+        if (pressed.a && n > 0) {
+            if (shop_mode) shop_sell(shop_sell_list[shop_cursor]);
+            else           shop_buy(shop_stock[shop_id][shop_cursor]);
+        }
         return;
     }
     if (ui_mode == UI_SMITH) {
@@ -2829,6 +2963,7 @@ int main(void)
         if (inv[i] != IT_NONE && inv_qty[i] == 0) inv_qty[i] = 1;
     for (int i = 0; i < NUM_SLOTS; i++) equipped[i] = IT_NONE;
     cast_spell = SPELL_MELEE;
+    gp = 25;                      /* a few starter coins */
     memset(bank, 0, sizeof bank);
     for (int i = 0; i < CHAT_LINES; i++) chat[i][0] = 0;
 
