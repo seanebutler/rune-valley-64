@@ -1625,6 +1625,12 @@ New-Recolor 'item_bronze_sword' 'item_bane' $baneMap
 foreach ($dir in 'd','u','s') { New-Recolor "eq_bz_wep_$dir" "eq_bane_wep_$dir" $baneMap }
 New-FlipX 'eq_bane_wep_s' 'eq_bane_wep_sl'
 
+# Dragonfire blade: the Dragon's rare unique, a molten-orange sword (icon + worn)
+$dfMap = @{ '#b87f4e'='#e0641e'; '#94633a'='#a83410'; '#d8a070'='#ffc050' }
+New-Recolor 'item_bronze_sword' 'item_dragonfire' $dfMap
+foreach ($dir in 'd','u','s') { New-Recolor "eq_bz_wep_$dir" "eq_df_wep_$dir" $dfMap }
+New-FlipX 'eq_df_wep_s' 'eq_df_wep_sl'
+
 Write-Host "Generating title logo..."
 
 # 256 wide: CI4 TMEM pitch must stay 8-byte aligned (280 wide = 140B = broken)

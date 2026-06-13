@@ -84,6 +84,11 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   Below* — a follow-up gated behind it (Attack/Defence/Hitpoints 30): descend
   to the dungeon's second floor and destroy the Demon for 5000 coins and a
   fortune in xp. Track them all in the Quest Journal (Start, then A)
+- **The Almanac** — an in-game reference for everything with numbers. Open it
+  from the help screen (Start, then A twice) for a scrollable listing of every
+  weapon's Attack/Strength/Magic bonuses and level requirement, every piece of
+  armour's Defence, and every monster's hitpoints, max hit, defence and full
+  **loot table with drop chances**. No wiki required
 - **A three-floor dungeon** — find the cave stairs in the open field southwest
   of the mine and descend into the gloom. **Floor 1**: tougher **skeletons**
   and the hulking **Goblin Warlord** (45 HP) in the chamber beyond the doorway.
@@ -95,9 +100,12 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   it **enrages at half health** to strike faster and hit harder, and when it
   does it **summons a brood of whelps** (the floor's red-scaled fodder) to swarm
   you. Fell it for the richest haul in the game — a guaranteed hoard of coins
-  and a **Dragonstone**, plus rune gear and a fat roll besides. Each boss pours
-  out combat xp. Come armoured in rune, prayed-up, and well fed — and if you
-  fall, you wake safely back on the surface
+  and a **Dragonstone**, plus rune gear and a fat roll besides, and a rare
+  (~7%) chance at its unique: the **Dragonfire blade**, the best weapon in the
+  valley and a true hybrid — top melee bonuses *and* a hefty Magic bonus, so it
+  hits hardest in your hand whether you swing it or sling spells with it. Each
+  boss pours out combat xp. Come armoured in rune, prayed-up, and well fed — and
+  if you fall, you wake safely back on the surface
 - **Banking** — a bank with deposit-all and per-item withdrawal sits at the
   north end of the path
 - **Hitpoints** start at level 10, regenerate 1 per minute, and shrimp heal 3
@@ -130,7 +138,7 @@ visits and death. The title offers Continue when a valid save exists.
 | C-up | Worn equipment (A: unequip) |
 | C-left | Spellbook (A: choose spell / cast Home Teleport) |
 | C-down | Prayer book (A: toggle prayer) |
-| Start | Help |
+| Start | Help (A: Quest Journal, then A: Almanac) |
 | L | Music on/off |
 
 ## Building

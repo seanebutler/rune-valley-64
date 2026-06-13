@@ -135,7 +135,7 @@ enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_STEEL_SWORD, IT_STEEL_HELM, IT_STEEL_SHIELD, IT_STEEL_BODY,
        IT_MITH_SWORD,  IT_MITH_HELM,  IT_MITH_SHIELD,  IT_MITH_BODY,
        IT_RUNE_SWORD,  IT_RUNE_HELM,  IT_RUNE_SHIELD,  IT_RUNE_BODY,
-       IT_BANE, IT_DRAGONSTONE, NUM_ITEMS };
+       IT_BANE, IT_DRAGONSTONE, IT_DRAGONFIRE, NUM_ITEMS };
 
 /* worn equipment slots; SLOT_NONE = item is not equippable */
 enum { SLOT_NONE, SLOT_WEAPON, SLOT_SHIELD, SLOT_HELM, SLOT_BODY };
@@ -213,6 +213,8 @@ enum {
     SPR_EQ_RU_SHD_D,  SPR_EQ_RU_SHD_U,  SPR_EQ_RU_SHD_S,  SPR_EQ_RU_SHD_SL,
     SPR_COW_A, SPR_COW_B, SPR_FENCE, SPR_TUTOR,
     SPR_WHELP_A, SPR_WHELP_B, SPR_DRAGON, SPR_I_DRAGONSTONE,
+    SPR_I_DRAGONFIRE,
+    SPR_EQ_DF_WEP_D, SPR_EQ_DF_WEP_U, SPR_EQ_DF_WEP_S, SPR_EQ_DF_WEP_SL,
     NUM_SPR
 };
 
@@ -278,7 +280,9 @@ static const char *spr_files[NUM_SPR] = {
     "eq_ru_wep_d",  "eq_ru_wep_u",  "eq_ru_wep_s",  "eq_ru_wep_sl",
     "eq_ru_shd_d",  "eq_ru_shd_u",  "eq_ru_shd_s",  "eq_ru_shd_sl",
     "mob_cow_a", "mob_cow_b", "obj_fence", "obj_tutor",
-    "mob_whelp_a", "mob_whelp_b", "mob_dragon", "item_dragonstone"
+    "mob_whelp_a", "mob_whelp_b", "mob_dragon", "item_dragonstone",
+    "item_dragonfire",
+    "eq_df_wep_d", "eq_df_wep_u", "eq_df_wep_s", "eq_df_wep_sl"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -332,6 +336,8 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     [IT_RUNE_BODY]    ={ "Rune body",    SPR_I_RUNE_BODY,   0,false, SLOT_BODY,  0,0,40,40 },
     [IT_BANE]         ={ "Warlord's Bane",SPR_I_BANE,       0,false, SLOT_WEAPON,18,17,0,20 },
     [IT_DRAGONSTONE]  ={ "Dragonstone",  SPR_I_DRAGONSTONE, 0,false },
+    /* the Dragon's rare unique: a hybrid blade strong in melee AND magic */
+    [IT_DRAGONFIRE]   ={ "Dragonfire blade",SPR_I_DRAGONFIRE,0,false, SLOT_WEAPON,22,21,2,40,false,18 },
 };
 
 /* shop value in coins; buy price = value, sell price = value/2 (min 1).
@@ -487,11 +493,21 @@ static const mobinfo_t mobinfo[NUM_MOBS] = {
 /* ------------------------------------------------------------ UI state */
 
 typedef enum { UI_NONE, UI_INV, UI_SKILLS, UI_BANK, UI_HELP, UI_SMITH,
-               UI_DIALOG, UI_EQUIP, UI_SPELL, UI_SHOP, UI_QUEST, UI_PRAYER } ui_t;
+               UI_DIALOG, UI_EQUIP, UI_SPELL, UI_SHOP, UI_QUEST, UI_PRAYER,
+               UI_ALMANAC } ui_t;
 static ui_t ui_mode = UI_NONE;
 static int smith_cursor = 0;
 static int equip_cursor = 0;
 static int shop_id = 0, shop_mode = 0, shop_cursor = 0;   /* mode: 0 buy, 1 sell */
+
+/* Almanac: a scrollable reference of all gear stats and monster stats/loot.
+   Lines are built once when the screen opens. */
+#define ALMANAC_MAX 160
+#define ALMANAC_VIS 15
+static char almanac_buf[ALMANAC_MAX][48];
+static uint8_t almanac_style[ALMANAC_MAX];
+static int almanac_count = 0;
+static int almanac_scroll = 0;
 
 /* magic: the selected combat spell (SPELL_MELEE = ordinary melee).
    SPELL_HOME is an instant utility cast handled in the spellbook, not a combat
@@ -920,7 +936,7 @@ static bool tile_walkable(int x, int y)
 /* ------------------------------------------------------------ saves (EEPROM 4K) */
 
 #define SAVE_MAGIC 0x52563634u     /* 'RV64' */
-#define SAVE_VERSION 11
+#define SAVE_VERSION 12
 
 typedef struct __attribute__((packed)) {
     uint32_t magic;
@@ -939,7 +955,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  equipped[NUM_SLOTS];
     uint8_t  pad;
     uint16_t checksum;
-    uint8_t  pad2[2];          /* keeps sizeof a multiple of the 8-byte block */
+    uint8_t  pad2[8];          /* keeps sizeof a multiple of the 8-byte block */
 } save_t;
 
 _Static_assert(sizeof(save_t) % 8 == 0, "save_t must be EEPROM-block aligned");
@@ -1107,9 +1123,10 @@ static const drop_t whelp_drops[] = {  /* floor-3 fodder: better than wights */
     { IT_MITH_HELM, 1, 4 }, { IT_NONE, 0, 34 },
 };
 static const drop_t dragon_drops[] = {  /* on top of a guaranteed coin+stone payout */
-    { IT_COINS, 1500, 18 }, { IT_RUNE_BODY, 1, 14 }, { IT_RUNE_SWORD, 1, 13 },
-    { IT_RUNE_SHIELD, 1, 12 }, { IT_RUNE_HELM, 1, 12 }, { IT_FIRE_RUNE, 60, 13 },
-    { IT_DRAGONSTONE, 1, 18 },
+    { IT_COINS, 1500, 18 }, { IT_RUNE_BODY, 1, 13 }, { IT_RUNE_SWORD, 1, 12 },
+    { IT_RUNE_SHIELD, 1, 11 }, { IT_RUNE_HELM, 1, 11 }, { IT_FIRE_RUNE, 60, 12 },
+    { IT_DRAGONSTONE, 1, 16 },
+    { IT_DRAGONFIRE, 1, 7 },   /* the rare unique: the Dragonfire blade */
 };
 
 static void give_drop(int item, int qty)
@@ -1131,6 +1148,76 @@ static void roll_drops(const drop_t *tbl, int n)
     for (int i = 0; i < n; i++) {
         acc += tbl[i].weight;
         if (r < acc) { give_drop(tbl[i].item, tbl[i].qty); return; }
+    }
+}
+
+/* the weighted loot table for a monster type (NULL if it has none) */
+static const drop_t *mob_drops(int type, int *n)
+{
+    switch (type) {
+    case MOB_GOBLIN:   *n = NDROPS(goblin_drops);   return goblin_drops;
+    case MOB_SKELETON: *n = NDROPS(skeleton_drops); return skeleton_drops;
+    case MOB_BOSS:     *n = NDROPS(boss_drops);     return boss_drops;
+    case MOB_WIGHT:    *n = NDROPS(wight_drops);    return wight_drops;
+    case MOB_DEMON:    *n = NDROPS(demon_drops);    return demon_drops;
+    case MOB_COW:      *n = NDROPS(cow_drops);      return cow_drops;
+    case MOB_WHELP:    *n = NDROPS(whelp_drops);    return whelp_drops;
+    case MOB_DRAGON:   *n = NDROPS(dragon_drops);   return dragon_drops;
+    default:           *n = 0;                      return NULL;
+    }
+}
+
+/* ---- the Almanac: an in-game reference of gear and monster stats/loot ---- */
+static void al_add(int style, const char *fmt, ...)
+{
+    if (almanac_count >= ALMANAC_MAX) return;
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(almanac_buf[almanac_count], sizeof almanac_buf[0], fmt, ap);
+    va_end(ap);
+    almanac_style[almanac_count++] = style;
+}
+
+static void build_almanac(void)
+{
+    almanac_count = 0;
+
+    al_add(1, "== WEAPONS ==  (Atk/Str/Mag, level to wield)");
+    for (int it = 1; it < NUM_ITEMS; it++)
+        if (iteminfo[it].slot == SLOT_WEAPON)
+            al_add(0, "%-16s A+%-2d S+%-2d M+%-2d  L%d", iteminfo[it].name,
+                   iteminfo[it].atk, iteminfo[it].str, iteminfo[it].mag,
+                   iteminfo[it].eqlvl);
+
+    al_add(1, "== ARMOUR ==  (Defence, level to wield)");
+    for (int it = 1; it < NUM_ITEMS; it++) {
+        int s = iteminfo[it].slot;
+        if (s == SLOT_HELM || s == SLOT_SHIELD || s == SLOT_BODY)
+            al_add(0, "%-16s D+%-2d %-6s L%d", iteminfo[it].name,
+                   iteminfo[it].def, slot_names[s - 1], iteminfo[it].eqlvl);
+    }
+
+    al_add(1, "== MONSTERS ==  (all drop bones; %% = drop roll)");
+    for (int m = 0; m < NUM_MOBS; m++) {
+        al_add(4, "%s", mobinfo[m].name);
+        al_add(0, " HP %d   max hit %d   defence %d",
+               mobinfo[m].max_hp, mobinfo[m].max_dmg, mobinfo[m].mob_def);
+        if (m == MOB_DRAGON)
+            al_add(5, " always: 2500 coins + Dragonstone");
+        int n;
+        const drop_t *t = mob_drops(m, &n);
+        int total = 0;
+        for (int i = 0; i < n; i++) total += t[i].weight;
+        for (int i = 0; i < n; i++) {
+            int pct = total ? t[i].weight * 100 / total : 0;
+            if (t[i].item == IT_NONE)
+                al_add(6, "  nothing                  %d%%", pct);
+            else if (t[i].qty > 1)
+                al_add(6, "  %-16s x%-4d %d%%",
+                       iteminfo[t[i].item].name, t[i].qty, pct);
+            else
+                al_add(6, "  %-21s %d%%", iteminfo[t[i].item].name, pct);
+        }
     }
 }
 
@@ -2590,6 +2677,7 @@ static void use_inv_item(int slot)
         break;
     case IT_ESSENCE:   msg("A chunk of raw magical essence."); break;
     case IT_DRAGONSTONE: msg("A priceless gem from the Dragon's hoard. Sell it for a fortune."); break;
+    case IT_DRAGONFIRE: msg("The Dragonfire blade - it burns hot in hand and mind alike."); break;
     case IT_BRONZE_BAR: case IT_IRON_BAR:
         msg("Take this to the anvil by the mine."); break;
     case IT_HAMMER:    msg("For smithing at an anvil."); break;
@@ -2898,6 +2986,7 @@ static int equip_overlay_base(int item)
     case IT_RUNE_SHIELD:   return SPR_EQ_RU_SHD_D;
     case IT_RUNE_BODY:     return SPR_EQ_RU_BODY_D;
     case IT_BANE:          return SPR_EQ_BANE_WEP_D;
+    case IT_DRAGONFIRE:    return SPR_EQ_DF_WEP_D;
     default:               return -1;
     }
 }
@@ -3412,9 +3501,9 @@ static void render(void)
         draw_text(0, px0 + 8, py0 + 76, "C-dn: prayers (altars restore points)");
         draw_text(0, px0 + 8, py0 + 88, "Chop, mine, fish, cook, smith, pray,");
         draw_text(0, px0 + 8, py0 + 98, "wear gear, sling spells, shop, quest.");
-        draw_text(3, px0 + 8, py0 + 112, "A two-floor dungeon lurks SW: the");
-        draw_text(3, px0 + 8, py0 + 122, "Warlord, then the Demon below!");
-        draw_text(1, px0 + 8, py0 + 142, "(A) Quest Journal   (B) close");
+        draw_text(3, px0 + 8, py0 + 112, "A three-floor dungeon lurks SW: Warlord,");
+        draw_text(3, px0 + 8, py0 + 122, "Demon, then the Ancient Dragon below!");
+        draw_text(1, px0 + 8, py0 + 142, "(A) Journal, then Almanac   (B) close");
     }
     else if (ui_mode == UI_QUEST) {
         int px0 = 36, py0 = 24;
@@ -3469,7 +3558,24 @@ static void render(void)
                           DQ_REQ_ATT, DQ_REQ_DEF, DQ_REQ_HP);
         }
 
-        draw_text(6, px0 + 8, py0 + 152, "(A) back   (B) close");
+        draw_text(6, px0 + 8, py0 + 152, "(A) Almanac   (B) close");
+    }
+    else if (ui_mode == UI_ALMANAC) {
+        int px0 = 16, py0 = 16;
+        draw_panel(px0, py0, px0 + 288, py0 + 208);
+        draw_text(1, px0 + 8, py0 + 12, "Almanac");
+        draw_text(6, px0 + 132, py0 + 12, "D-pad: scroll/page");
+        for (int i = 0; i < ALMANAC_VIS; i++) {
+            int li = almanac_scroll + i;
+            if (li >= almanac_count) break;
+            draw_text(almanac_style[li], px0 + 8, py0 + 28 + i * 11,
+                      "%s", almanac_buf[li]);
+        }
+        /* scroll position indicator + controls */
+        int shown = almanac_scroll + ALMANAC_VIS;
+        if (shown > almanac_count) shown = almanac_count;
+        draw_text(6, px0 + 8, py0 + 198, "%d-%d of %d   (A) Help   (B) close",
+                  almanac_count ? almanac_scroll + 1 : 0, shown, almanac_count);
     }
 
     rdpq_detach_show();
@@ -3621,8 +3727,21 @@ static void handle_input(void)
         return;
     }
     if (ui_mode == UI_QUEST) {
-        if (pressed.a) { ui_mode = UI_HELP; return; }
+        if (pressed.a) { build_almanac(); almanac_scroll = 0; ui_mode = UI_ALMANAC; return; }
         if (pressed.b) { ui_mode = UI_NONE; return; }
+        return;
+    }
+    if (ui_mode == UI_ALMANAC) {
+        if (pressed.b) { ui_mode = UI_NONE; return; }
+        if (pressed.a) { ui_mode = UI_HELP; return; }
+        int maxs = almanac_count - ALMANAC_VIS;
+        if (maxs < 0) maxs = 0;
+        if (pressed.d_up)    almanac_scroll -= 1;
+        if (pressed.d_down)  almanac_scroll += 1;
+        if (pressed.d_left)  almanac_scroll -= ALMANAC_VIS;
+        if (pressed.d_right) almanac_scroll += ALMANAC_VIS;
+        if (almanac_scroll < 0) almanac_scroll = 0;
+        if (almanac_scroll > maxs) almanac_scroll = maxs;
         return;
     }
     if (ui_mode == UI_SKILLS || ui_mode == UI_HELP) {
