@@ -88,7 +88,8 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   from the help screen (Start, then A twice) for a scrollable listing of every
   weapon's Attack/Strength/Magic bonuses and level requirement, every piece of
   armour's Defence, and every monster's hitpoints, max hit, defence and full
-  **loot table with drop chances**. No wiki required
+  **loot table with drop chances**. No wiki required — and the same tables are
+  mirrored in [ALMANAC.md](ALMANAC.md) for quick reference out of game
 - **A three-floor dungeon** — find the cave stairs in the open field southwest
   of the mine and descend into the gloom. **Floor 1**: tougher **skeletons**
   and the hulking **Goblin Warlord** (45 HP) in the chamber beyond the doorway.
