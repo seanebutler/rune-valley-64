@@ -128,7 +128,8 @@ enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_BRONZE_BAR, IT_IRON_BAR, IT_HAMMER, IT_BRONZE_SWORD, IT_IRON_SWORD,
        IT_IRON_AXE, IT_IRON_PICK,
        IT_BRONZE_HELM, IT_IRON_HELM, IT_BRONZE_SHIELD, IT_IRON_SHIELD,
-       IT_BRONZE_BODY, IT_IRON_BODY, NUM_ITEMS };
+       IT_BRONZE_BODY, IT_IRON_BODY,
+       IT_STAFF, IT_WIZ_HAT, IT_WIZ_ROBE, NUM_ITEMS };
 
 /* worn equipment slots; SLOT_NONE = item is not equippable */
 enum { SLOT_NONE, SLOT_WEAPON, SLOT_SHIELD, SLOT_HELM, SLOT_BODY };
@@ -138,7 +139,7 @@ enum { SLOT_NONE, SLOT_WEAPON, SLOT_SHIELD, SLOT_HELM, SLOT_BODY };
    stackable items share one inventory slot with a quantity */
 typedef struct {
     const char *name; int spr; int heal; bool tool;
-    int slot; int atk; int str; int def; int eqlvl; bool stackable;
+    int slot; int atk; int str; int def; int eqlvl; bool stackable; int mag;
 } iteminfo_t;
 
 /* ------------------------------------------------------------ sprites */
@@ -172,6 +173,7 @@ enum {
     SPR_I_BRONZE_SWORD, SPR_I_IRON_SWORD, SPR_I_IRON_AXE, SPR_I_IRON_PICK,
     SPR_I_BRONZE_HELM, SPR_I_IRON_HELM, SPR_I_BRONZE_SHIELD, SPR_I_IRON_SHIELD,
     SPR_I_BRONZE_BODY, SPR_I_IRON_BODY,
+    SPR_I_STAFF, SPR_I_WIZ_HAT, SPR_I_WIZ_ROBE,
     SPR_BOLT_AIR, SPR_BOLT_FIRE,
     /* worn-equipment overlays: 4 facings (down,up,side,side-left) per slot */
     SPR_EQ_BZ_HELM_D, SPR_EQ_BZ_HELM_U, SPR_EQ_BZ_HELM_S, SPR_EQ_BZ_HELM_SL,
@@ -182,6 +184,9 @@ enum {
     SPR_EQ_IR_BODY_D, SPR_EQ_IR_BODY_U, SPR_EQ_IR_BODY_S, SPR_EQ_IR_BODY_SL,
     SPR_EQ_IR_WEP_D,  SPR_EQ_IR_WEP_U,  SPR_EQ_IR_WEP_S,  SPR_EQ_IR_WEP_SL,
     SPR_EQ_IR_SHD_D,  SPR_EQ_IR_SHD_U,  SPR_EQ_IR_SHD_S,  SPR_EQ_IR_SHD_SL,
+    SPR_EQ_HAT_D,  SPR_EQ_HAT_U,  SPR_EQ_HAT_S,  SPR_EQ_HAT_SL,
+    SPR_EQ_ROBE_D, SPR_EQ_ROBE_U, SPR_EQ_ROBE_S, SPR_EQ_ROBE_SL,
+    SPR_EQ_STAFF_D,SPR_EQ_STAFF_U,SPR_EQ_STAFF_S,SPR_EQ_STAFF_SL,
     NUM_SPR
 };
 
@@ -215,6 +220,7 @@ static const char *spr_files[NUM_SPR] = {
     "item_bronze_sword", "item_iron_sword", "item_iron_axe", "item_iron_pick",
     "item_bronze_helm", "item_iron_helm", "item_bronze_shield",
     "item_iron_shield", "item_bronze_body", "item_iron_body",
+    "item_staff", "item_wizard_hat", "item_wizard_robe",
     "obj_bolt_air", "obj_bolt_fire",
     "eq_bz_helm_d", "eq_bz_helm_u", "eq_bz_helm_s", "eq_bz_helm_sl",
     "eq_bz_body_d", "eq_bz_body_u", "eq_bz_body_s", "eq_bz_body_sl",
@@ -223,7 +229,10 @@ static const char *spr_files[NUM_SPR] = {
     "eq_ir_helm_d", "eq_ir_helm_u", "eq_ir_helm_s", "eq_ir_helm_sl",
     "eq_ir_body_d", "eq_ir_body_u", "eq_ir_body_s", "eq_ir_body_sl",
     "eq_ir_wep_d",  "eq_ir_wep_u",  "eq_ir_wep_s",  "eq_ir_wep_sl",
-    "eq_ir_shd_d",  "eq_ir_shd_u",  "eq_ir_shd_s",  "eq_ir_shd_sl"
+    "eq_ir_shd_d",  "eq_ir_shd_u",  "eq_ir_shd_s",  "eq_ir_shd_sl",
+    "eq_hat_d",  "eq_hat_u",  "eq_hat_s",  "eq_hat_sl",
+    "eq_robe_d", "eq_robe_u", "eq_robe_s", "eq_robe_sl",
+    "eq_staff_d","eq_staff_u","eq_staff_s","eq_staff_sl"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -259,6 +268,9 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     [IT_IRON_SHIELD]  ={ "Iron shield",  SPR_I_IRON_SHIELD,  0,false, SLOT_SHIELD,2,0,8,10 },
     [IT_BRONZE_BODY]  ={ "Bronze body",  SPR_I_BRONZE_BODY,  0,false, SLOT_BODY,  0,0,8,1  },
     [IT_IRON_BODY]    ={ "Iron body",    SPR_I_IRON_BODY,    0,false, SLOT_BODY,  0,0,14,10},
+    [IT_STAFF]        ={ "Wizard staff", SPR_I_STAFF,    0,false, SLOT_WEAPON,1,2,0,1, false,12 },
+    [IT_WIZ_HAT]      ={ "Wizard hat",   SPR_I_WIZ_HAT,  0,false, SLOT_HELM,  0,0,1,1, false, 3 },
+    [IT_WIZ_ROBE]     ={ "Wizard robe",  SPR_I_WIZ_ROBE, 0,false, SLOT_BODY,  0,0,2,1, false, 5 },
 };
 
 /* worn equipment: equipped[slot-1] holds an item id (IT_NONE = empty) */
@@ -284,6 +296,13 @@ static int equip_def(void)
     int t = 0;
     for (int i = 0; i < NUM_SLOTS; i++)
         if (equipped[i]) t += iteminfo[equipped[i]].def;
+    return t;
+}
+static int equip_mag(void)
+{
+    int t = 0;
+    for (int i = 0; i < NUM_SLOTS; i++)
+        if (equipped[i]) t += iteminfo[equipped[i]].mag;
     return t;
 }
 
@@ -650,7 +669,7 @@ static bool tile_walkable(int x, int y)
 /* ------------------------------------------------------------ saves (EEPROM 4K) */
 
 #define SAVE_MAGIC 0x52563634u     /* 'RV64' */
-#define SAVE_VERSION 4
+#define SAVE_VERSION 5
 
 typedef struct __attribute__((packed)) {
     uint32_t magic;
@@ -664,9 +683,8 @@ typedef struct __attribute__((packed)) {
     uint8_t  run_energy;
     uint8_t  quest_state, quest_kills;
     uint8_t  equipped[NUM_SLOTS];
-    uint8_t  pad;
+    uint8_t  pad;              /* keeps sizeof a multiple of the 8-byte block */
     uint16_t checksum;
-    uint8_t  pad2[6];          /* keep sizeof a multiple of the 8-byte block */
 } save_t;
 
 _Static_assert(sizeof(save_t) % 8 == 0, "save_t must be EEPROM-block aligned");
@@ -779,6 +797,44 @@ static void hurt_player(int dmg)
     if (pl.hp <= 0) player_die();
 }
 
+/* ---- monster drop tables (weighted; an IT_NONE entry means "nothing") ---- */
+typedef struct { int item, qty, weight; } drop_t;
+#define NDROPS(t) ((int)(sizeof(t) / sizeof(t[0])))
+
+static const drop_t goblin_drops[] = {
+    { IT_AIR_RUNE, 3, 30 }, { IT_RAW_SHRIMP, 1, 20 },
+    { IT_COPPER, 1, 15 }, { IT_NONE, 0, 35 },
+};
+static const drop_t skeleton_drops[] = {
+    { IT_FIRE_RUNE, 2, 25 }, { IT_AIR_RUNE, 4, 18 }, { IT_IRON, 1, 15 },
+    { IT_SHRIMP, 1, 15 }, { IT_WIZ_HAT, 1, 5 }, { IT_NONE, 0, 22 },
+};
+static const drop_t boss_drops[] = {   /* no "nothing": the boss always pays */
+    { IT_STAFF, 1, 20 }, { IT_WIZ_ROBE, 1, 22 }, { IT_WIZ_HAT, 1, 18 },
+    { IT_IRON_BAR, 5, 22 }, { IT_FIRE_RUNE, 15, 18 },
+};
+
+static void give_drop(int item, int qty)
+{
+    if (item == IT_NONE || qty <= 0) return;
+    for (int i = 0; i < qty; i++)
+        if (!add_item(item)) { msg("You have no room for all the loot!"); return; }
+    if (qty > 1) msg("Drop: %s x%d.", iteminfo[item].name, qty);
+    else         msg("Drop: %s.", iteminfo[item].name);
+}
+
+static void roll_drops(const drop_t *tbl, int n)
+{
+    int total = 0;
+    for (int i = 0; i < n; i++) total += tbl[i].weight;
+    if (total <= 0) return;
+    int r = rand() % total, acc = 0;
+    for (int i = 0; i < n; i++) {
+        acc += tbl[i].weight;
+        if (r < acc) { give_drop(tbl[i].item, tbl[i].qty); return; }
+    }
+}
+
 static void mob_die(gob_t *g)
 {
     const mobinfo_t *mi = &mobinfo[g->type];
@@ -803,7 +859,14 @@ static void mob_die(gob_t *g)
         quest_kills++;
         msg("Goblin bashed for the Chef! (%d/%d)", quest_kills, QUEST_KILLS_NEEDED);
     }
-    if (!inv_full()) add_item(IT_BONES);
+    /* always-bones, plus a roll on this monster's table */
+    int bones = (g->type == MOB_BOSS) ? 2 : 1;
+    for (int i = 0; i < bones; i++) if (!inv_full()) add_item(IT_BONES);
+    switch (g->type) {
+    case MOB_GOBLIN:   roll_drops(goblin_drops,   NDROPS(goblin_drops));   break;
+    case MOB_SKELETON: roll_drops(skeleton_drops, NDROPS(skeleton_drops)); break;
+    case MOB_BOSS:     roll_drops(boss_drops,     NDROPS(boss_drops));     break;
+    }
     if (pl.state == ST_FIGHT) pl.state = ST_IDLE;
 }
 
@@ -877,10 +940,12 @@ static bool player_cast(gob_t *g)
                cast_spell == SPELL_FIRE ? SPR_BOLT_FIRE : SPR_BOLT_AIR);
     sfx(SND_CRAFT);
     int magic = level_of(SK_MAGIC);
-    int p_hit = 55 + magic * 2 - mobinfo[g->type].mob_def * 2;
+    int mbonus = equip_mag();
+    int p_hit = 55 + magic * 2 + mbonus - mobinfo[g->type].mob_def * 2;
     if (p_hit > 95) p_hit = 95;
     if (p_hit < 5) p_hit = 5;
-    int dmg = chance(p_hit) ? (rand() % (spellinfo[cast_spell].maxhit + 1)) : 0;
+    int maxhit = spellinfo[cast_spell].maxhit + mbonus / 10;   /* gear ups the cap */
+    int dmg = chance(p_hit) ? (rand() % (maxhit + 1)) : 0;
     g->hp -= dmg;
     g->hitsplat = dmg;
     g->hitsplat_t = 40;
@@ -2080,6 +2145,9 @@ static int equip_overlay_base(int item)
     case IT_IRON_SWORD:    return SPR_EQ_IR_WEP_D;
     case IT_BRONZE_SHIELD: return SPR_EQ_BZ_SHD_D;
     case IT_IRON_SHIELD:   return SPR_EQ_IR_SHD_D;
+    case IT_STAFF:         return SPR_EQ_STAFF_D;
+    case IT_WIZ_HAT:       return SPR_EQ_HAT_D;
+    case IT_WIZ_ROBE:      return SPR_EQ_ROBE_D;
     default:               return -1;
     }
 }
@@ -2489,9 +2557,10 @@ static void render(void)
         draw_text(1, px0 + 6, py0 + 84, "%s", slot_names[equip_cursor]);
         draw_text(0, px0 + 6, py0 + 94, "%s",
                   sel != IT_NONE ? iteminfo[sel].name : "(empty)");
-        draw_text(4, px0 + 6, py0 + 110, "Attack   +%d", equip_atk());
-        draw_text(4, px0 + 6, py0 + 120, "Strength +%d", equip_str());
-        draw_text(4, px0 + 6, py0 + 130, "Defence  +%d", equip_def());
+        draw_text(4, px0 + 6, py0 + 106, "Attack   +%d", equip_atk());
+        draw_text(4, px0 + 6, py0 + 115, "Strength +%d", equip_str());
+        draw_text(4, px0 + 6, py0 + 124, "Defence  +%d", equip_def());
+        draw_text(5, px0 + 6, py0 + 133, "Magic    +%d", equip_mag());
         draw_text(6, px0 + 6, py0 + 144, "A: remove   B: close");
     }
     else if (ui_mode == UI_SPELL) {

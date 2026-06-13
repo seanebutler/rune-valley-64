@@ -30,7 +30,14 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
 - **Magic** — open the spellbook (C-left) and pick Wind Strike (1 air rune) or
   Fire Strike (1 fire rune, Magic 13). With a spell chosen, A flings a bolt at
   the nearest goblin from up to five tiles away, spending a rune and earning
-  Magic xp. You start with 25 air runes to get going; craft more at the altar
+  Magic xp. You start with 25 air runes to get going; craft more at the altar.
+  **Wizard gear** — a staff, hat and robe carry a Magic bonus that boosts your
+  spell accuracy and max hit (worn in the weapon/helm/body slots, drawn on your
+  character). Win them as **monster drops**
+- **Drop tables** — every monster drops bones plus a weighted roll: goblins
+  give runes and shrimp, skeletons drop runes, ore and the odd wizard hat, and
+  the **Goblin Warlord always pays out** — a staff, robe, hat, bars or a fat
+  pile of fire runes. Loot drops straight into your pack
 - **Smithing** — smelt copper + tin into bronze bars at the furnace by the
   mine (iron smelts at 15, and fails half the time, as is tradition), then
   hammer out swords, helms, shields, and platebodies at the anvil. Iron tools
