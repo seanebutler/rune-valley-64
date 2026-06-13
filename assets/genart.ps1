@@ -1421,6 +1421,26 @@ New-Recolor 'obj_stall_general' 'obj_stall_weapon' @{ '#8a4a2a' = '#b03030' }
 New-Recolor 'obj_stall_general' 'obj_stall_armor'  @{ '#8a4a2a' = '#3a6a9a' }
 New-Recolor 'obj_stall_general' 'obj_stall_magic'  @{ '#8a4a2a' = '#7a3a9a' }
 
+# Higher gear tiers: recolor the bronze icons and overlays (b/d/h -> tier hues)
+$gearTiers = @{
+    'st' = @{ '#b87f4e'='#b8c0cc'; '#94633a'='#8a929e'; '#d8a070'='#dce4ec' }  # steel
+    'mi' = @{ '#b87f4e'='#4a5ac0'; '#94633a'='#36429a'; '#d8a070'='#7a8ae0' }  # mithril
+    'ru' = @{ '#b87f4e'='#2aa89a'; '#94633a'='#1c8076'; '#d8a070'='#6ad8c8' }  # rune
+}
+foreach ($t in 'st','mi','ru') {
+    $map = $gearTiers[$t]
+    New-Recolor 'item_bronze_sword'  "item_${t}_sword"  $map
+    New-Recolor 'item_bronze_helm'   "item_${t}_helm"   $map
+    New-Recolor 'item_bronze_shield' "item_${t}_shield" $map
+    New-Recolor 'item_bronze_body'   "item_${t}_body"   $map
+    foreach ($slot in 'helm','body','wep','shd') {
+        foreach ($dir in 'd','u','s') {
+            New-Recolor "eq_bz_${slot}_$dir" "eq_${t}_${slot}_$dir" $map
+        }
+        New-FlipX "eq_${t}_${slot}_s" "eq_${t}_${slot}_sl"
+    }
+}
+
 Write-Host "Generating title logo..."
 
 # 256 wide: CI4 TMEM pitch must stay 8-byte aligned (280 wide = 140B = broken)

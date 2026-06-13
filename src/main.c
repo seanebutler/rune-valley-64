@@ -130,7 +130,11 @@ enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_IRON_AXE, IT_IRON_PICK,
        IT_BRONZE_HELM, IT_IRON_HELM, IT_BRONZE_SHIELD, IT_IRON_SHIELD,
        IT_BRONZE_BODY, IT_IRON_BODY,
-       IT_STAFF, IT_WIZ_HAT, IT_WIZ_ROBE, IT_COINS, NUM_ITEMS };
+       IT_STAFF, IT_WIZ_HAT, IT_WIZ_ROBE, IT_COINS,
+       IT_STEEL_SWORD, IT_STEEL_HELM, IT_STEEL_SHIELD, IT_STEEL_BODY,
+       IT_MITH_SWORD,  IT_MITH_HELM,  IT_MITH_SHIELD,  IT_MITH_BODY,
+       IT_RUNE_SWORD,  IT_RUNE_HELM,  IT_RUNE_SHIELD,  IT_RUNE_BODY,
+       NUM_ITEMS };
 
 /* worn equipment slots; SLOT_NONE = item is not equippable */
 enum { SLOT_NONE, SLOT_WEAPON, SLOT_SHIELD, SLOT_HELM, SLOT_BODY };
@@ -189,6 +193,21 @@ enum {
     SPR_EQ_HAT_D,  SPR_EQ_HAT_U,  SPR_EQ_HAT_S,  SPR_EQ_HAT_SL,
     SPR_EQ_ROBE_D, SPR_EQ_ROBE_U, SPR_EQ_ROBE_S, SPR_EQ_ROBE_SL,
     SPR_EQ_STAFF_D,SPR_EQ_STAFF_U,SPR_EQ_STAFF_S,SPR_EQ_STAFF_SL,
+    SPR_I_STEEL_SWORD, SPR_I_STEEL_HELM, SPR_I_STEEL_SHIELD, SPR_I_STEEL_BODY,
+    SPR_I_MITH_SWORD,  SPR_I_MITH_HELM,  SPR_I_MITH_SHIELD,  SPR_I_MITH_BODY,
+    SPR_I_RUNE_SWORD,  SPR_I_RUNE_HELM,  SPR_I_RUNE_SHIELD,  SPR_I_RUNE_BODY,
+    SPR_EQ_ST_HELM_D, SPR_EQ_ST_HELM_U, SPR_EQ_ST_HELM_S, SPR_EQ_ST_HELM_SL,
+    SPR_EQ_ST_BODY_D, SPR_EQ_ST_BODY_U, SPR_EQ_ST_BODY_S, SPR_EQ_ST_BODY_SL,
+    SPR_EQ_ST_WEP_D,  SPR_EQ_ST_WEP_U,  SPR_EQ_ST_WEP_S,  SPR_EQ_ST_WEP_SL,
+    SPR_EQ_ST_SHD_D,  SPR_EQ_ST_SHD_U,  SPR_EQ_ST_SHD_S,  SPR_EQ_ST_SHD_SL,
+    SPR_EQ_MI_HELM_D, SPR_EQ_MI_HELM_U, SPR_EQ_MI_HELM_S, SPR_EQ_MI_HELM_SL,
+    SPR_EQ_MI_BODY_D, SPR_EQ_MI_BODY_U, SPR_EQ_MI_BODY_S, SPR_EQ_MI_BODY_SL,
+    SPR_EQ_MI_WEP_D,  SPR_EQ_MI_WEP_U,  SPR_EQ_MI_WEP_S,  SPR_EQ_MI_WEP_SL,
+    SPR_EQ_MI_SHD_D,  SPR_EQ_MI_SHD_U,  SPR_EQ_MI_SHD_S,  SPR_EQ_MI_SHD_SL,
+    SPR_EQ_RU_HELM_D, SPR_EQ_RU_HELM_U, SPR_EQ_RU_HELM_S, SPR_EQ_RU_HELM_SL,
+    SPR_EQ_RU_BODY_D, SPR_EQ_RU_BODY_U, SPR_EQ_RU_BODY_S, SPR_EQ_RU_BODY_SL,
+    SPR_EQ_RU_WEP_D,  SPR_EQ_RU_WEP_U,  SPR_EQ_RU_WEP_S,  SPR_EQ_RU_WEP_SL,
+    SPR_EQ_RU_SHD_D,  SPR_EQ_RU_SHD_U,  SPR_EQ_RU_SHD_S,  SPR_EQ_RU_SHD_SL,
     NUM_SPR
 };
 
@@ -235,7 +254,22 @@ static const char *spr_files[NUM_SPR] = {
     "eq_ir_shd_d",  "eq_ir_shd_u",  "eq_ir_shd_s",  "eq_ir_shd_sl",
     "eq_hat_d",  "eq_hat_u",  "eq_hat_s",  "eq_hat_sl",
     "eq_robe_d", "eq_robe_u", "eq_robe_s", "eq_robe_sl",
-    "eq_staff_d","eq_staff_u","eq_staff_s","eq_staff_sl"
+    "eq_staff_d","eq_staff_u","eq_staff_s","eq_staff_sl",
+    "item_st_sword", "item_st_helm", "item_st_shield", "item_st_body",
+    "item_mi_sword", "item_mi_helm", "item_mi_shield", "item_mi_body",
+    "item_ru_sword", "item_ru_helm", "item_ru_shield", "item_ru_body",
+    "eq_st_helm_d", "eq_st_helm_u", "eq_st_helm_s", "eq_st_helm_sl",
+    "eq_st_body_d", "eq_st_body_u", "eq_st_body_s", "eq_st_body_sl",
+    "eq_st_wep_d",  "eq_st_wep_u",  "eq_st_wep_s",  "eq_st_wep_sl",
+    "eq_st_shd_d",  "eq_st_shd_u",  "eq_st_shd_s",  "eq_st_shd_sl",
+    "eq_mi_helm_d", "eq_mi_helm_u", "eq_mi_helm_s", "eq_mi_helm_sl",
+    "eq_mi_body_d", "eq_mi_body_u", "eq_mi_body_s", "eq_mi_body_sl",
+    "eq_mi_wep_d",  "eq_mi_wep_u",  "eq_mi_wep_s",  "eq_mi_wep_sl",
+    "eq_mi_shd_d",  "eq_mi_shd_u",  "eq_mi_shd_s",  "eq_mi_shd_sl",
+    "eq_ru_helm_d", "eq_ru_helm_u", "eq_ru_helm_s", "eq_ru_helm_sl",
+    "eq_ru_body_d", "eq_ru_body_u", "eq_ru_body_s", "eq_ru_body_sl",
+    "eq_ru_wep_d",  "eq_ru_wep_u",  "eq_ru_wep_s",  "eq_ru_wep_sl",
+    "eq_ru_shd_d",  "eq_ru_shd_u",  "eq_ru_shd_s",  "eq_ru_shd_sl"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -275,6 +309,18 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     [IT_WIZ_HAT]      ={ "Wizard hat",   SPR_I_WIZ_HAT,  0,false, SLOT_HELM,  0,0,1,1, false, 3 },
     [IT_WIZ_ROBE]     ={ "Wizard robe",  SPR_I_WIZ_ROBE, 0,false, SLOT_BODY,  0,0,2,1, false, 5 },
     [IT_COINS]        ={ "Coins",        SPR_I_COINS,    0,false },
+    [IT_STEEL_SWORD]  ={ "Steel sword",  SPR_I_STEEL_SWORD, 0,false, SLOT_WEAPON,10,9,0,20  },
+    [IT_STEEL_HELM]   ={ "Steel helm",   SPR_I_STEEL_HELM,  0,false, SLOT_HELM,  0,0,7,20  },
+    [IT_STEEL_SHIELD] ={ "Steel shield", SPR_I_STEEL_SHIELD,0,false, SLOT_SHIELD,2,0,11,20 },
+    [IT_STEEL_BODY]   ={ "Steel body",   SPR_I_STEEL_BODY,  0,false, SLOT_BODY,  0,0,20,20 },
+    [IT_MITH_SWORD]   ={ "Mithril sword",SPR_I_MITH_SWORD,  0,false, SLOT_WEAPON,14,13,0,30 },
+    [IT_MITH_HELM]    ={ "Mithril helm", SPR_I_MITH_HELM,   0,false, SLOT_HELM,  0,0,10,30 },
+    [IT_MITH_SHIELD]  ={ "Mithril shield",SPR_I_MITH_SHIELD,0,false, SLOT_SHIELD,3,0,15,30 },
+    [IT_MITH_BODY]    ={ "Mithril body", SPR_I_MITH_BODY,   0,false, SLOT_BODY,  0,0,28,30 },
+    [IT_RUNE_SWORD]   ={ "Rune sword",   SPR_I_RUNE_SWORD,  0,false, SLOT_WEAPON,20,18,0,40 },
+    [IT_RUNE_HELM]    ={ "Rune helm",    SPR_I_RUNE_HELM,   0,false, SLOT_HELM,  0,0,14,40 },
+    [IT_RUNE_SHIELD]  ={ "Rune shield",  SPR_I_RUNE_SHIELD, 0,false, SLOT_SHIELD,4,0,20,40 },
+    [IT_RUNE_BODY]    ={ "Rune body",    SPR_I_RUNE_BODY,   0,false, SLOT_BODY,  0,0,40,40 },
 };
 
 /* shop value in coins; buy price = value, sell price = value/2 (min 1).
@@ -288,6 +334,9 @@ static const int item_value[NUM_ITEMS] = {
     [IT_BRONZE_HELM]=26, [IT_IRON_HELM]=70, [IT_BRONZE_SHIELD]=40, [IT_IRON_SHIELD]=100,
     [IT_BRONZE_BODY]=60, [IT_IRON_BODY]=150,
     [IT_STAFF]=200, [IT_WIZ_HAT]=80, [IT_WIZ_ROBE]=120,
+    [IT_STEEL_SWORD]=200, [IT_STEEL_HELM]=150, [IT_STEEL_SHIELD]=250, [IT_STEEL_BODY]=400,
+    [IT_MITH_SWORD]=500, [IT_MITH_HELM]=400, [IT_MITH_SHIELD]=600, [IT_MITH_BODY]=1000,
+    [IT_RUNE_SWORD]=1500, [IT_RUNE_HELM]=1200, [IT_RUNE_SHIELD]=2000, [IT_RUNE_BODY]=3500,
 };
 static int sell_price(int item) { int v = item_value[item]; return v ? (v / 2 < 1 ? 1 : v / 2) : 0; }
 
@@ -694,7 +743,7 @@ static bool tile_walkable(int x, int y)
 /* ------------------------------------------------------------ saves (EEPROM 4K) */
 
 #define SAVE_MAGIC 0x52563634u     /* 'RV64' */
-#define SAVE_VERSION 6
+#define SAVE_VERSION 7
 
 typedef struct __attribute__((packed)) {
     uint32_t magic;
@@ -839,8 +888,9 @@ static const drop_t skeleton_drops[] = {
     { IT_IRON, 1, 13 }, { IT_SHRIMP, 1, 12 }, { IT_WIZ_HAT, 1, 5 }, { IT_NONE, 0, 10 },
 };
 static const drop_t boss_drops[] = {   /* no "nothing": the boss always pays */
-    { IT_COINS, 350, 22 }, { IT_STAFF, 1, 18 }, { IT_WIZ_ROBE, 1, 18 },
-    { IT_WIZ_HAT, 1, 14 }, { IT_IRON_BAR, 5, 16 }, { IT_FIRE_RUNE, 15, 12 },
+    { IT_COINS, 350, 20 }, { IT_STAFF, 1, 14 }, { IT_WIZ_ROBE, 1, 12 },
+    { IT_WIZ_HAT, 1, 10 }, { IT_FIRE_RUNE, 15, 10 },
+    { IT_STEEL_BODY, 1, 14 }, { IT_MITH_HELM, 1, 12 }, { IT_MITH_SWORD, 1, 8 },
 };
 
 static void give_drop(int item, int qty)
@@ -2042,11 +2092,14 @@ enum { SHOP_GENERAL, SHOP_WEAPON, SHOP_ARMOR, SHOP_MAGIC, NUM_SHOPS };
 static const char *shop_names[NUM_SHOPS] = {
     "General Store", "Weapon Shop", "Armoury", "Magic Shop"
 };
-static const int shop_stock[NUM_SHOPS][8] = {
+static const int shop_stock[NUM_SHOPS][20] = {
     { IT_AXE, IT_PICK, IT_NET, IT_TINDER, IT_HAMMER, IT_RAW_SHRIMP, IT_SHRIMP, IT_NONE },
-    { IT_BRONZE_SWORD, IT_IRON_SWORD, IT_NONE },
+    { IT_BRONZE_SWORD, IT_IRON_SWORD, IT_STEEL_SWORD, IT_MITH_SWORD, IT_RUNE_SWORD, IT_NONE },
     { IT_BRONZE_HELM, IT_BRONZE_SHIELD, IT_BRONZE_BODY,
-      IT_IRON_HELM, IT_IRON_SHIELD, IT_IRON_BODY, IT_NONE },
+      IT_IRON_HELM, IT_IRON_SHIELD, IT_IRON_BODY,
+      IT_STEEL_HELM, IT_STEEL_SHIELD, IT_STEEL_BODY,
+      IT_MITH_HELM, IT_MITH_SHIELD, IT_MITH_BODY,
+      IT_RUNE_HELM, IT_RUNE_SHIELD, IT_RUNE_BODY, IT_NONE },
     { IT_AIR_RUNE, IT_FIRE_RUNE, IT_STAFF, IT_WIZ_HAT, IT_WIZ_ROBE, IT_NONE },
 };
 static int shop_sell_list[NUM_ITEMS];
@@ -2054,7 +2107,7 @@ static int shop_sell_list[NUM_ITEMS];
 static int shop_stock_count(int s)
 {
     int n = 0;
-    while (n < 8 && shop_stock[s][n] != IT_NONE) n++;
+    while (n < 20 && shop_stock[s][n] != IT_NONE) n++;
     return n;
 }
 
@@ -2241,6 +2294,18 @@ static int equip_overlay_base(int item)
     case IT_STAFF:         return SPR_EQ_STAFF_D;
     case IT_WIZ_HAT:       return SPR_EQ_HAT_D;
     case IT_WIZ_ROBE:      return SPR_EQ_ROBE_D;
+    case IT_STEEL_SWORD:   return SPR_EQ_ST_WEP_D;
+    case IT_STEEL_HELM:    return SPR_EQ_ST_HELM_D;
+    case IT_STEEL_SHIELD:  return SPR_EQ_ST_SHD_D;
+    case IT_STEEL_BODY:    return SPR_EQ_ST_BODY_D;
+    case IT_MITH_SWORD:    return SPR_EQ_MI_WEP_D;
+    case IT_MITH_HELM:     return SPR_EQ_MI_HELM_D;
+    case IT_MITH_SHIELD:   return SPR_EQ_MI_SHD_D;
+    case IT_MITH_BODY:     return SPR_EQ_MI_BODY_D;
+    case IT_RUNE_SWORD:    return SPR_EQ_RU_WEP_D;
+    case IT_RUNE_HELM:     return SPR_EQ_RU_HELM_D;
+    case IT_RUNE_SHIELD:   return SPR_EQ_RU_SHD_D;
+    case IT_RUNE_BODY:     return SPR_EQ_RU_BODY_D;
     default:               return -1;
     }
 }
@@ -2612,8 +2677,8 @@ static void render(void)
         }
     }
     else if (ui_mode == UI_SHOP) {
-        int px0 = 50, py0 = 28;
-        draw_panel(px0, py0, px0 + 220, py0 + 150);
+        int px0 = 50, py0 = 20;
+        draw_panel(px0, py0, px0 + 220, py0 + 188);
         draw_text(1, px0 + 6, py0 + 12, "%s", shop_names[shop_id]);
         draw_text(5, px0 + 150, py0 + 12, "%d gp", gp);
         draw_text(6, px0 + 6, py0 + 22, "%s   A:%s  Z:swap  B:close",
@@ -2621,17 +2686,21 @@ static void render(void)
         int n = shop_mode ? shop_sell_count() : shop_stock_count(shop_id);
         if (shop_cursor >= n) shop_cursor = n ? n - 1 : 0;
         if (n == 0)
-            draw_text(0, px0 + 6, py0 + 44, "Nothing to sell here.");
-        for (int i = 0; i < n && i < 11; i++) {
+            draw_text(0, px0 + 6, py0 + 40, "Nothing to sell here.");
+        /* scroll the list so the cursor stays visible (16 rows fit) */
+        int top = shop_cursor - 8; if (top < 0) top = 0;
+        if (top > n - 16) top = n - 16 < 0 ? 0 : n - 16;
+        for (int i = top; i < n && i < top + 16; i++) {
             int it = shop_mode ? shop_sell_list[i] : shop_stock[shop_id][i];
             int price = shop_mode ? sell_price(it) : item_value[it];
+            int ry = py0 + 36 + (i - top) * 9;
             if (shop_mode)
-                draw_text(i == shop_cursor ? 1 : 0, px0 + 6, py0 + 40 + i * 10,
+                draw_text(i == shop_cursor ? 1 : 0, px0 + 6, ry,
                           "%c %-14s x%d   %dgp", i == shop_cursor ? '>' : ' ',
                           iteminfo[it].name, inv_count(it), price);
             else
                 draw_text(i == shop_cursor ? 1 : (gp >= price ? 0 : 6),
-                          px0 + 6, py0 + 40 + i * 10, "%c %-16s %dgp",
+                          px0 + 6, ry, "%c %-16s %dgp",
                           i == shop_cursor ? '>' : ' ', iteminfo[it].name, price);
         }
     }

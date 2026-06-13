@@ -50,9 +50,12 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
 - **Equipment** — open the worn-equipment screen (C-up), or press A on gear in
   your inventory to equip it. Four slots — weapon, shield, helm, body — each
   with Attack/Strength/Defence bonuses that feed straight into the combat
-  formulas. Bronze gear wears at level 1, iron at Defence 10. You start with a
-  bronze sword in your pack to wield. **Worn gear is drawn on your character** —
-  helm, platebody, sword and shield all show on the sprite in every facing
+  formulas. **Worn gear is drawn on your character** — helm, platebody, sword
+  and shield all show on the sprite in every facing
+- **Six gear tiers** — bronze and iron are smithed; **steel, mithril and rune**
+  are bought at the bazaar or won from the Warlord. Each tier hits harder and
+  defends better but demands a higher Attack (weapons) or Defence (armour)
+  level to wield — rune needs 40. A full rune set is the late-game coin sink
 - **A quest!** — *The Chef's Little Problem*: Chef Bouillon by the bank path
   needs 3 goblins bashed and 2 cooked shrimp delivered. Chunky xp rewards,
   as is right and proper
