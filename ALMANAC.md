@@ -183,6 +183,21 @@ element; teleports are powered by Law runes (Home uses an Air rune).
 
 ---
 
+## Fishing & food
+
+The tackle you carry decides the catch at a fishing spot. Cook the catch on
+a fire (it burns until your Cooking level reaches the listed level); eating
+the cooked fish restores the listed Hitpoints.
+
+| Fish | Fishing level | Tackle | Cooking level | Heals |
+|---|--:|---|--:|--:|
+| Shrimp | 1 | Small net | 34 | 3 |
+| Trout | 20 | Fishing rod | 40 | 7 |
+| Lobster | 40 | Lobster pot | 55 | 12 |
+| Swordfish | 50 | Harpoon | 70 | 16 |
+
+---
+
 ## Notes
 
 - **Dragonstone** is a trophy gem worth ~1000 coins at any shop's Sell tab.

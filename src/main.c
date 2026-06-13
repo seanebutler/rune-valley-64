@@ -1392,6 +1392,12 @@ static void build_almanac(void)
                    spellinfo[sp].runes, iteminfo[spellinfo[sp].rune].name);
         }
     }
+
+    al_add(1, "== FISHING & FOOD ==  (tackle, levels, heal)");
+    for (int f = 0; f < NUM_FISH; f++)
+        al_add(0, "%-10s F%-2d %-12s cook%-2d  heal %d", fishinfo[f].name,
+               fishinfo[f].fish_lvl, iteminfo[fishinfo[f].tool].name,
+               fishinfo[f].cook_lvl, iteminfo[fishinfo[f].cooked].heal);
 }
 
 static void mob_die(gob_t *g)

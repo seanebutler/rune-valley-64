@@ -6,10 +6,12 @@ $root = Split-Path $PSScriptRoot -Parent
 $src  = Get-Content (Join-Path $root 'src\main.c') -Raw
 $outPath = Join-Path $root 'ALMANAC.md'
 
-# --- item id -> display name (every item) ---
+# --- item id -> display name + heal (every item) ---
 $itemName = @{}
-foreach ($m in [regex]::Matches($src, '\[IT_(\w+)\]\s*=\s*\{\s*"([^"]*)"')) {
+$itemHeal = @{}
+foreach ($m in [regex]::Matches($src, '\[IT_(\w+)\]\s*=\s*\{\s*"([^"]*)"\s*,\s*\w+\s*,\s*(\d+)')) {
     $itemName[$m.Groups[1].Value] = $m.Groups[2].Value
+    $itemHeal[$m.Groups[1].Value] = [int]$m.Groups[3].Value
 }
 function Item-Label($id) {
     if ($id -eq 'IT_NONE') { return 'Nothing' }
@@ -56,6 +58,21 @@ if ($mSpellBlock.Success) {
             Name=$m.Groups[1].Value; Rune=$m.Groups[2].Value; Runes=[int]$m.Groups[3].Value
             Rune2=$m.Groups[4].Value; Runes2=[int]$m.Groups[5].Value
             MaxHit=[int]$m.Groups[6].Value; Lvl=[int]$m.Groups[7].Value
+        }
+    }
+}
+
+# --- fishing tiers: { "name", raw, cooked, tool, fishLvl, cookLvl, ... } ---
+$fish = @()
+$mFishBlock = [regex]::Match($src, 'fishinfo\[NUM_FISH\]\s*=\s*\{(.*?)\};', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+if ($mFishBlock.Success) {
+    $rxF = '\{\s*"([^"]+)"\s*,\s*(IT_\w+)\s*,\s*(IT_\w+)\s*,\s*(IT_\w+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,'
+    foreach ($m in [regex]::Matches($mFishBlock.Groups[1].Value, $rxF)) {
+        $cooked = $m.Groups[3].Value -replace '^IT_',''
+        $fish += [pscustomobject]@{
+            Name=$m.Groups[1].Value; Tool=$m.Groups[4].Value
+            FishLvl=[int]$m.Groups[5].Value; CookLvl=[int]$m.Groups[6].Value
+            Heal=$(if ($itemHeal.ContainsKey($cooked)) { $itemHeal[$cooked] } else { 0 })
         }
     }
 }
@@ -172,6 +189,21 @@ foreach ($sp in $spells) {
     if ($sp.Runes2 -gt 0) { $cost += " + $($sp.Runes2)x $(Item-Label $sp.Rune2)" }
     $hit = if ($sp.MaxHit -gt 0) { "$($sp.MaxHit)" } else { 'teleport' }
     W ("| {0} | {1} | {2} | {3} |" -f $sp.Name, $sp.Lvl, $cost, $hit)
+}
+W ''
+W '---'
+W ''
+W '## Fishing & food'
+W ''
+W 'The tackle you carry decides the catch at a fishing spot. Cook the catch on'
+W 'a fire (it burns until your Cooking level reaches the listed level); eating'
+W 'the cooked fish restores the listed Hitpoints.'
+W ''
+W '| Fish | Fishing level | Tackle | Cooking level | Heals |'
+W '|---|--:|---|--:|--:|'
+foreach ($fi in $fish) {
+    $disp = $fi.Name.Substring(0,1).ToUpper() + $fi.Name.Substring(1)
+    W ("| {0} | {1} | {2} | {3} | {4} |" -f $disp, $fi.FishLvl, (Item-Label $fi.Tool), $fi.CookLvl, $fi.Heal)
 }
 W ''
 W '---'
