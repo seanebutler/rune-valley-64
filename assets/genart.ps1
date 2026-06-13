@@ -1428,6 +1428,91 @@ Save-Sprite 'obj_fence' $fencePal @(
 # Combat Tutor (Sergeant Hardy): red tunic + bronze helm recolour of the player
 New-Recolor 'pl_down_a' 'obj_tutor' @{ '#3e5e7e' = '#8a3a2a'; '#4a3320' = '#b8923a' }
 
+# Whelp: small red dragon, floor-3 fodder + the Dragon's brood (16x16, 2 frames)
+$whelpPal = @{ 'r'='#c0392b'; 'd'='#7a241b'; 'k'='#1a1410'; 'e'='#f5d020'; 'o'='#8a3a1a' }
+Save-Sprite 'mob_whelp_a' $whelpPal @(
+    '.k............k.',
+    '.rr..........rr.',
+    '.rrr.rrrrrr.rrr.',
+    '.rrrrrrrrrrrrrr.',
+    '..rrdrrrrrrdrr..',
+    '...rekrrrrekr...',
+    '...rrrrrrrrrr...',
+    '....rrdddrrr....',
+    '.....rrrrrr.....',
+    '...rrrrrrrrrr...',
+    '..rr.rrrrrr.rr..',
+    '.....oooooo.....',
+    '.....oooooo.....',
+    '....rrr..rrr....',
+    '....rr....rr....',
+    '................')
+Save-Sprite 'mob_whelp_b' $whelpPal @(
+    '.k............k.',
+    '.rr..........rr.',
+    '.rrr.rrrrrr.rrr.',
+    '.rrrrrrrrrrrrrr.',
+    '..rrdrrrrrrdrr..',
+    '...rekrrrrekr...',
+    '...rrrrrrrrrr...',
+    '....rrdddrrr....',
+    '.....rrrrrr.....',
+    '...rrrrrrrrrr...',
+    '..rr.rrrrrr.rr..',
+    '.....oooooo.....',
+    '.....oooooo.....',
+    '...rrr....rrr...',
+    '...rr......rr...',
+    '................')
+
+# Ancient Dragon: the floor-3 boss (24x24). Winged, horned, fire-breathing
+$dragonPal = @{ 'r'='#b8321f'; 'd'='#6e1f12'; 'w'='#e0742a'; 'k'='#1a1410'; 'e'='#f5d020'; 'o'='#3a1208' }
+Save-Sprite 'mob_dragon' $dragonPal @(
+    '........k......k........',
+    '........kk....kk........',
+    '.......krrrrrrrrk.......',
+    '......rrrrrrrrrrrr......',
+    '......rrerrrrrrerr......',
+    '......rrrrrrrrrrrr......',
+    '.......rroooorr.........',
+    '........rrrrrr..........',
+    '.........rrrr...........',
+    '...ww....rrrrrr....ww...',
+    '..wwww..rrrrrrrr..wwww..',
+    '.wwwwww.rrrrrrrr.wwwwww.',
+    'wwwwwww.rrrrrrrr.wwwwwww',
+    '.wwwww..rrrrrrrr..wwwww.',
+    '..www...rrrrrrrr...www..',
+    '........rrrrrrrr........',
+    '........rrddddrr........',
+    '.........rrrrrr.........',
+    '........rr....rr........',
+    '........rr....rr........',
+    '.......kkk..kkk.........',
+    '........................',
+    '........................',
+    '........................')
+
+# Dragonstone: the Dragon's lucrative trophy gem (16x16)
+$gemPal = @{ 'r'='#d83a2a'; 'd'='#8a1e10'; 'k'='#1a1a1a'; 'w'='#ffd0a0' }
+Save-Sprite 'item_dragonstone' $gemPal @(
+    '................',
+    '......kkkk......',
+    '.....kwwrrk.....',
+    '....kwrrrrrk....',
+    '...krrrrrrrrk...',
+    '...krrrrrrrrk...',
+    '...kdrrrrrrdk...',
+    '....kdrrrrdk....',
+    '.....kdrrdk.....',
+    '......kddk......',
+    '.......kk.......',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................')
+
 # Left-facing variants: copy-mode blits cannot mirror (reversed S range is
 # undefined on real RDP hardware), so bake flipped sprites instead
 foreach ($set in 'pl','bota','botb','botc') {

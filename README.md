@@ -84,13 +84,20 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   Below* — a follow-up gated behind it (Attack/Defence/Hitpoints 30): descend
   to the dungeon's second floor and destroy the Demon for 5000 coins and a
   fortune in xp. Track them all in the Quest Journal (Start, then A)
-- **A two-floor dungeon** — find the cave stairs in the open field southwest
+- **A three-floor dungeon** — find the cave stairs in the open field southwest
   of the mine and descend into the gloom. **Floor 1**: tougher **skeletons**
   and the hulking **Goblin Warlord** (45 HP) in the chamber beyond the doorway.
   A sealed stair in his chamber leads to **Floor 2**: undead **wights** and the
-  fearsome **Demon** (80 HP, hits for 8), the deepest boss and the richest
-  drops. Each boss pours out combat xp. Come armed, armoured, and fed — and if
-  you fall, you wake safely back on the surface
+  fearsome **Demon** (80 HP, hits for 8). Beat the Demon and a final stair opens
+  in its chamber, down to **Floor 3** — the lair of the **Ancient Dragon**
+  (150 HP). The Dragon is the deepest, deadliest fight in the valley: it
+  **breathes fire from across the room** (armour won't stop it — bring food),
+  it **enrages at half health** to strike faster and hit harder, and when it
+  does it **summons a brood of whelps** (the floor's red-scaled fodder) to swarm
+  you. Fell it for the richest haul in the game — a guaranteed hoard of coins
+  and a **Dragonstone**, plus rune gear and a fat roll besides. Each boss pours
+  out combat xp. Come armoured in rune, prayed-up, and well fed — and if you
+  fall, you wake safely back on the surface
 - **Banking** — a bank with deposit-all and per-item withdrawal sits at the
   north end of the path
 - **Hitpoints** start at level 10, regenerate 1 per minute, and shrimp heal 3

@@ -135,7 +135,7 @@ enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_STEEL_SWORD, IT_STEEL_HELM, IT_STEEL_SHIELD, IT_STEEL_BODY,
        IT_MITH_SWORD,  IT_MITH_HELM,  IT_MITH_SHIELD,  IT_MITH_BODY,
        IT_RUNE_SWORD,  IT_RUNE_HELM,  IT_RUNE_SHIELD,  IT_RUNE_BODY,
-       IT_BANE, NUM_ITEMS };
+       IT_BANE, IT_DRAGONSTONE, NUM_ITEMS };
 
 /* worn equipment slots; SLOT_NONE = item is not equippable */
 enum { SLOT_NONE, SLOT_WEAPON, SLOT_SHIELD, SLOT_HELM, SLOT_BODY };
@@ -212,6 +212,7 @@ enum {
     SPR_EQ_RU_WEP_D,  SPR_EQ_RU_WEP_U,  SPR_EQ_RU_WEP_S,  SPR_EQ_RU_WEP_SL,
     SPR_EQ_RU_SHD_D,  SPR_EQ_RU_SHD_U,  SPR_EQ_RU_SHD_S,  SPR_EQ_RU_SHD_SL,
     SPR_COW_A, SPR_COW_B, SPR_FENCE, SPR_TUTOR,
+    SPR_WHELP_A, SPR_WHELP_B, SPR_DRAGON, SPR_I_DRAGONSTONE,
     NUM_SPR
 };
 
@@ -276,7 +277,8 @@ static const char *spr_files[NUM_SPR] = {
     "eq_ru_body_d", "eq_ru_body_u", "eq_ru_body_s", "eq_ru_body_sl",
     "eq_ru_wep_d",  "eq_ru_wep_u",  "eq_ru_wep_s",  "eq_ru_wep_sl",
     "eq_ru_shd_d",  "eq_ru_shd_u",  "eq_ru_shd_s",  "eq_ru_shd_sl",
-    "mob_cow_a", "mob_cow_b", "obj_fence", "obj_tutor"
+    "mob_cow_a", "mob_cow_b", "obj_fence", "obj_tutor",
+    "mob_whelp_a", "mob_whelp_b", "mob_dragon", "item_dragonstone"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -329,6 +331,7 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     [IT_RUNE_SHIELD]  ={ "Rune shield",  SPR_I_RUNE_SHIELD, 0,false, SLOT_SHIELD,4,0,20,40 },
     [IT_RUNE_BODY]    ={ "Rune body",    SPR_I_RUNE_BODY,   0,false, SLOT_BODY,  0,0,40,40 },
     [IT_BANE]         ={ "Warlord's Bane",SPR_I_BANE,       0,false, SLOT_WEAPON,18,17,0,20 },
+    [IT_DRAGONSTONE]  ={ "Dragonstone",  SPR_I_DRAGONSTONE, 0,false },
 };
 
 /* shop value in coins; buy price = value, sell price = value/2 (min 1).
@@ -345,6 +348,7 @@ static const int item_value[NUM_ITEMS] = {
     [IT_STEEL_SWORD]=200, [IT_STEEL_HELM]=150, [IT_STEEL_SHIELD]=250, [IT_STEEL_BODY]=400,
     [IT_MITH_SWORD]=500, [IT_MITH_HELM]=400, [IT_MITH_SHIELD]=600, [IT_MITH_BODY]=1000,
     [IT_RUNE_SWORD]=1500, [IT_RUNE_HELM]=1200, [IT_RUNE_SHIELD]=2000, [IT_RUNE_BODY]=3500,
+    [IT_DRAGONSTONE]=2000,
 };
 static int sell_price(int item) { int v = item_value[item]; return v ? (v / 2 < 1 ? 1 : v / 2) : 0; }
 
@@ -448,6 +452,9 @@ typedef struct {
     int   atk_cd, wander_cd;
     int   hitsplat, hitsplat_t;
     int   hurt_timer;        /* show hp bar briefly */
+    int   special_cd;        /* boss: ranged-attack timer */
+    int   phase;             /* boss: 0 normal, 1 enraged */
+    bool  summoned;          /* spawned by a boss; vanishes (no respawn) on death */
 } gob_t;
 
 static gob_t gob[MAX_GOB];
@@ -455,7 +462,8 @@ static int num_gob = 0;
 
 /* monster types: stats, sprite, size, drop. mob_def lowers player accuracy;
    hit_base is the mob's chance to land before the player's defence. */
-enum { MOB_GOBLIN, MOB_SKELETON, MOB_BOSS, MOB_WIGHT, MOB_DEMON, MOB_COW, NUM_MOBS };
+enum { MOB_GOBLIN, MOB_SKELETON, MOB_BOSS, MOB_WIGHT, MOB_DEMON, MOB_COW,
+       MOB_WHELP, MOB_DRAGON, NUM_MOBS };
 typedef struct {
     const char *name; int max_hp; int max_dmg; int mob_def; int hit_base;
     int aggro; int respawn; int spr_a, spr_b; int w, h;
@@ -469,6 +477,11 @@ static const mobinfo_t mobinfo[NUM_MOBS] = {
     /* a placid training target: lots of HP for the xp, defence 0 so you hit
        almost every swing, never aggressive, barely scratches back, respawns fast */
     [MOB_COW]      = { "cow",            8, 1,  0, 25, 0,  8, SPR_COW_A,   SPR_COW_B,   16, 16 },
+    /* floor-3 fodder, and the Dragon's brood */
+    [MOB_WHELP]    = { "whelp",         18, 4, 12, 66, 5, 25, SPR_WHELP_A, SPR_WHELP_B, 16, 16 },
+    /* the deepest boss: huge HP, hits hard in melee, and breathes fire from
+       range. mob_def 35 demands rune-tier gear to land hits reliably */
+    [MOB_DRAGON]   = { "Ancient Dragon",150,12, 35, 90, 8,140, SPR_DRAGON,  SPR_DRAGON,  24, 24 },
 };
 
 /* ------------------------------------------------------------ UI state */
@@ -704,10 +717,15 @@ static int dungeon_floor = 1;
 static int up_x, up_y;             /* up-stairs of the current map */
 static int down_x, down_y;         /* down-stairs of the current map (-1 if none) */
 
-static void spawn_mob(int type, int x, int y)
+static gob_t *spawn_mob(int type, int x, int y)
 {
-    if (num_gob >= MAX_GOB) return;
-    gob_t *g = &gob[num_gob++];
+    gob_t *g = NULL;
+    for (int i = 0; i < num_gob; i++)        /* reclaim a vacated (summoned) slot */
+        if (!gob[i].exists) { g = &gob[i]; break; }
+    if (!g) {
+        if (num_gob >= MAX_GOB) return NULL;
+        g = &gob[num_gob++];
+    }
     memset(g, 0, sizeof *g);
     g->exists = true;
     g->type = type;
@@ -715,6 +733,7 @@ static void spawn_mob(int type, int x, int y)
     g->ty = g->sy = g->mty = y;
     g->px = x * TILE + 8; g->py = y * TILE + 12;
     g->hp = mobinfo[type].max_hp;
+    return g;
 }
 
 static void load_overworld(void)
@@ -801,14 +820,28 @@ static void build_dungeon(int floor)
         };
         for (int i = 0; i < 9; i++) spawn_mob(MOB_SKELETON, skel[i][0], skel[i][1]);
         spawn_mob(MOB_BOSS, 24, 5);
-    } else {
-        down_x = down_y = -1;          /* the deepest floor */
+    } else if (floor == 2) {
+        /* a final stair opens in the Demon's chamber once it is bested */
+        if (dquest == DQ_DONE) {
+            down_x = 38; down_y = 4;
+            object[down_y][down_x] = OBJ_STAIRS_DOWN;
+            obj_orig[down_y][down_x] = OBJ_STAIRS_DOWN;
+        } else {
+            down_x = down_y = -1;
+        }
         static const int wt[][2] = {
             {8,14},{38,14},{16,17},{30,17},{12,21},{34,21},{20,24},{28,24},
             {10,30},{36,30}
         };
         for (int i = 0; i < 10; i++) spawn_mob(MOB_WIGHT, wt[i][0], wt[i][1]);
         spawn_mob(MOB_DEMON, 24, 5);
+    } else {
+        down_x = down_y = -1;          /* the deepest floor: the Dragon's lair */
+        static const int wh[][2] = {
+            {8,14},{38,14},{16,18},{30,18},{12,22},{34,22},{20,26},{28,26}
+        };
+        for (int i = 0; i < 8; i++) spawn_mob(MOB_WHELP, wh[i][0], wh[i][1]);
+        spawn_mob(MOB_DRAGON, 24, 5);
     }
 }
 
@@ -838,14 +871,19 @@ static void enter_dungeon(void)
     msg("Something large stirs beyond the doorway...");
 }
 
-static void descend_floor(void)      /* floor 1 -> floor 2 */
+static void descend_floor(void)      /* down one level via the deeper stair */
 {
-    dungeon_floor = 2;
+    dungeon_floor++;
     load_map(MAP_DUNGEON);
     place_player(up_x, up_y + 1);
     pl.facing = 0;
-    msg("You climb down into the deep dark.");
-    msg("The air reeks of brimstone - a Demon prowls here...");
+    if (dungeon_floor == 2) {
+        msg("You climb down into the deep dark.");
+        msg("The air reeks of brimstone - a Demon prowls here...");
+    } else {
+        msg("You descend the last stair into a vast, hot cavern.");
+        msg("Scales rasp on stone - an Ancient Dragon stirs...");
+    }
 }
 
 static void exit_dungeon(void)
@@ -858,12 +896,12 @@ static void exit_dungeon(void)
 
 static void ascend_floor(void)       /* up one level from the up-stairs */
 {
-    if (dungeon_floor == 2) {
-        dungeon_floor = 1;
+    if (dungeon_floor > 1) {
+        dungeon_floor--;
         load_map(MAP_DUNGEON);
         place_player(down_x, down_y + 1);   /* back beside the descent stair */
         pl.facing = 0;
-        msg("You climb back up to the dungeon's first floor.");
+        msg("You climb back up to the floor above.");
     } else {
         exit_dungeon();
     }
@@ -882,7 +920,7 @@ static bool tile_walkable(int x, int y)
 /* ------------------------------------------------------------ saves (EEPROM 4K) */
 
 #define SAVE_MAGIC 0x52563634u     /* 'RV64' */
-#define SAVE_VERSION 10
+#define SAVE_VERSION 11
 
 typedef struct __attribute__((packed)) {
     uint32_t magic;
@@ -901,7 +939,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  equipped[NUM_SLOTS];
     uint8_t  pad;
     uint16_t checksum;
-    uint8_t  pad2[4];          /* keeps sizeof a multiple of the 8-byte block */
+    uint8_t  pad2[2];          /* keeps sizeof a multiple of the 8-byte block */
 } save_t;
 
 _Static_assert(sizeof(save_t) % 8 == 0, "save_t must be EEPROM-block aligned");
@@ -1064,6 +1102,15 @@ static const drop_t demon_drops[] = {  /* the deepest boss pays the richest */
 static const drop_t cow_drops[] = {   /* a few coins, the odd shrimp to keep you fed */
     { IT_COINS, 6, 42 }, { IT_RAW_SHRIMP, 1, 12 }, { IT_NONE, 0, 46 },
 };
+static const drop_t whelp_drops[] = {  /* floor-3 fodder: better than wights */
+    { IT_COINS, 90, 26 }, { IT_FIRE_RUNE, 6, 20 }, { IT_SHRIMP, 2, 16 },
+    { IT_MITH_HELM, 1, 4 }, { IT_NONE, 0, 34 },
+};
+static const drop_t dragon_drops[] = {  /* on top of a guaranteed coin+stone payout */
+    { IT_COINS, 1500, 18 }, { IT_RUNE_BODY, 1, 14 }, { IT_RUNE_SWORD, 1, 13 },
+    { IT_RUNE_SHIELD, 1, 12 }, { IT_RUNE_HELM, 1, 12 }, { IT_FIRE_RUNE, 60, 13 },
+    { IT_DRAGONSTONE, 1, 18 },
+};
 
 static void give_drop(int item, int qty)
 {
@@ -1129,8 +1176,27 @@ static void mob_die(gob_t *g)
             cow_kills++;
             msg("Cow felled for Sergeant Hardy! (%d/%d)", cow_kills, CQ_COWS_NEEDED);
         }
+    } else if (g->type == MOB_DRAGON) {
+        msg("The Ancient Dragon collapses with an earth-shaking roar!");
+        sfx_ui(SND_LEVELUP);
+        /* the deepest kill in the game pays the most combat xp */
+        add_xp(SK_ATT, 18000, false);
+        add_xp(SK_STR, 18000, false);
+        add_xp(SK_DEF, 18000, false);
+        add_xp(SK_HP,  14000, false);
+        /* a guaranteed hoard on top of the weighted table below */
+        gp += 2500;
+        if (!inv_full()) add_item(IT_DRAGONSTONE);
+        msg("You plunder its hoard: 2500 coins and a Dragonstone!");
+        gratz_timer = 4;
     } else {
         msg("You have defeated the %s!", mi->name);
+    }
+    /* summoned brood vanish on death: no loot (no farming), no respawn */
+    if (g->summoned) {
+        g->exists = false;
+        if (pl.state == ST_FIGHT) pl.state = ST_IDLE;
+        return;
     }
     if (g->type == MOB_GOBLIN && quest_state == QUEST_ACTIVE &&
         quest_kills < QUEST_KILLS_NEEDED) {
@@ -1138,7 +1204,8 @@ static void mob_die(gob_t *g)
         msg("Goblin bashed for the Chef! (%d/%d)", quest_kills, QUEST_KILLS_NEEDED);
     }
     /* always-bones, plus a roll on this monster's table */
-    int bones = (g->type == MOB_BOSS || g->type == MOB_DEMON) ? 2 : 1;
+    int bones = (g->type == MOB_BOSS || g->type == MOB_DEMON ||
+                 g->type == MOB_DRAGON) ? 2 : 1;
     for (int i = 0; i < bones; i++) if (!inv_full()) add_item(IT_BONES);
     switch (g->type) {
     case MOB_GOBLIN:   roll_drops(goblin_drops,   NDROPS(goblin_drops));   break;
@@ -1147,6 +1214,8 @@ static void mob_die(gob_t *g)
     case MOB_WIGHT:    roll_drops(wight_drops,    NDROPS(wight_drops));    break;
     case MOB_DEMON:    roll_drops(demon_drops,    NDROPS(demon_drops));    break;
     case MOB_COW:      roll_drops(cow_drops,      NDROPS(cow_drops));      break;
+    case MOB_WHELP:    roll_drops(whelp_drops,    NDROPS(whelp_drops));    break;
+    case MOB_DRAGON:   roll_drops(dragon_drops,   NDROPS(dragon_drops));   break;
     }
     if (pl.state == ST_FIGHT) pl.state = ST_IDLE;
 }
@@ -1514,6 +1583,35 @@ static void gob_step(gob_t *g, int tx, int ty)
     }
 }
 
+/* the Dragon's signature: a ranged gout of fire that ignores distance and armour */
+static void dragon_breath(gob_t *g)
+{
+    int dmg = g->phase ? 8 : 5;
+    spawn_proj(g->px, g->py - 8, pl.px, pl.py - 8, SPR_BOLT_FIRE);
+    sfx(SND_FIRE);
+    msg("The Ancient Dragon breathes a torrent of fire!");
+    hurt_player(dmg);
+}
+
+/* the Dragon calls reinforcements when enraged; brood vanish on death */
+static void summon_whelps(gob_t *dragon, int n)
+{
+    static const int off[][2] = {
+        {-2,2},{2,2},{-3,0},{3,0},{0,3},{-2,-1},{2,-1}
+    };
+    int got = 0;
+    for (int k = 0; k < 7 && got < n; k++) {
+        int sx = dragon->sx + off[k][0], sy = dragon->sy + off[k][1];
+        if (!gob_tile_free(sx, sy, dragon)) continue;
+        gob_t *w = spawn_mob(MOB_WHELP, sx, sy);
+        if (!w) break;
+        w->summoned = true;
+        w->aggro = true;
+        got++;
+    }
+    if (got) msg("The Dragon calls its brood to its defence!");
+}
+
 static void tick_goblins(void)
 {
     for (int i = 0; i < num_gob; i++) {
@@ -1539,13 +1637,29 @@ static void tick_goblins(void)
         if (g->aggro) {
             if (cheb(g->tx, g->ty, g->sx, g->sy) > 10) {
                 g->aggro = false;
-            } else if (dp <= 1) {
-                if (--g->atk_cd <= 0) {
-                    g->atk_cd = 4;
-                    mob_attack(g);
-                }
             } else {
-                gob_step(g, pl.tx, pl.ty);
+                if (g->type == MOB_DRAGON) {
+                    /* enrage once at half health: faster, fiercer, summons brood */
+                    if (g->phase == 0 && g->hp <= mobinfo[MOB_DRAGON].max_hp / 2) {
+                        g->phase = 1;
+                        msg("The Ancient Dragon roars and erupts in fury!");
+                        summon_whelps(g, 2);
+                    }
+                    /* breathe fire at range (and up close) on a cooldown */
+                    if (dp <= 5 && --g->special_cd <= 0) {
+                        g->special_cd = g->phase ? 4 : 7;
+                        dragon_breath(g);
+                    }
+                }
+                if (dp <= 1) {
+                    int cd = (g->type == MOB_DRAGON && g->phase) ? 3 : 4;
+                    if (--g->atk_cd <= 0) {
+                        g->atk_cd = cd;
+                        mob_attack(g);
+                    }
+                } else {
+                    gob_step(g, pl.tx, pl.ty);
+                }
             }
         } else {
             if (g->tx != g->sx || g->ty != g->sy) {
@@ -2148,9 +2262,10 @@ static void knight_talk(void)
             msg("Sir Garrick rewards you with 5000 coins.");
             break;
         default:
-            dlg_line("Warlord and Demon both fallen to your");
-            dlg_line("blade. Rune Valley will sing of you for");
-            dlg_line("a hundred years, champion.");
+            dlg_line("A stair has opened where the Demon fell.");
+            dlg_line("An Ancient Dragon sleeps in the deep -");
+            dlg_line("the last terror of these lands. Go in");
+            dlg_line("rune armour, and ware its fire!");
             break;
         }
         break;
@@ -2333,11 +2448,13 @@ static void interact(void)
                 msg("The dungeon is perilous. Speak with Sir Garrick first.");
             else
                 enter_dungeon();
-        } else {                       /* floor 1 -> floor 2 */
+        } else if (dungeon_floor == 1) {       /* floor 1 -> floor 2 */
             if (dquest == DQ_NONE)
                 msg("A sealed stair. Sir Garrick must know of this.");
             else
                 descend_floor();
+        } else {                               /* floor 2 -> floor 3 */
+            descend_floor();   /* the stair only exists once the Demon is bested */
         }
         break;
     case OBJ_STAIRS_UP:
@@ -2384,8 +2501,10 @@ static const char *context_hint(void)
         if (cur_map == MAP_OVERWORLD)
             return wquest == WQ_NONE ? "A: Dungeon (barred - see Sir Garrick)"
                                      : "A: Descend into the dungeon";
-        return dquest == DQ_NONE ? "A: Deeper stair (sealed)"
-                                 : "A: Descend to the depths";
+        if (dungeon_floor == 1)
+            return dquest == DQ_NONE ? "A: Deeper stair (sealed)"
+                                     : "A: Descend to the depths";
+        return "A: Descend to the Dragon's lair";
     case OBJ_STAIRS_UP:   return "A: Climb up";
     case OBJ_SHOP_GENERAL:return "A: Browse the General Store";
     case OBJ_SHOP_WEAPON: return "A: Browse the Weapon Shop";
@@ -2470,6 +2589,7 @@ static void use_inv_item(int slot)
         msg("Ugh, there's nothing left of it. Best discard it.");
         break;
     case IT_ESSENCE:   msg("A chunk of raw magical essence."); break;
+    case IT_DRAGONSTONE: msg("A priceless gem from the Dragon's hoard. Sell it for a fortune."); break;
     case IT_BRONZE_BAR: case IT_IRON_BAR:
         msg("Take this to the anvil by the mine."); break;
     case IT_HAMMER:    msg("For smithing at an anvil."); break;
