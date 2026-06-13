@@ -1867,6 +1867,40 @@ New-Rock    'obj_rock_coal' '#161616'
 New-OreIcon 'item_coal'     '#101010'
 New-Recolor 'item_bronze_bar' 'item_steel_bar' $gearTiers['st']
 
+# ---- Gold: a yellow ore smelted into bars that mount dragonstone jewelry ----
+New-Rock    'obj_rock_gold' '#e8c84a'
+New-OreIcon 'item_gold_ore' '#e8c84a'
+New-Recolor 'item_bronze_bar' 'item_gold_bar' @{ '#b87f4e'='#e8c84a'; '#94633a'='#b89818'; '#d8a070'='#f8e87a' }
+
+# ---- Dragonstone jewelry: gold settings (g) + a violet gem (p/q) ----
+$jewPal = @{ 'g'='#e8c84a'; 'p'='#b04ad0'; 'q'='#7a2a9a' }
+Save-Sprite 'item_dstone_ring' $jewPal @(
+    '................','................','.......p........','......qpq.......',
+    '.......p........','.....gg.gg......','....g.....g.....','....g.....g.....',
+    '....g.....g.....','.....g...g......','......ggg.......','................',
+    '................','................','................','................')
+Save-Sprite 'item_dstone_bracelet' $jewPal @(
+    '................','................','................','....gggggg......',
+    '...g......g.....','..g..qpq...g....','...g......g.....','....gggggg......',
+    '................','................','................','................',
+    '................','................','................','................')
+Save-Sprite 'item_dstone_amulet' $jewPal @(
+    '................','....g.....g.....','.....g...g......','......g.g.......',
+    '.......g........','.......p........','......pqp.......','.....pqpqp......',
+    '......pqp.......','.......p........','................','................',
+    '................','................','................','................')
+Save-Sprite 'item_dstone_necklace' $jewPal @(
+    '................','...g.......g....','....g.....g.....','.....g...g......',
+    '......ggg.......','......qpq.......','.....qpppq......','......qpq.......',
+    '................','................','................','................',
+    '................','................','................','................')
+# enchanted: the gem flares brighter (and the gold warms)
+$enchMap = @{ '#b04ad0'='#f08aff'; '#7a2a9a'='#c45ae0'; '#e8c84a'='#fff070' }
+New-Recolor 'item_dstone_ring'     'item_fury_ring'      $enchMap
+New-Recolor 'item_dstone_bracelet' 'item_guard_bracelet' $enchMap
+New-Recolor 'item_dstone_amulet'   'item_glory_amulet'   $enchMap
+New-Recolor 'item_dstone_necklace' 'item_power_necklace' $enchMap
+
 # ---- Mithril: a deep-blue ore deeper in the mine, smithed into bars/gear ----
 $mithFleck = '#4a5ac0'
 New-Rock    'obj_rock_mithril' $mithFleck

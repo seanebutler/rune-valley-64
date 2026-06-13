@@ -198,6 +198,7 @@ element; each teleport takes its own mix of runes (Law, plus elemental runes).
 | Home Teleport | 1 | 1x Air rune + 1x Law rune | teleport |
 | Bank Teleport | 20 | 1x Law rune + 1x Fire rune + 1x Air rune | teleport |
 | Cave Teleport * | 25 | 1x Law rune + 1x Water rune + 1x Fire rune | teleport |
+| Enchant Jewel | 30 | 1x Law rune + 1x Fire rune | enchant |
 
 *Cave Teleport is locked until you complete **The Warlord's Bane** quest.
 
@@ -240,14 +241,36 @@ Slay cows for **cowhide** (and the Ancient Dragon for **dragonhide**), then
 have **Pelt the Tanner** by the cow pasture cure them into leather for a few
 coins. Use a **needle** on the leather (with **thread** in your pack) to stitch
 ranged armour - both sold at the General Store. Dragonhide gear demands a high
-Crafting level but gives the best Ranged bonuses in the valley.
+Crafting level but gives the best Ranged bonuses in the valley. The same
+needle also mounts **dragonstone** gems on **gold bars** into jewelry (see
+the Jewellery section).
 
-| | Stitch | Materials | Crafting level |
+| | Craft | Materials | Crafting level |
 |:-:|---|---|--:|
 | ![](docs/almanac/item_leather_coif.png) | Leather coif | 1x Leather + 1x Thread | 5 |
 | ![](docs/almanac/item_leather_body.png) | Leather body | 3x Leather + 1x Thread | 14 |
 | ![](docs/almanac/item_dhide_coif.png) | D'hide coif | 1x Dragon leather + 1x Thread | 35 |
 | ![](docs/almanac/item_dhide_body.png) | D'hide body | 2x Dragon leather + 1x Thread | 40 |
+| ![](docs/almanac/item_dstone_ring.png) | Dstone ring | 1x Dragonstone + 1x Gold bar | 45 |
+| ![](docs/almanac/item_dstone_bracelet.png) | Dstone bracelet | 1x Dragonstone + 1x Gold bar | 48 |
+| ![](docs/almanac/item_dstone_amulet.png) | Dstone amulet | 1x Dragonstone + 1x Gold bar | 50 |
+| ![](docs/almanac/item_dstone_necklace.png) | Dstone necklace | 1x Dragonstone + 1x Gold bar | 55 |
+
+---
+
+## Jewellery
+
+Mine **gold** (Mining 40) and smelt it into **gold bars** (Smithing 40). Craft
+a **dragonstone + gold bar** into a plain piece (Crafting), then cast **Enchant
+Jewel** (Magic 30, 1 Law + 1 Fire rune) on it for a combat boost. Wear one
+**neck** piece (amulet or necklace) and one **hand** piece (ring or bracelet).
+
+| | Jewellery | Slot | Attack | Strength | Defence | Magic | Ranged |
+|:-:|---|---|--:|--:|--:|--:|--:|
+| ![](docs/almanac/item_guard_bracelet.png) | Bracelet of Guard | Hand | +6 | +0 | +6 | +0 | +0 |
+| ![](docs/almanac/item_fury_ring.png) | Ring of Fury | Hand | +0 | +8 | +0 | +0 | +0 |
+| ![](docs/almanac/item_glory_amulet.png) | Amulet of Glory | Neck | +8 | +8 | +8 | +0 | +0 |
+| ![](docs/almanac/item_power_necklace.png) | Necklace of Power | Neck | +0 | +0 | +0 | +10 | +8 |
 
 ---
 

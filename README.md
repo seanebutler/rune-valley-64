@@ -14,7 +14,7 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
 - **Woodcutting** — chop trees (and oaks at level 15); trees fall to stumps
   and respawn
 - **Mining** — copper and tin near the west path, iron (level 15), **coal**
-  (level 20) and a deep vein of **mithril** (level 30) further out; rocks
+  (level 20), **mithril** (level 30) and **gold** (level 40) further out; rocks
   deplete and respawn
 - **Fishing** — the **tackle you carry** decides the catch at the rippling
   river spots: a **net** lands shrimp (level 1), a **fishing rod** trout
@@ -65,9 +65,11 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   1 law — your dungeon escape to the surface spawn), **Bank** (lvl 20; 1 law +
   1 fire + 1 air) for the bank, and **Cave** (lvl 25; 1 law + 1 water + 1 fire)
   for the dungeon mouth. The **Cave Teleport is locked** until you complete *The
-  Warlord's Bane* — Sir Garrick teaches it to you as part of the reward. You
-  start with 25 air runes; craft more at the altars or buy any rune (chaos and
-  law included) at the Magic Shop.
+  Warlord's Bane* — Sir Garrick teaches it to you as part of the reward. The
+  book also holds **Enchant Jewel** (lvl 30; 1 law + 1 fire), which turns plain
+  dragonstone jewelry into combat-boosting gear. You start with 25 air runes;
+  craft more at the altars or buy any rune (chaos and law included) at the
+  Magic Shop.
   **Wizard gear** — a staff, hat and robe carry a Magic bonus that boosts your
   spell accuracy and max hit (worn in the weapon/helm/body slots, drawn on your
   character). Win them as **monster drops**
@@ -101,15 +103,24 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
 - **Smithing** — smelt ore into bars at the furnace by the mine: copper + tin →
   bronze; iron alone → iron (fails half the time, as is tradition); **iron + 1
   coal → steel** (level 20); and **mithril ore + 2 coal → a mithril bar**
-  (level 30). Then hammer bars into swords, helms, shields, platebodies and
-  **arrowtips** at the anvil — the full **steel and mithril** sets are now
-  smithable from your own bars, not just bought. Iron tools speed up gathering
-  when carried
+  (level 30); and **gold ore → a gold bar** (level 40, for jewelry). Then
+  hammer bars into swords, helms, shields, platebodies and **arrowtips** at the
+  anvil — the full **steel and mithril** sets are now smithable from your own
+  bars, not just bought. Iron tools speed up gathering when carried
 - **Equipment** — open the worn-equipment screen (C-up), or press A on gear in
-  your inventory to equip it. Four slots — weapon, shield, helm, body — each
-  with Attack/Strength/Defence bonuses that feed straight into the combat
-  formulas. **Worn gear is drawn on your character** — helm, platebody, sword
-  and shield all show on the sprite in every facing
+  your inventory to equip it. Six slots — weapon, shield, helm, body, **neck**
+  and **hand** — each with Attack/Strength/Defence/Magic/Ranged bonuses that
+  feed straight into the combat formulas. **Worn gear is drawn on your
+  character** — helm, platebody, sword and shield all show on the sprite in
+  every facing (rings and amulets are too small to draw)
+- **Crafting & jewelry** — the Crafting skill does double duty. Beyond the
+  leather/dragonhide ranged armour (use a **needle**), it mounts **dragonstone**
+  gems on **gold bars** into jewelry: a **ring**, **bracelet**, **amulet** and
+  **necklace**. Crafted plain, each is inert until you cast **Enchant Jewel**
+  (Magic 30) on it — then it becomes combat gear: the **Amulet of Glory**
+  (Atk/Str/Def +8) or **Necklace of Power** (Mag +10, Rng +8) for the neck, and
+  the **Ring of Fury** (Str +8) or **Bracelet of Guard** (Atk/Def +6) for the
+  hand. Hunt the Ancient Dragon for the dragonstones
 - **Six gear tiers** — bronze, iron, **steel and mithril** are smithed from your
   own bars; **rune** is bought at the bazaar or won from the Warlord (steel and
   mithril can still be bought too). Each tier hits harder and defends better but

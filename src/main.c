@@ -51,7 +51,7 @@ enum { OBJ_NONE, OBJ_TREE, OBJ_OAK, OBJ_STUMP, OBJ_ROCK_COPPER, OBJ_ROCK_TIN,
        OBJ_SHOP_GENERAL, OBJ_SHOP_WEAPON, OBJ_SHOP_ARMOR, OBJ_SHOP_MAGIC,
        OBJ_KNIGHT, OBJ_FENCE, OBJ_TUTOR,
        OBJ_ALTAR_WATER, OBJ_ALTAR_EARTH, OBJ_ALTAR_LAW, OBJ_ALTAR_CHAOS,
-       OBJ_ROCK_MITHRIL, OBJ_TANNER, OBJ_ROCK_COAL };
+       OBJ_ROCK_MITHRIL, OBJ_TANNER, OBJ_ROCK_COAL, OBJ_ROCK_GOLD };
 
 enum { MAP_OVERWORLD, MAP_DUNGEON };
 
@@ -84,7 +84,7 @@ static const char *map_rows[MAP_H] = {
     "T.......C...N.......................ss~~~~.....T",
     "T.................1...2...3...4.....ss~~~~.....T",
     "T...................................ssF~~~.....T",
-    "T......I..I..m.k.O.k................ss~~~~.....T",
+    "T......I..I..m.k.O.k.d..............ss~~~~.....T",
     "T.....X......K......................ss~~~~.....T",
     "T.............................O.....ss~~~~..R..T",
     "T...................................ssF~~~.....T",
@@ -157,11 +157,14 @@ enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_NEEDLE, IT_THREAD,
        IT_LEATHER_COIF, IT_LEATHER_BODY, IT_DHIDE_COIF, IT_DHIDE_BODY,
        IT_COAL, IT_STEEL_BAR,
+       IT_GOLD_ORE, IT_GOLD_BAR,
+       IT_DSTONE_AMULET, IT_DSTONE_NECKLACE, IT_DSTONE_RING, IT_DSTONE_BRACELET,
+       IT_GLORY_AMULET, IT_POWER_NECKLACE, IT_FURY_RING, IT_GUARD_BRACELET,
        NUM_ITEMS };
 
 /* worn equipment slots; SLOT_NONE = item is not equippable */
-enum { SLOT_NONE, SLOT_WEAPON, SLOT_SHIELD, SLOT_HELM, SLOT_BODY };
-#define NUM_SLOTS 4
+enum { SLOT_NONE, SLOT_WEAPON, SLOT_SHIELD, SLOT_HELM, SLOT_BODY, SLOT_NECK, SLOT_HAND };
+#define NUM_SLOTS 6
 
 /* equip fields default to 0 (= SLOT_NONE, no bonus) for non-gear items;
    stackable items share one inventory slot with a quantity */
@@ -246,8 +249,10 @@ enum {
     SPR_I_RAW_SWORDFISH, SPR_I_SWORDFISH,
     SPR_I_KNIFE, SPR_I_ARROW_SHAFT, SPR_I_BRONZE_TIPS, SPR_I_IRON_TIPS,
     SPR_I_BRONZE_ARROW, SPR_I_IRON_ARROW, SPR_I_SHORTBOW, SPR_I_OAK_BOW,
-    SPR_ROCK_M, SPR_ROCK_COAL, SPR_TANNER,
-    SPR_I_COAL, SPR_I_STEEL_BAR,
+    SPR_ROCK_M, SPR_ROCK_COAL, SPR_ROCK_GOLD, SPR_TANNER,
+    SPR_I_COAL, SPR_I_STEEL_BAR, SPR_I_GOLD_ORE, SPR_I_GOLD_BAR,
+    SPR_I_DSTONE_AMULET, SPR_I_DSTONE_NECKLACE, SPR_I_DSTONE_RING, SPR_I_DSTONE_BRACELET,
+    SPR_I_GLORY_AMULET, SPR_I_POWER_NECKLACE, SPR_I_FURY_RING, SPR_I_GUARD_BRACELET,
     SPR_I_MITH_ORE, SPR_I_MITH_BAR, SPR_I_MITH_TIPS, SPR_I_MITH_ARROW,
     SPR_I_COWHIDE, SPR_I_LEATHER, SPR_I_DRAGON_HIDE, SPR_I_DRAGON_LEATHER,
     SPR_I_NEEDLE, SPR_I_THREAD,
@@ -332,8 +337,10 @@ static const char *spr_files[NUM_SPR] = {
     "item_raw_swordfish", "item_swordfish",
     "item_knife", "item_arrow_shaft", "item_bronze_tips", "item_iron_tips",
     "item_bronze_arrow", "item_iron_arrow", "item_shortbow", "item_oak_bow",
-    "obj_rock_mithril", "obj_rock_coal", "tanner_down_a",
-    "item_coal", "item_steel_bar",
+    "obj_rock_mithril", "obj_rock_coal", "obj_rock_gold", "tanner_down_a",
+    "item_coal", "item_steel_bar", "item_gold_ore", "item_gold_bar",
+    "item_dstone_amulet", "item_dstone_necklace", "item_dstone_ring", "item_dstone_bracelet",
+    "item_glory_amulet", "item_power_necklace", "item_fury_ring", "item_guard_bracelet",
     "item_mith_ore", "item_mith_bar", "item_mith_tips", "item_mith_arrow",
     "item_cowhide", "item_leather", "item_dragon_hide", "item_dragon_leather",
     "item_needle", "item_thread",
@@ -425,6 +432,18 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     /* coal: fuels steel (1 iron + 1 coal) and mithril (1 ore + 2 coal) smelts */
     [IT_COAL]         ={ "Coal",          SPR_I_COAL,         0, false },
     [IT_STEEL_BAR]    ={ "Steel bar",     SPR_I_STEEL_BAR,    0, false },
+    /* gold: smelts into bars that mount dragonstone gems into jewelry */
+    [IT_GOLD_ORE]     ={ "Gold ore",      SPR_I_GOLD_ORE,     0, false },
+    [IT_GOLD_BAR]     ={ "Gold bar",      SPR_I_GOLD_BAR,     0, false },
+    /* dragonstone jewelry: crafted plain, then enchanted by magic for boosts */
+    [IT_DSTONE_AMULET]  ={ "Dstone amulet",  SPR_I_DSTONE_AMULET,  0, false },
+    [IT_DSTONE_NECKLACE]={ "Dstone necklace",SPR_I_DSTONE_NECKLACE,0, false },
+    [IT_DSTONE_RING]    ={ "Dstone ring",    SPR_I_DSTONE_RING,    0, false },
+    [IT_DSTONE_BRACELET]={ "Dstone bracelet",SPR_I_DSTONE_BRACELET,0, false },
+    [IT_GLORY_AMULET]   ={ "Amulet of Glory", SPR_I_GLORY_AMULET,  0, false, SLOT_NECK, 8,8,8,1 },
+    [IT_POWER_NECKLACE] ={ "Necklace of Power",SPR_I_POWER_NECKLACE,0,false, SLOT_NECK, 0,0,0,1, false,10, 8 },
+    [IT_FURY_RING]      ={ "Ring of Fury",   SPR_I_FURY_RING,     0, false, SLOT_HAND, 0,8,0,1 },
+    [IT_GUARD_BRACELET] ={ "Bracelet of Guard",SPR_I_GUARD_BRACELET,0,false, SLOT_HAND, 6,0,6,1 },
     /* mithril: a deeper ore that smelts into bars for gear and arrowtips */
     [IT_MITH_ORE]     ={ "Mithril ore",   SPR_I_MITH_ORE,     0, false },
     [IT_MITH_BAR]     ={ "Mithril bar",   SPR_I_MITH_BAR,     0, false },
@@ -466,6 +485,11 @@ static const int item_value[NUM_ITEMS] = {
     [IT_KNIFE]=6, [IT_ARROW_SHAFT]=1, [IT_BRONZE_TIPS]=2, [IT_IRON_TIPS]=4,
     [IT_BRONZE_ARROW]=2, [IT_IRON_ARROW]=4, [IT_SHORTBOW]=25, [IT_OAK_BOW]=80,
     [IT_COAL]=18, [IT_STEEL_BAR]=80,
+    [IT_GOLD_ORE]=80, [IT_GOLD_BAR]=160,
+    [IT_DSTONE_AMULET]=1500, [IT_DSTONE_NECKLACE]=1500,
+    [IT_DSTONE_RING]=1500, [IT_DSTONE_BRACELET]=1500,
+    [IT_GLORY_AMULET]=4000, [IT_POWER_NECKLACE]=4000,
+    [IT_FURY_RING]=4000, [IT_GUARD_BRACELET]=4000,
     [IT_MITH_ORE]=60, [IT_MITH_BAR]=120, [IT_MITH_TIPS]=8, [IT_MITH_ARROW]=8,
     [IT_COWHIDE]=12, [IT_LEATHER]=20, [IT_DRAGON_HIDE]=120, [IT_DRAGON_LEATHER]=200,
     [IT_NEEDLE]=2, [IT_THREAD]=2,
@@ -492,7 +516,7 @@ static int gp = 0;     /* the player's coins */
 
 /* worn equipment: equipped[slot-1] holds an item id (IT_NONE = empty) */
 static int equipped[NUM_SLOTS];
-static const char *slot_names[NUM_SLOTS] = { "Weapon", "Shield", "Helm", "Body" };
+static const char *slot_names[NUM_SLOTS] = { "Weapon", "Shield", "Helm", "Body", "Neck", "Hand" };
 
 static int equip_atk(void)
 {
@@ -669,7 +693,8 @@ static int almanac_scroll = 0;
    SPELL_HOME is an instant utility cast handled in the spellbook, not a combat
    spell, so it never becomes the standing cast_spell. */
 enum { SPELL_MELEE, SPELL_AIR, SPELL_WATER, SPELL_EARTH, SPELL_FIRE,
-       SPELL_EBOLT, SPELL_FBOLT, SPELL_HOME, SPELL_BANK, SPELL_CAVE, NUM_SPELLS };
+       SPELL_EBOLT, SPELL_FBOLT, SPELL_HOME, SPELL_BANK, SPELL_CAVE,
+       SPELL_ENCHANT, NUM_SPELLS };
 /* rune2/runes2 and rune3/runes3 are extra required runes (IT_NONE = none):
    bolts need a Chaos rune on top of their element; teleports take a mix. */
 static const struct { const char *name; int rune; int runes; int rune2; int runes2;
@@ -685,6 +710,7 @@ spellinfo[NUM_SPELLS] = {
     { "Home Teleport", IT_AIR_RUNE,   1, IT_LAW_RUNE,   1, IT_NONE,      0, 0,  1,  35 },
     { "Bank Teleport", IT_LAW_RUNE,   1, IT_FIRE_RUNE,  1, IT_AIR_RUNE,  1, 0, 20,  90 },
     { "Cave Teleport", IT_LAW_RUNE,   1, IT_WATER_RUNE, 1, IT_FIRE_RUNE, 1, 0, 25, 110 },
+    { "Enchant Jewel", IT_LAW_RUNE,   1, IT_FIRE_RUNE,  1, IT_NONE,      0, 0, 30, 100 },
 };
 static int cast_spell = SPELL_MELEE;
 static int spell_cursor = 0;
@@ -944,6 +970,7 @@ static void load_overworld(void)
             case 'I': obj = OBJ_ROCK_IRON;   break;
             case 'm': obj = OBJ_ROCK_MITHRIL;break;
             case 'k': obj = OBJ_ROCK_COAL;   break;
+            case 'd': obj = OBJ_ROCK_GOLD;   break;
             case 'Z': obj = OBJ_TANNER;      break;
             case 'F': ter = TER_WATER; obj = OBJ_FISH; break;
             case 'E': obj = OBJ_ESSENCE;    break;
@@ -1523,6 +1550,8 @@ static void build_almanac(void)
         char pre[24];
         if (spellinfo[sp].maxhit > 0)
             snprintf(pre, sizeof pre, "max hit %d - ", spellinfo[sp].maxhit);
+        else if (sp == SPELL_ENCHANT)
+            snprintf(pre, sizeof pre, "enchant - ");
         else
             snprintf(pre, sizeof pre, "teleport - ");
         int r1=spellinfo[sp].rune,  n1=spellinfo[sp].runes;
@@ -1556,6 +1585,17 @@ static void build_almanac(void)
         al_add(0, "%-10s F%-2d %-12s cook%-2d  heal %d", fishinfo[f].name,
                fishinfo[f].fish_lvl, iteminfo[fishinfo[f].tool].name,
                fishinfo[f].cook_lvl, iteminfo[fishinfo[f].cooked].heal);
+
+    al_add(1, "== JEWELLERY ==  (Atk/Str/Def/Mag/Rng)");
+    al_add(6, "  craft dragonstone+gold bar, enchant with magic");
+    for (int it = 1; it < NUM_ITEMS; it++) {
+        int s = iteminfo[it].slot;
+        if (s == SLOT_NECK || s == SLOT_HAND)
+            al_add(0, "%-17s %s A+%d S+%d D+%d M+%d R+%d", iteminfo[it].name,
+                   s == SLOT_NECK ? "neck" : "hand",
+                   iteminfo[it].atk, iteminfo[it].str, iteminfo[it].def,
+                   iteminfo[it].mag, iteminfo[it].rng);
+    }
 }
 
 static void mob_die(gob_t *g)
@@ -1831,6 +1871,38 @@ static void do_teleport(int spell, int tx, int ty, const char *where)
    is complete (Sir Garrick rewards it once the Warlord is slain) */
 static bool cave_unlocked(void) { return wquest >= WQ_DONE; }
 
+/* enchanting: a magic cast that turns a plain dragonstone piece into its
+   combat-boosting enchanted form (spends the spell's runes, earns Magic xp) */
+static const struct { int plain, enchanted; } enchant_map[] = {
+    { IT_DSTONE_AMULET,   IT_GLORY_AMULET   },
+    { IT_DSTONE_NECKLACE, IT_POWER_NECKLACE },
+    { IT_DSTONE_RING,     IT_FURY_RING      },
+    { IT_DSTONE_BRACELET, IT_GUARD_BRACELET },
+};
+static void do_enchant(void)
+{
+    int plain = IT_NONE, made = IT_NONE;
+    for (int i = 0; i < (int)(sizeof enchant_map / sizeof enchant_map[0]); i++)
+        if (has_item(enchant_map[i].plain)) {
+            plain = enchant_map[i].plain; made = enchant_map[i].enchanted; break;
+        }
+    if (plain == IT_NONE) { msg("You have no dragonstone jewelry to enchant."); return; }
+    int r[3] = { spellinfo[SPELL_ENCHANT].rune, spellinfo[SPELL_ENCHANT].rune2, spellinfo[SPELL_ENCHANT].rune3 };
+    int n[3] = { spellinfo[SPELL_ENCHANT].runes, spellinfo[SPELL_ENCHANT].runes2, spellinfo[SPELL_ENCHANT].runes3 };
+    for (int i = 0; i < 3; i++)
+        if (r[i] != IT_NONE && inv_count(r[i]) < n[i]) {
+            msg("You need %dx %s to enchant.", n[i], iteminfo[r[i]].name);
+            return;
+        }
+    for (int i = 0; i < 3; i++)
+        for (int k = 0; k < n[i]; k++) remove_item(r[i]);
+    remove_item(plain);
+    add_item(made);
+    sfx_ui(SND_LEVELUP);
+    add_xp(SK_MAGIC, spellinfo[SPELL_ENCHANT].xp_x10, true);
+    msg("The gem flares - you enchant a %s!", iteminfo[made].name);
+}
+
 /* ------------------------------------------------------------ skilling ticks */
 
 static void stop_action(void) { pl.state = ST_IDLE; }
@@ -1886,7 +1958,8 @@ static void tick_skilling(void)
     case ST_MINE: {
         int o = object[ay][ax];
         if (o != OBJ_ROCK_COPPER && o != OBJ_ROCK_TIN && o != OBJ_ROCK_IRON &&
-            o != OBJ_ROCK_MITHRIL && o != OBJ_ROCK_COAL && o != OBJ_ESSENCE) {
+            o != OBJ_ROCK_MITHRIL && o != OBJ_ROCK_COAL && o != OBJ_ROCK_GOLD &&
+            o != OBJ_ESSENCE) {
             if (o == OBJ_ROCK_EMPTY) msg("There is no ore currently available in this rock.");
             stop_action(); break;
         }
@@ -1912,6 +1985,7 @@ static void tick_skilling(void)
         case OBJ_ROCK_IRON:    ore=IT_IRON;     req=15; base=8+mn*3/2; oxp=350; resp=9;  noun="iron";        break;
         case OBJ_ROCK_COAL:    ore=IT_COAL;     req=20; base=6+mn;     oxp=250; resp=7;  noun="coal";        break;
         case OBJ_ROCK_MITHRIL: ore=IT_MITH_ORE; req=30; base=4+mn;     oxp=600; resp=16; noun="mithril ore"; break;
+        case OBJ_ROCK_GOLD:    ore=IT_GOLD_ORE; req=40; base=4+mn;     oxp=650; resp=16; noun="gold ore";    break;
         case OBJ_ROCK_COPPER:  ore=IT_COPPER;   req=1;  base=25+mn*2;  oxp=175; resp=4;  noun="copper";      break;
         default:               ore=IT_TIN;      req=1;  base=25+mn*2;  oxp=175; resp=4;  noun="tin";         break;
         }
@@ -2040,6 +2114,17 @@ static void tick_skilling(void)
             sfx(SND_FIRE);
             msg("You smelt a steel bar.");
             add_xp(SK_SMITH, 175, true);
+        } else if (has_item(IT_GOLD_ORE)) {
+            if (level_of(SK_SMITH) < 40) {
+                msg("You need a Smithing level of 40 to smelt gold.");
+                stop_action();
+                break;
+            }
+            remove_item(IT_GOLD_ORE);
+            add_item(IT_GOLD_BAR);
+            sfx(SND_FIRE);
+            msg("You smelt a gold bar.");
+            add_xp(SK_SMITH, 280, true);
         } else if (has_item(IT_IRON)) {
             if (level_of(SK_SMITH) < 15) {
                 msg("You need a Smithing level of 15 to smelt iron.");
@@ -2973,7 +3058,7 @@ static void interact(void)
         msg("You swing your axe at the tree.");
         break;
     case OBJ_ROCK_COPPER: case OBJ_ROCK_TIN: case OBJ_ROCK_IRON:
-    case OBJ_ROCK_MITHRIL: case OBJ_ROCK_COAL: case OBJ_ESSENCE:
+    case OBJ_ROCK_MITHRIL: case OBJ_ROCK_COAL: case OBJ_ROCK_GOLD: case OBJ_ESSENCE:
         if (!has_pick()) { msg("You need a pickaxe to mine this rock."); return; }
         pl.state = ST_MINE; pl.act_timer = 2;
         msg("You swing your pick at the rock.");
@@ -3039,7 +3124,7 @@ static void interact(void)
         break;
     case OBJ_FURNACE:
         if ((has_item(IT_COPPER) && has_item(IT_TIN)) || has_item(IT_IRON) ||
-            has_item(IT_MITH_ORE)) {
+            has_item(IT_MITH_ORE) || has_item(IT_GOLD_ORE)) {
             pl.state = ST_SMELT; pl.act_timer = 2;
             msg("You feed ore into the furnace.");
         } else {
@@ -3115,6 +3200,7 @@ static const char *context_hint(void)
     case OBJ_ROCK_IRON:   return "A: Mine Iron rock";
     case OBJ_ROCK_MITHRIL:return "A: Mine Mithril rock";
     case OBJ_ROCK_COAL:   return "A: Mine Coal rock";
+    case OBJ_ROCK_GOLD:   return "A: Mine Gold rock";
     case OBJ_FISH:        return "A: Fish here";
     case OBJ_BOOTH:       return "A: Use Bank booth";
     case OBJ_FIRE:        return "A: Cook on Fire";
@@ -3226,12 +3312,20 @@ static void use_inv_item(int slot)
         msg("Ugh, there's nothing left of it. Best discard it.");
         break;
     case IT_ESSENCE:   msg("A chunk of raw magical essence."); break;
-    case IT_DRAGONSTONE: msg("A priceless gem from the Dragon's hoard. Sell it for a fortune."); break;
+    case IT_DRAGONSTONE: msg("A Dragon's gem. Craft it with a gold bar into jewelry."); break;
     case IT_DRAGONFIRE: msg("The Dragonfire blade - it burns hot in hand and mind alike."); break;
     case IT_BRONZE_BAR: case IT_IRON_BAR: case IT_MITH_BAR: case IT_STEEL_BAR:
         msg("Take this to the anvil by the mine."); break;
     case IT_COAL: msg("Coal. Smelt iron+coal for steel, ore+2 coal for mithril."); break;
     case IT_MITH_ORE: msg("Mithril ore. Smelt with 2 coal at the furnace (Smithing 30)."); break;
+    case IT_GOLD_ORE: msg("Gold ore. Smelt it into a gold bar (Smithing 40)."); break;
+    case IT_GOLD_BAR: msg("A gold bar. Craft it with a dragonstone into jewelry."); break;
+    case IT_DSTONE_AMULET: case IT_DSTONE_NECKLACE:
+    case IT_DSTONE_RING: case IT_DSTONE_BRACELET:
+        msg("Plain dragonstone jewelry. Enchant it (C-left) for combat power."); break;
+    case IT_GLORY_AMULET: case IT_POWER_NECKLACE:
+    case IT_FURY_RING: case IT_GUARD_BRACELET:
+        msg("Enchanted jewelry - A to wear it for a combat boost."); break;
     case IT_COWHIDE: msg("Cowhide. Pelt the Tanner will cure it into leather."); break;
     case IT_DRAGON_HIDE: msg("Dragonhide. The Tanner can cure this into tough leather."); break;
     case IT_LEATHER: case IT_DRAGON_LEATHER:
@@ -3356,13 +3450,19 @@ static void fletch_make(int row)
 
 /* ------------------------------------------------------------ crafting */
 
-/* stitch tanned leather + thread into ranged armour (open with a needle) */
-static const struct { int result, hide, n_hide, n_thread, lvl, xp_x10; }
+/* the Crafting menu (open with a needle): stitch ranged armour from leather +
+   thread, and mount dragonstone gems on gold bars into jewelry. m2 = IT_NONE
+   for single-material recipes. */
+static const struct { int result, m1, n1, m2, n2, lvl, xp_x10; }
 craft_list[] = {
-    { IT_LEATHER_COIF, IT_LEATHER,        1, 1,  5,  250 },
-    { IT_LEATHER_BODY, IT_LEATHER,        3, 1, 14,  500 },
-    { IT_DHIDE_COIF,   IT_DRAGON_LEATHER, 1, 1, 35, 1200 },
-    { IT_DHIDE_BODY,   IT_DRAGON_LEATHER, 2, 1, 40, 1800 },
+    { IT_LEATHER_COIF,    IT_LEATHER,        1, IT_THREAD,    1,  5,  250 },
+    { IT_LEATHER_BODY,    IT_LEATHER,        3, IT_THREAD,    1, 14,  500 },
+    { IT_DHIDE_COIF,      IT_DRAGON_LEATHER, 1, IT_THREAD,    1, 35, 1200 },
+    { IT_DHIDE_BODY,      IT_DRAGON_LEATHER, 2, IT_THREAD,    1, 40, 1800 },
+    { IT_DSTONE_RING,     IT_DRAGONSTONE,    1, IT_GOLD_BAR,  1, 45, 1000 },
+    { IT_DSTONE_BRACELET, IT_DRAGONSTONE,    1, IT_GOLD_BAR,  1, 48, 1100 },
+    { IT_DSTONE_AMULET,   IT_DRAGONSTONE,    1, IT_GOLD_BAR,  1, 50, 1200 },
+    { IT_DSTONE_NECKLACE, IT_DRAGONSTONE,    1, IT_GOLD_BAR,  1, 55, 1300 },
 };
 #define CRAFT_COUNT (int)(sizeof craft_list / sizeof craft_list[0])
 
@@ -3370,22 +3470,21 @@ static void craft_make(int row)
 {
     if (row < 0 || row >= CRAFT_COUNT) return;
     int result = craft_list[row].result;
-    int hide = craft_list[row].hide, nh = craft_list[row].n_hide;
-    int nt = craft_list[row].n_thread;
+    int m1 = craft_list[row].m1, n1 = craft_list[row].n1;
+    int m2 = craft_list[row].m2, n2 = craft_list[row].n2;
     if (level_of(SK_CRAFT) < craft_list[row].lvl) {
         msg("You need a Crafting level of %d for that.", craft_list[row].lvl);
         return;
     }
-    if (inv_count(hide) < nh || inv_count(IT_THREAD) < nt) {
-        msg("You need %dx %s and %dx thread for that.",
-            nh, iteminfo[hide].name, nt);
+    if (inv_count(m1) < n1 || (m2 != IT_NONE && inv_count(m2) < n2)) {
+        msg("You don't have the materials for that.");
         return;
     }
-    for (int i = 0; i < nh; i++) remove_item(hide);
-    for (int i = 0; i < nt; i++) remove_item(IT_THREAD);
+    for (int i = 0; i < n1; i++) remove_item(m1);
+    for (int i = 0; i < n2; i++) remove_item(m2);
     add_item(result);
     sfx(SND_SMITH);
-    msg("You stitch together a %s.", iteminfo[result].name);
+    msg("You craft a %s.", iteminfo[result].name);
     add_xp(SK_CRAFT, craft_list[row].xp_x10, true);
 }
 
@@ -3781,6 +3880,7 @@ static void render(void)
             case OBJ_ROCK_IRON:   rdpq_sprite_blit(spr[SPR_ROCK_I], sx, sy, NULL); break;
             case OBJ_ROCK_MITHRIL:rdpq_sprite_blit(spr[SPR_ROCK_M], sx, sy, NULL); break;
             case OBJ_ROCK_COAL:   rdpq_sprite_blit(spr[SPR_ROCK_COAL], sx, sy, NULL); break;
+            case OBJ_ROCK_GOLD:   rdpq_sprite_blit(spr[SPR_ROCK_GOLD], sx, sy, NULL); break;
             case OBJ_ROCK_EMPTY:  rdpq_sprite_blit(spr[SPR_ROCK_E], sx, sy, NULL); break;
             case OBJ_FISH:
                 rdpq_sprite_blit(spr[anim_frame ? SPR_FISH_B : SPR_FISH_A], sx, sy, NULL);
@@ -4120,8 +4220,8 @@ static void render(void)
                       fletch_list[fc].n1, iteminfo[fletch_list[fc].in1].name);
     }
     else if (ui_mode == UI_CRAFT) {
-        int px0 = 56, py0 = 54;
-        draw_panel(px0, py0, px0 + 208, py0 + 98);
+        int px0 = 56, py0 = 24;
+        draw_panel(px0, py0, px0 + 208, py0 + 46 + CRAFT_COUNT * 11);
         draw_text(1, px0 + 6, py0 + 12, "Crafting (needle)");
         draw_text(6, px0 + 6, py0 + 22, "A: make   B: close");
         for (int i = 0; i < CRAFT_COUNT; i++) {
@@ -4132,71 +4232,78 @@ static void render(void)
                       iteminfo[craft_list[i].result].name, craft_list[i].lvl);
         }
         int cc = craft_cursor;
-        draw_text(0, px0 + 6, py0 + 86, "Needs %dx %s + %dx thread",
-                  craft_list[cc].n_hide, iteminfo[craft_list[cc].hide].name,
-                  craft_list[cc].n_thread);
+        if (craft_list[cc].m2 != IT_NONE)
+            draw_text(0, px0 + 6, py0 + 36 + CRAFT_COUNT * 11, "Needs %dx %s + %dx %s",
+                      craft_list[cc].n1, iteminfo[craft_list[cc].m1].name,
+                      craft_list[cc].n2, iteminfo[craft_list[cc].m2].name);
+        else
+            draw_text(0, px0 + 6, py0 + 36 + CRAFT_COUNT * 11, "Needs %dx %s",
+                      craft_list[cc].n1, iteminfo[craft_list[cc].m1].name);
     }
     else if (ui_mode == UI_EQUIP) {
-        int px0 = SCREEN_W - 142, py0 = 30;
-        draw_panel(px0, py0, px0 + 134, py0 + 150);
-        draw_text(1, px0 + 6, py0 + 12, "Worn Equipment");
+        int px0 = SCREEN_W - 142, py0 = 22;
+        int gy = py0 + 22;          /* slot grid: 2 cols x 3 rows, 26px pitch */
+        draw_panel(px0, py0, px0 + 134, py0 + 178);
+        draw_text(1, px0 + 6, py0 + 10, "Worn Equipment");
         rdpq_set_mode_fill(RGBA32(70, 60, 45, 255));
         for (int i = 0; i < NUM_SLOTS; i++) {
             if (i == equip_cursor) continue;
-            int cx = px0 + 16 + (i % 2) * 54, cy = py0 + 22 + (i / 2) * 28;
+            int cx = px0 + 16 + (i % 2) * 54, cy = gy + (i / 2) * 26;
             rdpq_fill_rectangle(cx, cy, cx + 18, cy + 18);
         }
         rdpq_set_mode_fill(RGBA32(120, 100, 60, 255));
         {
             int cx = px0 + 16 + (equip_cursor % 2) * 54;
-            int cy = py0 + 22 + (equip_cursor / 2) * 28;
+            int cy = gy + (equip_cursor / 2) * 26;
             rdpq_fill_rectangle(cx, cy, cx + 18, cy + 18);
         }
         rdpq_set_mode_copy(true);
         for (int i = 0; i < NUM_SLOTS; i++) {
             if (equipped[i] == IT_NONE) continue;
             int cx = (px0 + 17 + (i % 2) * 54) & ~1;
-            int cy = py0 + 23 + (i / 2) * 28;
+            int cy = gy + 1 + (i / 2) * 26;
             rdpq_sprite_blit(spr[iteminfo[equipped[i]].spr], cx, cy, NULL);
         }
         int sel = equipped[equip_cursor];
-        draw_text(1, px0 + 6, py0 + 84, "%s", slot_names[equip_cursor]);
-        draw_text(0, px0 + 6, py0 + 94, "%s",
+        draw_text(1, px0 + 6, py0 + 102, "%s", slot_names[equip_cursor]);
+        draw_text(0, px0 + 6, py0 + 112, "%s",
                   sel != IT_NONE ? iteminfo[sel].name : "(empty)");
-        draw_text(4, px0 + 6, py0 + 106, "Attack   +%d", equip_atk());
-        draw_text(4, px0 + 6, py0 + 115, "Strength +%d", equip_str());
-        draw_text(4, px0 + 6, py0 + 124, "Defence  +%d", equip_def());
-        draw_text(5, px0 + 6, py0 + 133, "Magic    +%d", equip_mag());
-        draw_text(6, px0 + 6, py0 + 144, "A: remove   B: close");
+        draw_text(4, px0 + 6, py0 + 124, "Attack   +%d", equip_atk());
+        draw_text(4, px0 + 6, py0 + 133, "Strength +%d", equip_str());
+        draw_text(4, px0 + 6, py0 + 142, "Defence  +%d", equip_def());
+        draw_text(5, px0 + 6, py0 + 151, "Magic    +%d", equip_mag());
+        draw_text(5, px0 + 6, py0 + 160, "Ranged   +%d", equip_rng());
+        draw_text(6, px0 + 6, py0 + 171, "A: remove   B: close");
     }
     else if (ui_mode == UI_SPELL) {
-        int px0 = SCREEN_W - 166, py0 = 18;
-        draw_panel(px0, py0, px0 + 158, py0 + 172);
-        draw_text(1, px0 + 6, py0 + 12, "Spellbook");
-        draw_text(6, px0 + 6, py0 + 22, "A: select   B: close");
+        int px0 = SCREEN_W - 166, py0 = 12;
+        int rows0 = py0 + 32, foot = rows0 + NUM_SPELLS * 10 + 2;
+        draw_panel(px0, py0, px0 + 158, foot + 22);
+        draw_text(1, px0 + 6, py0 + 10, "Spellbook");
+        draw_text(6, px0 + 6, py0 + 20, "A: select   B: close");
         for (int i = 0; i < NUM_SPELLS; i++) {
             bool can = level_of(SK_MAGIC) >= spellinfo[i].lvl &&
                        (i != SPELL_CAVE || cave_unlocked());
             int style = (i == spell_cursor) ? 1 : (i == cast_spell ? 4 : (can ? 0 : 6));
             char mark = (i == spell_cursor) ? '>' : (i == cast_spell ? '*' : ' ');
             if (i == SPELL_MELEE)
-                draw_text(style, px0 + 6, py0 + 34 + i * 11, "%c %s", mark,
+                draw_text(style, px0 + 6, rows0 + i * 10, "%c %s", mark,
                           spellinfo[i].name);
             else if (i == SPELL_CAVE && !cave_unlocked())
-                draw_text(style, px0 + 6, py0 + 34 + i * 11, "%c %s  (locked)", mark,
+                draw_text(style, px0 + 6, rows0 + i * 10, "%c %s (lock)", mark,
                           spellinfo[i].name);
             else
-                draw_text(style, px0 + 6, py0 + 34 + i * 11, "%c %s  L%d", mark,
+                draw_text(style, px0 + 6, rows0 + i * 10, "%c %s  L%d", mark,
                           spellinfo[i].name, spellinfo[i].lvl);
         }
         if (cast_spell == SPELL_MELEE)
-            draw_text(0, px0 + 6, py0 + 150, "Style: melee");
+            draw_text(0, px0 + 6, foot, "Style: melee");
         else {
-            draw_text(0, px0 + 6, py0 + 150, "Need %dx %s",
+            draw_text(0, px0 + 6, foot, "Need %dx %s",
                       spellinfo[cast_spell].runes,
                       iteminfo[spellinfo[cast_spell].rune].name);
             if (spellinfo[cast_spell].runes2 > 0)
-                draw_text(0, px0 + 6, py0 + 160, " + %dx %s",
+                draw_text(0, px0 + 6, foot + 10, " + %dx %s",
                           spellinfo[cast_spell].runes2,
                           iteminfo[spellinfo[cast_spell].rune2].name);
         }
@@ -4438,9 +4545,9 @@ static void handle_input(void)
     if (ui_mode == UI_EQUIP) {
         if (pressed.b) { ui_mode = UI_NONE; return; }
         if (pressed.d_left  && (equip_cursor & 1)) equip_cursor--;
-        if (pressed.d_right && !(equip_cursor & 1)) equip_cursor++;
+        if (pressed.d_right && !(equip_cursor & 1) && equip_cursor + 1 < NUM_SLOTS) equip_cursor++;
         if (pressed.d_up    && equip_cursor >= 2) equip_cursor -= 2;
-        if (pressed.d_down  && equip_cursor < 2) equip_cursor += 2;
+        if (pressed.d_down  && equip_cursor + 2 < NUM_SLOTS) equip_cursor += 2;
         if (pressed.a) unequip(equip_cursor);
         return;
     }
@@ -4469,6 +4576,8 @@ static void handle_input(void)
                     ui_mode = UI_NONE;
                     return;
                 }
+            } else if (spell_cursor == SPELL_ENCHANT) {
+                do_enchant();   /* stays in the book so you can enchant more */
             } else {
                 cast_spell = spell_cursor;
                 msg(cast_spell == SPELL_MELEE ? "You ready your weapon."

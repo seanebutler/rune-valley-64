@@ -149,12 +149,13 @@ if ($mFishBlock.Success) {
 $crafts = @()
 $mCraftBlock = [regex]::Match($src, 'craft_list\[\]\s*=\s*\{(.*?)\};', [System.Text.RegularExpressions.RegexOptions]::Singleline)
 if ($mCraftBlock.Success) {
-    $rxC = '\{\s*(IT_\w+)\s*,\s*(IT_\w+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,'
+    $rxC = '\{\s*(IT_\w+)\s*,\s*(IT_\w+)\s*,\s*(\d+)\s*,\s*(IT_\w+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,'
     foreach ($m in [regex]::Matches($mCraftBlock.Groups[1].Value, $rxC)) {
         $crafts += [pscustomobject]@{
-            Result=$m.Groups[1].Value; Hide=$m.Groups[2].Value
-            NHide=[int]$m.Groups[3].Value; NThread=[int]$m.Groups[4].Value
-            Lvl=[int]$m.Groups[5].Value
+            Result=$m.Groups[1].Value
+            M1=$m.Groups[2].Value; N1=[int]$m.Groups[3].Value
+            M2=$m.Groups[4].Value; N2=[int]$m.Groups[5].Value
+            Lvl=[int]$m.Groups[6].Value
         }
     }
 }
@@ -188,7 +189,7 @@ $mobExtra  = @{ DRAGON=@(
     'Fire breath: a ranged attack (up to 5 tiles, ignores armour) for 5 damage, rising to 8 when enraged.',
     'Enrages at half health: attacks and breathes faster and hits harder.',
     'On enraging it summons 2 whelps (they vanish and drop nothing on death).') }
-$slotLabel = @{ SLOT_WEAPON='Weapon'; SLOT_HELM='Helm'; SLOT_SHIELD='Shield'; SLOT_BODY='Body' }
+$slotLabel = @{ SLOT_WEAPON='Weapon'; SLOT_HELM='Helm'; SLOT_SHIELD='Shield'; SLOT_BODY='Body'; SLOT_NECK='Neck'; SLOT_HAND='Hand' }
 
 # --- emit markdown ---
 $o = [System.Collections.Generic.List[string]]::new()
@@ -272,7 +273,8 @@ foreach ($sp in $spells) {
     $cost = "$($sp.Runes)x $(Item-Label $sp.Rune)"
     if ($sp.Runes2 -gt 0) { $cost += " + $($sp.Runes2)x $(Item-Label $sp.Rune2)" }
     if ($sp.Runes3 -gt 0) { $cost += " + $($sp.Runes3)x $(Item-Label $sp.Rune3)" }
-    $hit = if ($sp.MaxHit -gt 0) { "$($sp.MaxHit)" } else { 'teleport' }
+    $hit = if ($sp.MaxHit -gt 0) { "$($sp.MaxHit)" }
+           elseif ($sp.Name -eq 'Enchant Jewel') { 'enchant' } else { 'teleport' }
     $name = if ($sp.Name -eq 'Cave Teleport') { "$($sp.Name) *" } else { $sp.Name }
     W ("| {0} | {1} | {2} | {3} |" -f $name, $sp.Lvl, $cost, $hit)
 }
@@ -306,7 +308,7 @@ W 'listed Ranged level to wear.'
 W ''
 W '| | Ranged armour | Slot | Ranged | Defence | Ranged level |'
 W '|:-:|---|---|--:|--:|--:|'
-foreach ($a in ($equip | Where-Object { $_.Rng -gt 0 -and $_.Slot -ne 'SLOT_WEAPON' } | Sort-Object Lvl, Name)) {
+foreach ($a in ($equip | Where-Object { $_.Rng -gt 0 -and ($_.Slot -in 'SLOT_HELM','SLOT_BODY','SLOT_SHIELD') } | Sort-Object Lvl, Name)) {
     W ("| {0} | {1} | {2} | +{3} | +{4} | {5} |" -f (Item-Icon $a.Id), $a.Name, $slotLabel[$a.Slot], $a.Rng, $a.Def, $a.Lvl)
 }
 W ''
@@ -318,12 +320,31 @@ W 'Slay cows for **cowhide** (and the Ancient Dragon for **dragonhide**), then'
 W 'have **Pelt the Tanner** by the cow pasture cure them into leather for a few'
 W 'coins. Use a **needle** on the leather (with **thread** in your pack) to stitch'
 W 'ranged armour - both sold at the General Store. Dragonhide gear demands a high'
-W 'Crafting level but gives the best Ranged bonuses in the valley.'
+W 'Crafting level but gives the best Ranged bonuses in the valley. The same'
+W 'needle also mounts **dragonstone** gems on **gold bars** into jewelry (see'
+W 'the Jewellery section).'
 W ''
-W '| | Stitch | Materials | Crafting level |'
+W '| | Craft | Materials | Crafting level |'
 W '|:-:|---|---|--:|'
 foreach ($c in $crafts) {
-    W ("| {0} | {1} | {2}x {3} + {4}x Thread | {5} |" -f (Item-Icon $c.Result), (Item-Label $c.Result), $c.NHide, (Item-Label $c.Hide), $c.NThread, $c.Lvl)
+    $mat = "$($c.N1)x $(Item-Label $c.M1)"
+    if ($c.M2 -ne 'IT_NONE') { $mat += " + $($c.N2)x $(Item-Label $c.M2)" }
+    W ("| {0} | {1} | {2} | {3} |" -f (Item-Icon $c.Result), (Item-Label $c.Result), $mat, $c.Lvl)
+}
+W ''
+W '---'
+W ''
+W '## Jewellery'
+W ''
+W 'Mine **gold** (Mining 40) and smelt it into **gold bars** (Smithing 40). Craft'
+W 'a **dragonstone + gold bar** into a plain piece (Crafting), then cast **Enchant'
+W 'Jewel** (Magic 30, 1 Law + 1 Fire rune) on it for a combat boost. Wear one'
+W '**neck** piece (amulet or necklace) and one **hand** piece (ring or bracelet).'
+W ''
+W '| | Jewellery | Slot | Attack | Strength | Defence | Magic | Ranged |'
+W '|:-:|---|---|--:|--:|--:|--:|--:|'
+foreach ($a in ($equip | Where-Object { $_.Slot -in 'SLOT_NECK','SLOT_HAND' } | Sort-Object Slot, Name)) {
+    W ("| {0} | {1} | {2} | +{3} | +{4} | +{5} | +{6} | +{7} |" -f (Item-Icon $a.Id), $a.Name, $slotLabel[$a.Slot], $a.Atk, $a.Str, $a.Def, $a.Mag, $a.Rng)
 }
 W ''
 W '---'
