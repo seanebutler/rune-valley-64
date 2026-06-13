@@ -324,7 +324,7 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     [IT_RUNE_HELM]    ={ "Rune helm",    SPR_I_RUNE_HELM,   0,false, SLOT_HELM,  0,0,14,40 },
     [IT_RUNE_SHIELD]  ={ "Rune shield",  SPR_I_RUNE_SHIELD, 0,false, SLOT_SHIELD,4,0,20,40 },
     [IT_RUNE_BODY]    ={ "Rune body",    SPR_I_RUNE_BODY,   0,false, SLOT_BODY,  0,0,40,40 },
-    [IT_BANE]         ={ "Warlord's Bane",SPR_I_BANE,       0,false, SLOT_WEAPON,18,17,0,30 },
+    [IT_BANE]         ={ "Warlord's Bane",SPR_I_BANE,       0,false, SLOT_WEAPON,18,17,0,20 },
 };
 
 /* shop value in coins; buy price = value, sell price = value/2 (min 1).
@@ -465,7 +465,7 @@ static const mobinfo_t mobinfo[NUM_MOBS] = {
 /* ------------------------------------------------------------ UI state */
 
 typedef enum { UI_NONE, UI_INV, UI_SKILLS, UI_BANK, UI_HELP, UI_SMITH,
-               UI_DIALOG, UI_EQUIP, UI_SPELL, UI_SHOP } ui_t;
+               UI_DIALOG, UI_EQUIP, UI_SPELL, UI_SHOP, UI_QUEST } ui_t;
 static ui_t ui_mode = UI_NONE;
 static int smith_cursor = 0;
 static int equip_cursor = 0;
@@ -500,6 +500,10 @@ static int wquest = WQ_NONE;
 #define WQ_BONES_NEEDED 5
 #define WQ_BARS_NEEDED  2
 #define WQ_COIN_COST    300
+/* you must be a proven warrior-smith before Sir Garrick will trust you */
+#define WQ_REQ_ATT   20
+#define WQ_REQ_DEF   20
+#define WQ_REQ_SMITH 15
 
 /* dialog box */
 static const char *dlg_title = "";
@@ -1795,6 +1799,19 @@ static void knight_talk(void)
     dlg_count = 0;
     switch (wquest) {
     case WQ_NONE:
+        if (level_of(SK_ATT) < WQ_REQ_ATT || level_of(SK_DEF) < WQ_REQ_DEF ||
+            level_of(SK_SMITH) < WQ_REQ_SMITH) {
+            char b[44];
+            dlg_line("This is no errand for a novice. Come");
+            dlg_line("back when you can fight and forge:");
+            snprintf(b, sizeof b, "Need Att %d, Def %d, Smith %d.",
+                     WQ_REQ_ATT, WQ_REQ_DEF, WQ_REQ_SMITH);
+            dlg_line(b);
+            snprintf(b, sizeof b, "You: Att %d, Def %d, Smith %d.",
+                     level_of(SK_ATT), level_of(SK_DEF), level_of(SK_SMITH));
+            dlg_line(b);
+            break;
+        }
         dlg_line("The Goblin Warlord festers in the dungeon");
         dlg_line("and I am too grey to make the descent.");
         dlg_line("Prove your nerve: bring me 5 bones from");
@@ -1975,7 +1992,10 @@ static void interact(void)
         knight_talk();
         break;
     case OBJ_STAIRS_DOWN:
-        enter_dungeon();
+        if (wquest == WQ_NONE)
+            msg("The dungeon is perilous. Speak with Sir Garrick first.");
+        else
+            enter_dungeon();
         break;
     case OBJ_STAIRS_UP:
         exit_dungeon();
@@ -2016,7 +2036,9 @@ static const char *context_hint(void)
     case OBJ_ANVIL:       return "A: Smith at Anvil";
     case OBJ_CHEF:        return "A: Talk to Chef Bouillon";
     case OBJ_KNIGHT:      return "A: Talk to Sir Garrick";
-    case OBJ_STAIRS_DOWN: return "A: Descend into the dungeon";
+    case OBJ_STAIRS_DOWN: return wquest == WQ_NONE
+                                 ? "A: Dungeon (barred - see Sir Garrick)"
+                                 : "A: Descend into the dungeon";
     case OBJ_STAIRS_UP:   return "A: Climb back to the surface";
     case OBJ_SHOP_GENERAL:return "A: Browse the General Store";
     case OBJ_SHOP_WEAPON: return "A: Browse the Weapon Shop";
@@ -2902,13 +2924,38 @@ static void render(void)
         draw_text(0, px0 + 8, py0 + 90, "gear, sling spells, shop the bazaar.");
         draw_text(3, px0 + 8, py0 + 102, "A dungeon lurks SW of the mine -");
         draw_text(3, px0 + 8, py0 + 112, "skeletons and the Warlord await!");
-        draw_text(1, px0 + 8, py0 + 124, "Quests");
-        draw_text(0, px0 + 8, py0 + 134, "Chef: %s",
-                  quest_state == QUEST_NONE ? "talk to Chef Bouillon" :
-                  quest_state == QUEST_ACTIVE ? "in progress" : "complete");
-        draw_text(0, px0 + 8, py0 + 144, "Warlord's Bane: %s",
-                  wquest == WQ_NONE ? "see Sir Garrick" :
-                  wquest >= WQ_DONE ? "complete!" : "in progress");
+        draw_text(1, px0 + 8, py0 + 132, "(A) Quest Journal   (B) close");
+    }
+    else if (ui_mode == UI_QUEST) {
+        int px0 = 36, py0 = 28;
+        draw_panel(px0, py0, px0 + 248, py0 + 150);
+        draw_text(1, px0 + 8, py0 + 14, "Quest Journal");
+
+        draw_text(4, px0 + 8, py0 + 32, "The Chef's Little Problem");
+        if (quest_state == QUEST_NONE)
+            draw_text(0, px0 + 14, py0 + 44, "Seek out Chef Bouillon by the bank.");
+        else if (quest_state == QUEST_ACTIVE)
+            draw_text(0, px0 + 14, py0 + 44, "Bash goblins %d/%d, cook 2 shrimp.",
+                      quest_kills, QUEST_KILLS_NEEDED);
+        else
+            draw_text(6, px0 + 14, py0 + 44, "Complete - the valley eats well.");
+
+        draw_text(4, px0 + 8, py0 + 64, "The Warlord's Bane");
+        const char *wl;
+        switch (wquest) {
+        case WQ_NONE:    wl = "Seek Sir Garrick by the cave mouth."; break;
+        case WQ_STARTED: wl = "Bring Sir Garrick 5 bones."; break;
+        case WQ_SCOUTED: wl = "Bring 2 iron bars + 300 coins."; break;
+        case WQ_ARMED:   wl = "Slay the Warlord with the Bane."; break;
+        case WQ_SLAIN:   wl = "Return to Sir Garrick for reward."; break;
+        default:         wl = "Complete - the Warlord is slain!"; break;
+        }
+        draw_text(wquest >= WQ_DONE ? 6 : 0, px0 + 14, py0 + 76, "%s", wl);
+        if (wquest == WQ_NONE)
+            draw_text(6, px0 + 14, py0 + 88, "(needs Att %d, Def %d, Smith %d)",
+                      WQ_REQ_ATT, WQ_REQ_DEF, WQ_REQ_SMITH);
+
+        draw_text(6, px0 + 8, py0 + 138, "(A) back   (B) close");
     }
 
     rdpq_detach_show();
@@ -3045,8 +3092,14 @@ static void handle_input(void)
         if (pressed.a || pressed.b) ui_mode = UI_NONE;
         return;
     }
+    if (ui_mode == UI_QUEST) {
+        if (pressed.a) { ui_mode = UI_HELP; return; }
+        if (pressed.b) { ui_mode = UI_NONE; return; }
+        return;
+    }
     if (ui_mode == UI_SKILLS || ui_mode == UI_HELP) {
         if (pressed.b) { ui_mode = UI_NONE; return; }
+        if (ui_mode == UI_HELP && pressed.a) { ui_mode = UI_QUEST; return; }
         /* world input continues while these are open */
     }
 
