@@ -123,9 +123,19 @@ enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_RAW_SHRIMP, IT_SHRIMP, IT_BURNT, IT_AXE, IT_PICK, IT_NET,
        IT_TINDER, IT_BONES, IT_ESSENCE, IT_AIR_RUNE, IT_FIRE_RUNE,
        IT_BRONZE_BAR, IT_IRON_BAR, IT_HAMMER, IT_BRONZE_SWORD, IT_IRON_SWORD,
-       IT_IRON_AXE, IT_IRON_PICK, NUM_ITEMS };
+       IT_IRON_AXE, IT_IRON_PICK,
+       IT_BRONZE_HELM, IT_IRON_HELM, IT_BRONZE_SHIELD, IT_IRON_SHIELD,
+       IT_BRONZE_BODY, IT_IRON_BODY, NUM_ITEMS };
 
-typedef struct { const char *name; int spr; int heal; bool tool; } iteminfo_t;
+/* worn equipment slots; SLOT_NONE = item is not equippable */
+enum { SLOT_NONE, SLOT_WEAPON, SLOT_SHIELD, SLOT_HELM, SLOT_BODY };
+#define NUM_SLOTS 4
+
+/* equip fields default to 0 (= SLOT_NONE, no bonus) for non-gear items */
+typedef struct {
+    const char *name; int spr; int heal; bool tool;
+    int slot; int atk; int str; int def; int eqlvl;
+} iteminfo_t;
 
 /* ------------------------------------------------------------ sprites */
 
@@ -155,6 +165,8 @@ enum {
     SPR_FURNACE, SPR_ANVIL, SPR_CHEF,
     SPR_I_BRONZE_BAR, SPR_I_IRON_BAR, SPR_I_HAMMER,
     SPR_I_BRONZE_SWORD, SPR_I_IRON_SWORD, SPR_I_IRON_AXE, SPR_I_IRON_PICK,
+    SPR_I_BRONZE_HELM, SPR_I_IRON_HELM, SPR_I_BRONZE_SHIELD, SPR_I_IRON_SHIELD,
+    SPR_I_BRONZE_BODY, SPR_I_IRON_BODY,
     NUM_SPR
 };
 
@@ -184,7 +196,9 @@ static const char *spr_files[NUM_SPR] = {
     "ui_logo_12", "ui_logo_13", "ui_logo_14", "ui_logo_15",
     "obj_furnace", "obj_anvil", "chef_down_a",
     "item_bronze_bar", "item_iron_bar", "item_hammer",
-    "item_bronze_sword", "item_iron_sword", "item_iron_axe", "item_iron_pick"
+    "item_bronze_sword", "item_iron_sword", "item_iron_axe", "item_iron_pick",
+    "item_bronze_helm", "item_iron_helm", "item_bronze_shield",
+    "item_iron_shield", "item_bronze_body", "item_iron_body"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -210,11 +224,43 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     [IT_BRONZE_BAR] = { "Bronze bar",  SPR_I_BRONZE_BAR, 0, false },
     [IT_IRON_BAR]   = { "Iron bar",    SPR_I_IRON_BAR,   0, false },
     [IT_HAMMER]     = { "Hammer",      SPR_I_HAMMER,     0, true  },
-    [IT_BRONZE_SWORD]={ "Bronze sword",SPR_I_BRONZE_SWORD,0, true },
-    [IT_IRON_SWORD] = { "Iron sword",  SPR_I_IRON_SWORD, 0, true  },
+    [IT_BRONZE_SWORD]={ "Bronze sword",SPR_I_BRONZE_SWORD,0,false, SLOT_WEAPON,4,3,0,1 },
+    [IT_IRON_SWORD] = { "Iron sword",  SPR_I_IRON_SWORD, 0,false, SLOT_WEAPON,7,6,0,1 },
     [IT_IRON_AXE]   = { "Iron axe",    SPR_I_IRON_AXE,   0, true  },
     [IT_IRON_PICK]  = { "Iron pick",   SPR_I_IRON_PICK,  0, true  },
+    [IT_BRONZE_HELM]  ={ "Bronze helm",  SPR_I_BRONZE_HELM,  0,false, SLOT_HELM,  0,0,3,1  },
+    [IT_IRON_HELM]    ={ "Iron helm",    SPR_I_IRON_HELM,    0,false, SLOT_HELM,  0,0,5,10 },
+    [IT_BRONZE_SHIELD]={ "Bronze shield",SPR_I_BRONZE_SHIELD,0,false, SLOT_SHIELD,1,0,5,1  },
+    [IT_IRON_SHIELD]  ={ "Iron shield",  SPR_I_IRON_SHIELD,  0,false, SLOT_SHIELD,2,0,8,10 },
+    [IT_BRONZE_BODY]  ={ "Bronze body",  SPR_I_BRONZE_BODY,  0,false, SLOT_BODY,  0,0,8,1  },
+    [IT_IRON_BODY]    ={ "Iron body",    SPR_I_IRON_BODY,    0,false, SLOT_BODY,  0,0,14,10},
 };
+
+/* worn equipment: equipped[slot-1] holds an item id (IT_NONE = empty) */
+static int equipped[NUM_SLOTS];
+static const char *slot_names[NUM_SLOTS] = { "Weapon", "Shield", "Helm", "Body" };
+
+static int equip_atk(void)
+{
+    int t = 0;
+    for (int i = 0; i < NUM_SLOTS; i++)
+        if (equipped[i]) t += iteminfo[equipped[i]].atk;
+    return t;
+}
+static int equip_str(void)
+{
+    int t = 0;
+    for (int i = 0; i < NUM_SLOTS; i++)
+        if (equipped[i]) t += iteminfo[equipped[i]].str;
+    return t;
+}
+static int equip_def(void)
+{
+    int t = 0;
+    for (int i = 0; i < NUM_SLOTS; i++)
+        if (equipped[i]) t += iteminfo[equipped[i]].def;
+    return t;
+}
 
 /* ------------------------------------------------------------ audio */
 
@@ -288,9 +334,10 @@ static int num_gob = 0;
 /* ------------------------------------------------------------ UI state */
 
 typedef enum { UI_NONE, UI_INV, UI_SKILLS, UI_BANK, UI_HELP, UI_SMITH,
-               UI_DIALOG } ui_t;
+               UI_DIALOG, UI_EQUIP } ui_t;
 static ui_t ui_mode = UI_NONE;
 static int smith_cursor = 0;
+static int equip_cursor = 0;
 
 /* quest: The Chef's Little Problem */
 enum { QUEST_NONE, QUEST_ACTIVE, QUEST_DONE };
@@ -395,12 +442,6 @@ static bool has_axe(void)  { return has_item(IT_AXE) || has_item(IT_IRON_AXE); }
 static bool has_pick(void) { return has_item(IT_PICK) || has_item(IT_IRON_PICK); }
 static int axe_bonus(void)  { return has_item(IT_IRON_AXE) ? 12 : 0; }
 static int pick_bonus(void) { return has_item(IT_IRON_PICK) ? 12 : 0; }
-static int weapon_tier(void)
-{
-    if (has_item(IT_IRON_SWORD)) return 2;
-    if (has_item(IT_BRONZE_SWORD)) return 1;
-    return 0;
-}
 
 static int cheb(int x0, int y0, int x1, int y1)
 {
@@ -474,7 +515,7 @@ static bool tile_walkable(int x, int y)
 /* ------------------------------------------------------------ saves (EEPROM 4K) */
 
 #define SAVE_MAGIC 0x52563634u     /* 'RV64' */
-#define SAVE_VERSION 2
+#define SAVE_VERSION 3
 
 typedef struct __attribute__((packed)) {
     uint32_t magic;
@@ -486,6 +527,7 @@ typedef struct __attribute__((packed)) {
     uint16_t bank[NUM_ITEMS];
     uint8_t  run_energy;
     uint8_t  quest_state, quest_kills;
+    uint8_t  equipped[NUM_SLOTS];
     uint8_t  pad;
     uint16_t checksum;
     uint8_t  pad2[6];          /* keep sizeof a multiple of the 8-byte block */
@@ -516,6 +558,7 @@ static void save_game(void)
     s.run_energy = pl.run_energy;
     s.quest_state = quest_state;
     s.quest_kills = quest_kills;
+    for (int i = 0; i < NUM_SLOTS; i++) s.equipped[i] = equipped[i];
     s.checksum = save_checksum(&s);
 
     /* write only the blocks that changed, and keep the audio mixer fed
@@ -558,6 +601,12 @@ static void load_game(void)
     pl.run_energy = s.run_energy <= 100 ? s.run_energy : 100;
     quest_state = s.quest_state <= QUEST_DONE ? s.quest_state : QUEST_NONE;
     quest_kills = s.quest_kills <= QUEST_KILLS_NEEDED ? s.quest_kills : 0;
+    for (int i = 0; i < NUM_SLOTS; i++) {
+        int it = s.equipped[i];
+        /* only restore if it really belongs in this slot */
+        equipped[i] = (it > 0 && it < NUM_ITEMS && iteminfo[it].slot == i + 1)
+                      ? it : IT_NONE;
+    }
     if (tile_walkable(s.tx, s.ty)) { pl.tx = s.tx; pl.ty = s.ty; }
     pl.mtx = pl.tx; pl.mty = pl.ty;
     pl.px = pl.tx * TILE + 8; pl.py = pl.ty * TILE + 12;
@@ -611,9 +660,10 @@ static void goblin_die(gob_t *g)
 
 static void player_attack(gob_t *g)
 {
-    int att = level_of(SK_ATT), str = level_of(SK_STR);
-    int max_hit = 1 + str / 8 + weapon_tier();
-    int p_hit = 100 * (att + 8) / (att + 18) + weapon_tier() * 5;
+    int att = level_of(SK_ATT) + equip_atk();
+    int str = level_of(SK_STR) + equip_str();
+    int max_hit = 1 + str / 8;
+    int p_hit = 100 * (att + 8) / (att + 18);
     if (p_hit > 95) p_hit = 95;
     int dmg = chance(p_hit) ? (rand() % (max_hit + 1)) : 0;
     g->hp -= dmg;
@@ -634,9 +684,9 @@ static void player_attack(gob_t *g)
 
 static void goblin_attack(gob_t *g)
 {
-    int def = level_of(SK_DEF);
-    int p_hit = 55 - def;
-    if (p_hit < 15) p_hit = 15;
+    int def = level_of(SK_DEF) + equip_def();
+    int p_hit = 52 - def;
+    if (p_hit < 5) p_hit = 5;
     int dmg = chance(p_hit) ? (rand() % 2) : 0;
     sfx(SND_HIT);
     hurt_player(dmg);
@@ -1470,9 +1520,41 @@ static const char *context_hint(void)
 
 /* ------------------------------------------------------------ inventory use */
 
+/* ------------------------------------------------------------ equipment */
+
+static void equip_from_inv(int invslot)
+{
+    int it = inv[invslot];
+    int slot = iteminfo[it].slot;
+    if (!slot) return;
+    int reqsk = (slot == SLOT_WEAPON) ? SK_ATT : SK_DEF;
+    if (level_of(reqsk) < iteminfo[it].eqlvl) {
+        msg("You need %s level %d to wear that.",
+            skill_names[reqsk], iteminfo[it].eqlvl);
+        return;
+    }
+    /* swap whatever is worn back into the freed inventory slot */
+    int prev = equipped[slot - 1];
+    equipped[slot - 1] = it;
+    inv[invslot] = prev;
+    sfx_ui(SND_CRAFT);
+    msg("You equip the %s.", iteminfo[it].name);
+}
+
+static void unequip(int slot)
+{
+    int it = equipped[slot];
+    if (it == IT_NONE) return;
+    if (inv_full()) { msg("Your inventory is too full to unequip that."); return; }
+    add_item(it);
+    equipped[slot] = IT_NONE;
+    msg("You remove the %s.", iteminfo[it].name);
+}
+
 static void use_inv_item(int slot)
 {
     int it = inv[slot];
+    if (iteminfo[it].slot) { equip_from_inv(slot); return; }
     switch (it) {
     case IT_NONE: break;
     case IT_SHRIMP:
@@ -1529,26 +1611,34 @@ static void use_inv_item(int slot)
 
 /* ------------------------------------------------------------ smithing */
 
-static const struct { int item, bar, lvl, xp_x10; } smith_list[] = {
-    { IT_BRONZE_SWORD, IT_BRONZE_BAR,  1, 125 },
-    { IT_IRON_SWORD,   IT_IRON_BAR,   15, 250 },
-    { IT_IRON_AXE,     IT_IRON_BAR,   16, 250 },
-    { IT_IRON_PICK,    IT_IRON_BAR,   17, 250 },
+static const struct { int item, bar, bars, lvl, xp_x10; } smith_list[] = {
+    { IT_BRONZE_SWORD,  IT_BRONZE_BAR, 1,  1, 125 },
+    { IT_BRONZE_HELM,   IT_BRONZE_BAR, 1,  4, 125 },
+    { IT_BRONZE_SHIELD, IT_BRONZE_BAR, 2,  6, 250 },
+    { IT_BRONZE_BODY,   IT_BRONZE_BAR, 3,  8, 375 },
+    { IT_IRON_SWORD,    IT_IRON_BAR,   1, 15, 250 },
+    { IT_IRON_HELM,     IT_IRON_BAR,   1, 18, 250 },
+    { IT_IRON_SHIELD,   IT_IRON_BAR,   2, 20, 500 },
+    { IT_IRON_BODY,     IT_IRON_BAR,   3, 22, 750 },
+    { IT_IRON_AXE,      IT_IRON_BAR,   1, 16, 250 },
+    { IT_IRON_PICK,     IT_IRON_BAR,   1, 17, 250 },
 };
 #define SMITH_COUNT (int)(sizeof smith_list / sizeof smith_list[0])
 
 static void smith_make(int row)
 {
     if (row < 0 || row >= SMITH_COUNT) return;
-    int item = smith_list[row].item;
+    int item = smith_list[row].item, bar = smith_list[row].bar;
+    int need = smith_list[row].bars;
     if (level_of(SK_SMITH) < smith_list[row].lvl) {
         msg("You need a Smithing level of %d to make that.", smith_list[row].lvl);
         return;
     }
-    if (!remove_item(smith_list[row].bar)) {
-        msg("You need a %s for that.", iteminfo[smith_list[row].bar].name);
+    if (inv_count(bar) < need) {
+        msg("You need %d %s for that.", need, iteminfo[bar].name);
         return;
     }
+    for (int i = 0; i < need; i++) remove_item(bar);
     add_item(item);
     sfx(SND_SMITH);
     msg("You hammer out a %s.", iteminfo[item].name);
@@ -2018,20 +2108,53 @@ static void render(void)
         }
     }
     else if (ui_mode == UI_SMITH) {
-        int px0 = 70, py0 = 50;
-        draw_panel(px0, py0, px0 + 180, py0 + 100);
+        int px0 = 64, py0 = 36;
+        draw_panel(px0, py0, px0 + 192, py0 + 166);
         draw_text(1, px0 + 6, py0 + 12, "Anvil - Smithing");
         draw_text(6, px0 + 6, py0 + 22, "A: smith   B: close");
         for (int i = 0; i < SMITH_COUNT; i++) {
             bool can = level_of(SK_SMITH) >= smith_list[i].lvl;
             draw_text(i == smith_cursor ? 1 : (can ? 0 : 6),
-                      px0 + 6, py0 + 38 + i * 12,
-                      "%c %-13s %s lv%d",
+                      px0 + 6, py0 + 34 + i * 12,
+                      "%c %-12s %dx%s L%d",
                       i == smith_cursor ? '>' : ' ',
                       iteminfo[smith_list[i].item].name,
+                      smith_list[i].bars,
                       smith_list[i].bar == IT_BRONZE_BAR ? "brz" : "irn",
                       smith_list[i].lvl);
         }
+    }
+    else if (ui_mode == UI_EQUIP) {
+        int px0 = SCREEN_W - 142, py0 = 30;
+        draw_panel(px0, py0, px0 + 134, py0 + 150);
+        draw_text(1, px0 + 6, py0 + 12, "Worn Equipment");
+        rdpq_set_mode_fill(RGBA32(70, 60, 45, 255));
+        for (int i = 0; i < NUM_SLOTS; i++) {
+            if (i == equip_cursor) continue;
+            int cx = px0 + 16 + (i % 2) * 54, cy = py0 + 22 + (i / 2) * 28;
+            rdpq_fill_rectangle(cx, cy, cx + 18, cy + 18);
+        }
+        rdpq_set_mode_fill(RGBA32(120, 100, 60, 255));
+        {
+            int cx = px0 + 16 + (equip_cursor % 2) * 54;
+            int cy = py0 + 22 + (equip_cursor / 2) * 28;
+            rdpq_fill_rectangle(cx, cy, cx + 18, cy + 18);
+        }
+        rdpq_set_mode_copy(true);
+        for (int i = 0; i < NUM_SLOTS; i++) {
+            if (equipped[i] == IT_NONE) continue;
+            int cx = (px0 + 17 + (i % 2) * 54) & ~1;
+            int cy = py0 + 23 + (i / 2) * 28;
+            rdpq_sprite_blit(spr[iteminfo[equipped[i]].spr], cx, cy, NULL);
+        }
+        int sel = equipped[equip_cursor];
+        draw_text(1, px0 + 6, py0 + 84, "%s", slot_names[equip_cursor]);
+        draw_text(0, px0 + 6, py0 + 94, "%s",
+                  sel != IT_NONE ? iteminfo[sel].name : "(empty)");
+        draw_text(4, px0 + 6, py0 + 110, "Attack   +%d", equip_atk());
+        draw_text(4, px0 + 6, py0 + 120, "Strength +%d", equip_str());
+        draw_text(4, px0 + 6, py0 + 130, "Defence  +%d", equip_def());
+        draw_text(6, px0 + 6, py0 + 144, "A: remove   B: close");
     }
     else if (ui_mode == UI_DIALOG) {
         int px0 = 36, py0 = 64;
@@ -2047,11 +2170,11 @@ static void render(void)
         draw_text(1, px0 + 8, py0 + 14, "RUNE VALLEY 64");
         draw_text(0, px0 + 8, py0 + 30, "Stick/D-Pad: walk   R: toggle run");
         draw_text(0, px0 + 8, py0 + 42, "A: interact with the world");
-        draw_text(0, px0 + 8, py0 + 54, "B: inventory (A: use, C-down: drop)");
-        draw_text(0, px0 + 8, py0 + 66, "C-right: skills    L: music on/off");
-        draw_text(0, px0 + 8, py0 + 82, "Chop trees, mine rocks, catch shrimp,");
-        draw_text(0, px0 + 8, py0 + 94, "light fires, cook, slay goblins, bury");
-        draw_text(0, px0 + 8, py0 + 106, "bones, smith gear, bank your riches.");
+        draw_text(0, px0 + 8, py0 + 54, "B: inventory (A: use/equip, C-dn: drop)");
+        draw_text(0, px0 + 8, py0 + 66, "C-rt: skills  C-up: worn  L: music");
+        draw_text(0, px0 + 8, py0 + 82, "Chop, mine, fish, cook, light fires,");
+        draw_text(0, px0 + 8, py0 + 94, "slay goblins, bury bones, smith and");
+        draw_text(0, px0 + 8, py0 + 106, "wear gear, bank your hard-won riches.");
         draw_text(1, px0 + 8, py0 + 124, "Quest: The Chef's Little Problem");
         draw_text(0, px0 + 8, py0 + 136, "%s",
                   quest_state == QUEST_NONE ? "Not started - talk to the Chef." :
@@ -2105,6 +2228,8 @@ static void handle_input(void)
     }
     if (pressed.c_right)
         ui_mode = (ui_mode == UI_SKILLS) ? UI_NONE : UI_SKILLS;
+    if (pressed.c_up)
+        ui_mode = (ui_mode == UI_EQUIP) ? UI_NONE : UI_EQUIP;
 
     if (ui_mode == UI_INV) {
         if (pressed.b) { ui_mode = UI_NONE; return; }
@@ -2142,6 +2267,15 @@ static void handle_input(void)
         if (pressed.d_up && smith_cursor > 0) smith_cursor--;
         if (pressed.d_down && smith_cursor < SMITH_COUNT - 1) smith_cursor++;
         if (pressed.a) smith_make(smith_cursor);
+        return;
+    }
+    if (ui_mode == UI_EQUIP) {
+        if (pressed.b) { ui_mode = UI_NONE; return; }
+        if (pressed.d_left  && (equip_cursor & 1)) equip_cursor--;
+        if (pressed.d_right && !(equip_cursor & 1)) equip_cursor++;
+        if (pressed.d_up    && equip_cursor >= 2) equip_cursor -= 2;
+        if (pressed.d_down  && equip_cursor < 2) equip_cursor += 2;
+        if (pressed.a) unequip(equip_cursor);
         return;
     }
     if (ui_mode == UI_DIALOG) {
@@ -2235,7 +2369,8 @@ int main(void)
     pl.state = ST_IDLE;
     for (int i = 0; i < INV_SIZE; i++) inv[i] = IT_NONE;
     inv[0] = IT_AXE; inv[1] = IT_PICK; inv[2] = IT_NET; inv[3] = IT_TINDER;
-    inv[4] = IT_HAMMER;
+    inv[4] = IT_HAMMER; inv[5] = IT_BRONZE_SWORD;
+    for (int i = 0; i < NUM_SLOTS; i++) equipped[i] = IT_NONE;
     memset(bank, 0, sizeof bank);
     for (int i = 0; i < CHAT_LINES; i++) chat[i][0] = 0;
 

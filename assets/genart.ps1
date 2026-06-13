@@ -926,6 +926,60 @@ Save-Sprite 'item_bronze_sword' @{ 'b'='#b87f4e'; 'd'='#94633a'; 'h'='#553e22'; 
     '................',
     '................')
 
+# Bronze armour (iron variants made by recolor below)
+$armPal = @{ 'b'='#b87f4e'; 'd'='#94633a'; 'h'='#d8a070' }
+Save-Sprite 'item_bronze_helm' $armPal @(
+    '................',
+    '................',
+    '................',
+    '.....bbbbbb.....',
+    '...bbhhhhhhbb...',
+    '..bhhbbbbbbhhb..',
+    '..bhbbbbbbbbhb..',
+    '..bbbbbbbbbbbb..',
+    '..bbb.bbbb.bbb..',
+    '..bbbbbbbbbbbb..',
+    '..dbbbbbbbbbbd..',
+    '...dddddddddd...',
+    '................',
+    '................',
+    '................',
+    '................')
+Save-Sprite 'item_bronze_body' $armPal @(
+    '................',
+    '................',
+    '...bbb..bbb.....',
+    '..bhhb..bhhb....',
+    '.bhbbbbbbbbhb...',
+    '.bbbbbbbbbbbb...',
+    '.bbbbbbbbbbbb...',
+    '.bbbhbbbbhbbb...',
+    '.bbbbbbbbbbbb...',
+    '.bbbbbbbbbbbb...',
+    '.bdbbbbbbbbdb...',
+    '..dbbbbbbbbd....',
+    '..dddddddddd....',
+    '................',
+    '................',
+    '................')
+Save-Sprite 'item_bronze_shield' $armPal @(
+    '................',
+    '...bbbbbbbb.....',
+    '..bhhhhhhhhb....',
+    '..bhbbbbbbhb....',
+    '..bbbbbbbbbb....',
+    '..bbbhhhhbbb....',
+    '..bbbbhhbbbb....',
+    '..bbbbbbbbbb....',
+    '...bbbbbbbb.....',
+    '...bbbbbbbb.....',
+    '....bbbbbb......',
+    '.....bbbb.......',
+    '......bb........',
+    '................',
+    '................',
+    '................')
+
 Write-Host "Generating bot recolors..."
 
 # Palette-swap the player sprites into bot variants (tunic + hair)
@@ -988,6 +1042,9 @@ New-Recolor 'item_axe'          'item_iron_axe'   $ironMap
 New-Recolor 'item_pickaxe'      'item_iron_pick'  $ironMap
 New-Recolor 'item_bronze_bar'   'item_iron_bar'   $ironMap
 New-Recolor 'item_bronze_sword' 'item_iron_sword' $ironMap
+New-Recolor 'item_bronze_helm'  'item_iron_helm'  $ironMap
+New-Recolor 'item_bronze_body'  'item_iron_body'  $ironMap
+New-Recolor 'item_bronze_shield' 'item_iron_shield' $ironMap
 
 Write-Host "Generating title logo..."
 

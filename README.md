@@ -28,8 +28,13 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   the goblin camp to reach the Fire altar (level 14)
 - **Smithing** — smelt copper + tin into bronze bars at the furnace by the
   mine (iron smelts at 15, and fails half the time, as is tradition), then
-  hammer out swords and iron tools at the anvil. Better gear applies
-  automatically: swords raise your max hit, iron tools speed up gathering
+  hammer out swords, helms, shields, and platebodies at the anvil. Iron tools
+  speed up gathering when carried
+- **Equipment** — open the worn-equipment screen (C-up), or press A on gear in
+  your inventory to equip it. Four slots — weapon, shield, helm, body — each
+  with Attack/Strength/Defence bonuses that feed straight into the combat
+  formulas. Bronze gear wears at level 1, iron at Defence 10. You start with a
+  bronze sword in your pack to wield
 - **A quest!** — *The Chef's Little Problem*: Chef Bouillon by the bank path
   needs 3 goblins bashed and 2 cooked shrimp delivered. Chunky xp rewards,
   as is right and proper
@@ -60,8 +65,9 @@ visits and death. The title offers Continue when a valid save exists.
 | Stick / D-Pad | Walk |
 | R | Toggle run |
 | A | Interact: chop / mine / fish / cook / bank / attack |
-| B | Inventory (A: use/eat/bury/light, C-down: drop) |
+| B | Inventory (A: use/eat/bury/light/equip, C-down: drop) |
 | C-right | Skills panel |
+| C-up | Worn equipment (A: unequip) |
 | Start | Help |
 | L | Music on/off |
 
