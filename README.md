@@ -22,15 +22,25 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   (never burn again at 34)
 - **Combat** — level-2 goblins roam east of the bridge; they are aggressive,
   they hit 1s, and they drop bones
-- **Prayer** — bury those bones
+- **Prayer** — bury bones for Prayer xp, then spend it: open the prayer book
+  (C-down) and toggle combat boosts across four categories — Attack, Strength,
+  Defence and Magic. Each category has a basic prayer (Thick Skin, Burst of
+  Strength, Clarity of Thought, Mystic Will at +10%) and a high-level upgrade
+  (Steel Skin, Ultimate Strength, Incredible Reflexes, Mystic Might at +20%,
+  needing Prayer 20–26). Only one prayer per category runs at once, and active
+  prayers steadily **drain your prayer points** (you have one per Prayer level).
+  Pray at any rune altar — with no essence on you — to top them back up
 - **Runecraft** — mine rune essence from the glittering rock in the northwest
   ruins (it never depletes) and bind it at the Air altar beside it, or brave
   the goblin camp to reach the Fire altar (level 14). Runes **stack** in a
   single inventory slot, with the count drawn over the icon
-- **Magic** — open the spellbook (C-left) and pick Wind Strike (1 air rune) or
-  Fire Strike (1 fire rune, Magic 13). With a spell chosen, A flings a bolt at
-  the nearest goblin from up to five tiles away, spending a rune and earning
-  Magic xp. You start with 25 air runes to get going; craft more at the altar.
+- **Magic** — open the spellbook (C-left) and pick an attack spell: Wind Strike
+  (1 air rune), Fire Strike (1 fire rune, Magic 13) or the hard-hitting **Fire
+  Bolt** (3 fire runes, Magic 35). With a spell chosen, A flings a bolt at the
+  nearest goblin from up to five tiles away, spending its runes and earning
+  Magic xp. The spellbook also holds **Home Teleport** (1 air rune) — select it
+  to whisk yourself straight back to the surface spawn, your escape hatch from
+  the dungeon. You start with 25 air runes to get going; craft more at the altar.
   **Wizard gear** — a staff, hat and robe carry a Magic bonus that boosts your
   spell accuracy and max hit (worn in the weapon/helm/body slots, drawn on your
   character). Win them as **monster drops**
@@ -102,7 +112,8 @@ visits and death. The title offers Continue when a valid save exists.
 | B | Inventory (A: use/eat/bury/light/equip, C-down: drop) |
 | C-right | Skills panel |
 | C-up | Worn equipment (A: unequip) |
-| C-left | Spellbook (A: choose spell / melee) |
+| C-left | Spellbook (A: choose spell / cast Home Teleport) |
+| C-down | Prayer book (A: toggle prayer) |
 | Start | Help |
 | L | Music on/off |
 

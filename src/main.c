@@ -469,22 +469,65 @@ static const mobinfo_t mobinfo[NUM_MOBS] = {
 /* ------------------------------------------------------------ UI state */
 
 typedef enum { UI_NONE, UI_INV, UI_SKILLS, UI_BANK, UI_HELP, UI_SMITH,
-               UI_DIALOG, UI_EQUIP, UI_SPELL, UI_SHOP, UI_QUEST } ui_t;
+               UI_DIALOG, UI_EQUIP, UI_SPELL, UI_SHOP, UI_QUEST, UI_PRAYER } ui_t;
 static ui_t ui_mode = UI_NONE;
 static int smith_cursor = 0;
 static int equip_cursor = 0;
 static int shop_id = 0, shop_mode = 0, shop_cursor = 0;   /* mode: 0 buy, 1 sell */
 
-/* magic: the selected combat spell (SPELL_MELEE = ordinary melee) */
-enum { SPELL_MELEE, SPELL_AIR, SPELL_FIRE, NUM_SPELLS };
-static const struct { const char *name; int rune; int maxhit; int lvl; int xp_x10; }
+/* magic: the selected combat spell (SPELL_MELEE = ordinary melee).
+   SPELL_HOME is an instant utility cast handled in the spellbook, not a combat
+   spell, so it never becomes the standing cast_spell. */
+enum { SPELL_MELEE, SPELL_AIR, SPELL_FIRE, SPELL_BOLT, SPELL_HOME, NUM_SPELLS };
+static const struct { const char *name; int rune; int runes; int maxhit; int lvl; int xp_x10; }
 spellinfo[NUM_SPELLS] = {
-    { "Melee",       IT_NONE,      0, 1,   0 },
-    { "Wind Strike", IT_AIR_RUNE,  2, 1,  55 },
-    { "Fire Strike", IT_FIRE_RUNE, 4, 13,100 },
+    { "Melee",        IT_NONE,      0, 0,  1,   0 },
+    { "Wind Strike",  IT_AIR_RUNE,  1, 2,  1,  55 },
+    { "Fire Strike",  IT_FIRE_RUNE, 1, 4, 13, 100 },
+    { "Fire Bolt",    IT_FIRE_RUNE, 3, 8, 35, 225 },
+    { "Home Teleport",IT_AIR_RUNE,  1, 0,  1,  35 },
 };
 static int cast_spell = SPELL_MELEE;
 static int spell_cursor = 0;
+
+/* prayer: toggleable boosts that drain prayer points (1 point per Prayer level).
+   At most one prayer per category may be active; the percent feeds the matching
+   combat level. Steel/strength/reflex/might are the high-level upgrades. */
+enum { PCAT_DEF, PCAT_STR, PCAT_ATK, PCAT_MAG, NUM_PCAT };
+enum { PR_THICK, PR_BURST, PR_CLARITY, PR_MYSTICW,
+       PR_STEEL, PR_ULTSTR, PR_REFLEX, PR_MYSTICM, NUM_PRAYERS };
+static const struct { const char *name; int level, cat, pct, drain; }
+prayerinfo[NUM_PRAYERS] = {
+    { "Thick Skin",          1, PCAT_DEF, 10, 3 },
+    { "Burst of Strength",   4, PCAT_STR, 10, 3 },
+    { "Clarity of Thought",  7, PCAT_ATK, 10, 3 },
+    { "Mystic Will",         9, PCAT_MAG, 10, 3 },
+    { "Steel Skin",         20, PCAT_DEF, 20, 6 },
+    { "Ultimate Strength",  22, PCAT_STR, 20, 6 },
+    { "Incredible Reflexes",24, PCAT_ATK, 20, 6 },
+    { "Mystic Might",       26, PCAT_MAG, 20, 6 },
+};
+static bool pray_on[NUM_PRAYERS];
+static int pray_pts;            /* current prayer points */
+static int pray_drain_acc;      /* accumulates active drain; -1 point per 120 */
+static int pray_regen;          /* slow passive regen accumulator when inactive */
+static int pray_cursor = 0;
+
+/* prayer points cap = Prayer level */
+static int pray_max(void) { return level_of(SK_PRAY); }
+
+/* percent boost the active prayer of a category grants (0 if none active) */
+static int pray_bonus(int cat)
+{
+    for (int i = 0; i < NUM_PRAYERS; i++)
+        if (pray_on[i] && prayerinfo[i].cat == cat) return prayerinfo[i].pct;
+    return 0;
+}
+
+static void deactivate_all_prayers(void)
+{
+    for (int i = 0; i < NUM_PRAYERS; i++) pray_on[i] = false;
+}
 
 /* spell projectiles (purely visual; damage applies on cast) */
 #define MAX_PROJ 6
@@ -573,6 +616,23 @@ static void add_xp(int sk, int amount_x10, bool drop)
         if (sk == SK_HP) pl.hp++;
         gratz_timer = 3;
     }
+}
+
+static void toggle_prayer(int i)
+{
+    if (level_of(SK_PRAY) < prayerinfo[i].level) {
+        msg("You need a Prayer level of %d for %s.",
+            prayerinfo[i].level, prayerinfo[i].name);
+        return;
+    }
+    if (pray_on[i]) { pray_on[i] = false; return; }
+    if (pray_pts <= 0) { msg("You have run out of prayer points."); return; }
+    /* one prayer per category: drop any rival in the same category */
+    for (int j = 0; j < NUM_PRAYERS; j++)
+        if (j != i && prayerinfo[j].cat == prayerinfo[i].cat) pray_on[j] = false;
+    pray_on[i] = true;
+    sfx_ui(SND_CRAFT);
+    msg("You activate %s.", prayerinfo[i].name);
 }
 
 static int inv_count(int item)
@@ -917,6 +977,10 @@ static void load_game(void)
     if (tile_walkable(s.tx, s.ty)) { pl.tx = s.tx; pl.ty = s.ty; }
     pl.mtx = pl.tx; pl.mty = pl.ty;
     pl.px = pl.tx * TILE + 8; pl.py = pl.ty * TILE + 12;
+    /* prayer points are transient; you reload with a full prayer pool */
+    deactivate_all_prayers();
+    pray_pts = pray_max();
+    pray_drain_acc = pray_regen = 0;
 }
 
 /* ------------------------------------------------------------ combat & death */
@@ -926,6 +990,9 @@ static void player_die(void)
     msg("Oh dear, you are dead!");
     sfx_ui(SND_DEATH);
     pl.hp = level_of(SK_HP);
+    deactivate_all_prayers();
+    pray_pts = pray_max();
+    pray_drain_acc = 0;
     ui_mode = UI_NONE;
     /* always wake up on the surface */
     if (cur_map != MAP_OVERWORLD) load_map(MAP_OVERWORLD);
@@ -1053,8 +1120,8 @@ static void mob_die(gob_t *g)
 
 static void player_attack(gob_t *g)
 {
-    int att = level_of(SK_ATT) + equip_atk();
-    int str = level_of(SK_STR) + equip_str();
+    int att = level_of(SK_ATT) * (100 + pray_bonus(PCAT_ATK)) / 100 + equip_atk();
+    int str = level_of(SK_STR) * (100 + pray_bonus(PCAT_STR)) / 100 + equip_str();
     int max_hit = 1 + str / 8;
     int p_hit = 100 * (att + 8) / (att + 18) - mobinfo[g->type].mob_def * 2;
     if (p_hit > 95) p_hit = 95;
@@ -1078,7 +1145,7 @@ static void player_attack(gob_t *g)
 
 static void mob_attack(gob_t *g)
 {
-    int def = level_of(SK_DEF) + equip_def();
+    int def = level_of(SK_DEF) * (100 + pray_bonus(PCAT_DEF)) / 100 + equip_def();
     int p_hit = mobinfo[g->type].hit_base - def;
     if (p_hit < 5) p_hit = 5;
     int dmg = chance(p_hit) ? (rand() % (mobinfo[g->type].max_dmg + 1)) : 0;
@@ -1106,22 +1173,23 @@ static void spawn_proj(float x, float y, float tx, float ty, int spr)
 static bool player_cast(gob_t *g)
 {
     int rune = spellinfo[cast_spell].rune;
+    int need = spellinfo[cast_spell].runes;
     if (level_of(SK_MAGIC) < spellinfo[cast_spell].lvl) {
         msg("You need a Magic level of %d for that spell.",
             spellinfo[cast_spell].lvl);
         cast_spell = SPELL_MELEE;
         return false;
     }
-    if (!has_item(rune)) {
-        msg("You have run out of %s.", iteminfo[rune].name);
+    if (inv_count(rune) < need) {
+        msg("You do not have enough %s.", iteminfo[rune].name);
         cast_spell = SPELL_MELEE;
         return false;
     }
-    remove_item(rune);
+    for (int k = 0; k < need; k++) remove_item(rune);
     spawn_proj(pl.px, pl.py - 8, g->px, g->py - 8,
-               cast_spell == SPELL_FIRE ? SPR_BOLT_FIRE : SPR_BOLT_AIR);
+               rune == IT_FIRE_RUNE ? SPR_BOLT_FIRE : SPR_BOLT_AIR);
     sfx(SND_CRAFT);
-    int magic = level_of(SK_MAGIC);
+    int magic = level_of(SK_MAGIC) * (100 + pray_bonus(PCAT_MAG)) / 100;
     int mbonus = equip_mag();
     int p_hit = 55 + magic * 2 + mbonus - mobinfo[g->type].mob_def * 2;
     if (p_hit > 95) p_hit = 95;
@@ -1140,6 +1208,24 @@ static bool player_cast(gob_t *g)
     }
     if (g->hp <= 0) mob_die(g);
     return true;
+}
+
+/* Home Teleport: an instant utility cast (not a combat spell). Spends one air
+   rune and whisks you back to the surface spawn, escaping the dungeon. */
+static void cast_home_teleport(void)
+{
+    int rune = spellinfo[SPELL_HOME].rune;
+    if (!has_item(rune)) {
+        msg("You have run out of %s.", iteminfo[rune].name);
+        return;
+    }
+    remove_item(rune);
+    sfx_ui(SND_CRAFT);
+    add_xp(SK_MAGIC, spellinfo[SPELL_HOME].xp_x10, true);
+    if (cur_map != MAP_OVERWORLD) load_map(MAP_OVERWORLD);
+    place_player(pl.spawn_x, pl.spawn_y);
+    pl.state = ST_IDLE;
+    msg("You teleport home to Rune Valley.");
 }
 
 /* ------------------------------------------------------------ skilling ticks */
@@ -1754,6 +1840,29 @@ static void game_tick(void)
         pl.regen = 0;
         pl.hp++;
     }
+    /* prayer points: active prayers drain, otherwise a slow trickle restores.
+       Visit an altar for an instant top-up. */
+    {
+        int drain = 0;
+        for (int i = 0; i < NUM_PRAYERS; i++)
+            if (pray_on[i]) drain += prayerinfo[i].drain;
+        if (drain > 0) {
+            pray_drain_acc += drain;
+            while (pray_drain_acc >= 120 && pray_pts > 0) {
+                pray_drain_acc -= 120;
+                pray_pts--;
+            }
+            if (pray_pts <= 0) {
+                pray_pts = 0;
+                pray_drain_acc = 0;
+                deactivate_all_prayers();
+                msg("You have run out of prayer points.");
+            }
+        } else if (pray_pts < pray_max() && ++pray_regen >= 50) {
+            pray_regen = 0;
+            pray_pts++;
+        }
+    }
     /* silent autosave every ~60s of overworld play (saves never record the
        dungeon, so you always reload on the surface) */
     if (game_state == STATE_PLAY && cur_map == MAP_OVERWORLD && ++save_timer >= 100) {
@@ -2062,6 +2171,17 @@ static void interact(void)
         break;
     case OBJ_ALTAR_AIR: case OBJ_ALTAR_FIRE: {
         bool fire = (t.obj == OBJ_ALTAR_FIRE);
+        /* with no essence to bind, the altar restores your prayer instead */
+        if (!has_item(IT_ESSENCE)) {
+            if (pray_pts >= pray_max()) {
+                msg("You feel spiritually full already.");
+                return;
+            }
+            pray_pts = pray_max();
+            sfx_ui(SND_CRAFT);
+            msg("You pray at the altar; your prayer is restored.");
+            return;
+        }
         if (fire && level_of(SK_RC) < 14) {
             msg("You need a Runecraft level of 14 to bind fire runes.");
             return;
@@ -2071,7 +2191,6 @@ static void interact(void)
             add_item(fire ? IT_FIRE_RUNE : IT_AIR_RUNE);
             n++;
         }
-        if (!n) { msg("You need some rune essence to craft runes."); return; }
         sfx_ui(SND_CRAFT);
         msg("You bind the temple's power into %s rune%s.",
             fire ? "fire" : "air", n > 1 ? "s" : "");
@@ -2848,13 +2967,16 @@ static void render(void)
 
     /* ---- HUD ---- */
     rdpq_set_mode_fill(RGBA32(20, 20, 20, 255));
-    rdpq_fill_rectangle(4, 4, 90, 38);
+    rdpq_fill_rectangle(4, 4, 90, 48);
     int maxhp = level_of(SK_HP);
     draw_text(pl.hp * 3 <= maxhp ? 3 : 4, 8, 14, "HP  %d/%d", pl.hp, maxhp);
     draw_text(pl.run_on ? 1 : 6, 8, 24, "Run %d%% %s", pl.run_energy,
               pl.run_on ? "(on)" : "");
     draw_text(cast_spell == SPELL_MELEE ? 6 : 5, 8, 34, "Atk %s",
               spellinfo[cast_spell].name);
+    bool praying = false;
+    for (int i = 0; i < NUM_PRAYERS; i++) if (pray_on[i]) praying = true;
+    draw_text(praying ? 4 : 6, 8, 44, "Pray %d/%d", pray_pts, pray_max());
 
     const char *hint = (ui_mode == UI_NONE) ? context_hint() : NULL;
     if (hint) {
@@ -3023,7 +3145,7 @@ static void render(void)
     }
     else if (ui_mode == UI_SPELL) {
         int px0 = SCREEN_W - 142, py0 = 30;
-        draw_panel(px0, py0, px0 + 134, py0 + 110);
+        draw_panel(px0, py0, px0 + 134, py0 + 124);
         draw_text(1, px0 + 6, py0 + 12, "Spellbook");
         draw_text(6, px0 + 6, py0 + 22, "A: select   B: close");
         for (int i = 0; i < NUM_SPELLS; i++) {
@@ -3039,11 +3161,28 @@ static void render(void)
                           spellinfo[i].name, spellinfo[i].lvl);
         }
         if (cast_spell == SPELL_MELEE)
-            draw_text(0, px0 + 6, py0 + 90, "Style: melee");
+            draw_text(0, px0 + 6, py0 + 108, "Style: melee");
         else
-            draw_text(0, px0 + 6, py0 + 90, "Cast: %s (%d)",
-                      iteminfo[spellinfo[cast_spell].rune].name,
+            draw_text(0, px0 + 6, py0 + 108, "Cost %dx, have %d",
+                      spellinfo[cast_spell].runes,
                       inv_count(spellinfo[cast_spell].rune));
+    }
+    else if (ui_mode == UI_PRAYER) {
+        static const char *catname[NUM_PCAT] = { "Def", "Str", "Atk", "Mag" };
+        int px0 = SCREEN_W - 168, py0 = 22;
+        draw_panel(px0, py0, px0 + 160, py0 + 152);
+        draw_text(1, px0 + 6, py0 + 12, "Prayers");
+        draw_text(6, px0 + 6, py0 + 22, "A: toggle   B: close");
+        for (int i = 0; i < NUM_PRAYERS; i++) {
+            bool can = level_of(SK_PRAY) >= prayerinfo[i].level;
+            int style = (i == pray_cursor) ? 1 : (pray_on[i] ? 4 : (can ? 0 : 6));
+            char mark = (i == pray_cursor) ? '>' : (pray_on[i] ? '*' : ' ');
+            draw_text(style, px0 + 6, py0 + 36 + i * 11, "%c %s (L%d)",
+                      mark, prayerinfo[i].name, prayerinfo[i].level);
+        }
+        draw_text(5, px0 + 6, py0 + 128, "Prayer pts: %d/%d", pray_pts, pray_max());
+        draw_text(0, px0 + 6, py0 + 140, "Boost: +%d%% %s",
+                  prayerinfo[pray_cursor].pct, catname[prayerinfo[pray_cursor].cat]);
     }
     else if (ui_mode == UI_DIALOG) {
         int px0 = 36, py0 = 64;
@@ -3054,18 +3193,19 @@ static void render(void)
         draw_text(6, px0 + 8, py0 + 86, "(A) close");
     }
     else if (ui_mode == UI_HELP) {
-        int px0 = 40, py0 = 26;
-        draw_panel(px0, py0, px0 + 240, py0 + 150);
+        int px0 = 40, py0 = 24;
+        draw_panel(px0, py0, px0 + 240, py0 + 158);
         draw_text(1, px0 + 8, py0 + 14, "RUNE VALLEY 64");
-        draw_text(0, px0 + 8, py0 + 30, "Stick/D-Pad: walk   R: toggle run");
-        draw_text(0, px0 + 8, py0 + 42, "A: interact with the world");
-        draw_text(0, px0 + 8, py0 + 54, "B: inventory (A: use/equip, C-dn: drop)");
-        draw_text(0, px0 + 8, py0 + 66, "C-rt:skills C-up:worn C-lf:spells");
-        draw_text(0, px0 + 8, py0 + 80, "Chop, mine, fish, cook, smith, wear");
-        draw_text(0, px0 + 8, py0 + 90, "gear, sling spells, shop the bazaar.");
-        draw_text(3, px0 + 8, py0 + 102, "A two-floor dungeon lurks SW: the");
-        draw_text(3, px0 + 8, py0 + 112, "Warlord, then the Demon below!");
-        draw_text(1, px0 + 8, py0 + 132, "(A) Quest Journal   (B) close");
+        draw_text(0, px0 + 8, py0 + 28, "Stick/D-Pad: walk   R: toggle run");
+        draw_text(0, px0 + 8, py0 + 40, "A: interact with the world");
+        draw_text(0, px0 + 8, py0 + 52, "B: inventory (A: use/equip, C-dn: drop)");
+        draw_text(0, px0 + 8, py0 + 64, "C-rt:skills C-up:worn C-lf:spells");
+        draw_text(0, px0 + 8, py0 + 76, "C-dn: prayers (altars restore points)");
+        draw_text(0, px0 + 8, py0 + 88, "Chop, mine, fish, cook, smith, pray,");
+        draw_text(0, px0 + 8, py0 + 98, "wear gear, sling spells, shop, quest.");
+        draw_text(3, px0 + 8, py0 + 112, "A two-floor dungeon lurks SW: the");
+        draw_text(3, px0 + 8, py0 + 122, "Warlord, then the Demon below!");
+        draw_text(1, px0 + 8, py0 + 142, "(A) Quest Journal   (B) close");
     }
     else if (ui_mode == UI_QUEST) {
         int px0 = 36, py0 = 28;
@@ -3166,6 +3306,9 @@ static void handle_input(void)
         ui_mode = (ui_mode == UI_SPELL) ? UI_NONE : UI_SPELL;
         spell_cursor = cast_spell;
     }
+    /* C-down opens the prayer book (it doubles as "drop" inside the inventory) */
+    if (pressed.c_down && ui_mode != UI_INV)
+        ui_mode = (ui_mode == UI_PRAYER) ? UI_NONE : UI_PRAYER;
 
     if (ui_mode == UI_INV) {
         if (pressed.b) { ui_mode = UI_NONE; return; }
@@ -3236,12 +3379,23 @@ static void handle_input(void)
                 level_of(SK_MAGIC) < spellinfo[spell_cursor].lvl) {
                 msg("You need a Magic level of %d for that spell.",
                     spellinfo[spell_cursor].lvl);
+            } else if (spell_cursor == SPELL_HOME) {
+                cast_home_teleport();   /* instant: never becomes the standing cast */
+                ui_mode = UI_NONE;
+                return;
             } else {
                 cast_spell = spell_cursor;
                 msg(cast_spell == SPELL_MELEE ? "You ready your weapon."
                     : "You will now cast %s.", spellinfo[cast_spell].name);
             }
         }
+        return;
+    }
+    if (ui_mode == UI_PRAYER) {
+        if (pressed.b) { ui_mode = UI_NONE; return; }
+        if (pressed.d_up && pray_cursor > 0) pray_cursor--;
+        if (pressed.d_down && pray_cursor < NUM_PRAYERS - 1) pray_cursor++;
+        if (pressed.a) toggle_prayer(pray_cursor);
         return;
     }
     if (ui_mode == UI_DIALOG) {
@@ -3347,6 +3501,9 @@ int main(void)
         if (inv[i] != IT_NONE && inv_qty[i] == 0) inv_qty[i] = 1;
     for (int i = 0; i < NUM_SLOTS; i++) equipped[i] = IT_NONE;
     cast_spell = SPELL_MELEE;
+    deactivate_all_prayers();
+    pray_pts = pray_max();
+    pray_drain_acc = pray_regen = 0;
     gp = 25;                      /* a few starter coins */
     quest_state = QUEST_NONE; quest_kills = 0; wquest = WQ_NONE; dquest = DQ_NONE;
     dungeon_floor = 1;
