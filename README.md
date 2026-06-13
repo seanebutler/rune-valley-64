@@ -160,8 +160,9 @@ via an EverDrive/SC64 flashcart.
 ## Layout
 
 ```
-src/main.c        the whole game: map, ticks, skills, combat, UI, renderer
-assets/genart.ps1 ASCII-grid -> PNG pixel art generator (System.Drawing)
-assets/gensfx.ps1 SFX + 16-bar music loop synthesizer (embedded C#)
-Makefile          libdragon n64.mk build: PNG->sprite, WAV->wav64, DFS, Z64
+src/main.c           the whole game: map, ticks, skills, combat, UI, renderer
+assets/genart.ps1    ASCII-grid -> PNG pixel art generator (System.Drawing)
+assets/gensfx.ps1    SFX + 16-bar music loop synthesizer (embedded C#)
+assets/gen_almanac.ps1  regenerates ALMANAC.md from the data tables in main.c
+Makefile             libdragon n64.mk build: PNG->sprite, WAV->wav64, DFS, Z64
 ```
