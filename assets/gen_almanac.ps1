@@ -20,12 +20,70 @@ function Item-Label($id) {
     return $k
 }
 
+# --- sprite enum name -> PNG filename (the SPR_* enum and spr_files[] are parallel) ---
+$sprFile = @{}
+$mEnum = [regex]::Match($src, 'enum\s*\{([^}]*?SPR_GRASS_A.*?NUM_SPR)\s*\}', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+$mFiles = [regex]::Match($src, 'spr_files\[NUM_SPR\]\s*=\s*\{(.*?)\};', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+if ($mEnum.Success -and $mFiles.Success) {
+    $sprNames = [regex]::Matches($mEnum.Groups[1].Value, 'SPR_\w+') | ForEach-Object { $_.Value } | Where-Object { $_ -ne 'NUM_SPR' }
+    $sprFiles = [regex]::Matches($mFiles.Groups[1].Value, '"([^"]+)"') | ForEach-Object { $_.Groups[1].Value }
+    for ($i = 0; $i -lt $sprNames.Count -and $i -lt $sprFiles.Count; $i++) { $sprFile[$sprNames[$i]] = $sprFiles[$i] }
+}
+
+# --- item / mob -> sprite enum name ---
+$itemSpr = @{}
+foreach ($m in [regex]::Matches($src, '\[IT_(\w+)\]\s*=\s*\{\s*"[^"]*"\s*,\s*(SPR_\w+)')) {
+    $itemSpr['IT_' + $m.Groups[1].Value] = $m.Groups[2].Value
+}
+$mobSpr = @{}
+foreach ($m in [regex]::Matches($src, '\[MOB_(\w+)\]\s*=\s*\{\s*"[^"]*"\s*,(?:\s*\d+\s*,){6}\s*(SPR_\w+)')) {
+    $mobSpr['MOB_' + $m.Groups[1].Value] = $m.Groups[2].Value
+}
+
+# --- icon images: scale each needed sprite 3x (nearest-neighbour) into docs/almanac ---
+Add-Type -AssemblyName System.Drawing
+$imgDir = Join-Path $root 'docs\almanac'
+New-Item -ItemType Directory -Force -Path $imgDir | Out-Null
+$pngDir = Join-Path $root 'assets\png'
+$iconCache = @{}
+function Icon-FromSpr($sprName, $scale = 3) {
+    if (-not $sprName -or -not $sprFile.ContainsKey($sprName)) { return '' }
+    $file = $sprFile[$sprName]
+    if ($iconCache.ContainsKey($file)) { return $iconCache[$file] }
+    $inPath = Join-Path $pngDir "$file.png"
+    if (-not (Test-Path $inPath)) { $iconCache[$file] = ''; return '' }
+    $srcImg = New-Object System.Drawing.Bitmap($inPath)
+    $w = $srcImg.Width * $scale; $h = $srcImg.Height * $scale
+    $out = New-Object System.Drawing.Bitmap($w, $h, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    $g = [System.Drawing.Graphics]::FromImage($out)
+    $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::NearestNeighbor
+    $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::Half
+    $g.DrawImage($srcImg, 0, 0, $w, $h)
+    $g.Dispose(); $srcImg.Dispose()
+    $out.Save((Join-Path $imgDir "$file.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+    $out.Dispose()
+    $rel = "docs/almanac/$file.png"
+    $iconCache[$file] = $rel
+    return $rel
+}
+function Item-Icon($id) {   # markdown image for an item id, or '' if none
+    if (-not $itemSpr.ContainsKey($id)) { return '' }
+    $p = Icon-FromSpr $itemSpr[$id]
+    if ($p) { return "![]($p)" } else { return '' }
+}
+function Mob-Icon($id) {
+    if (-not $mobSpr.ContainsKey($id)) { return '' }
+    $p = Icon-FromSpr $mobSpr[$id]
+    if ($p) { return "![]($p)" } else { return '' }
+}
+
 # --- equippable items: [IT_X]={ "name", SPR, heal, bool, SLOT_Y, atk,str,def,lvl [,bool,mag[,rng]] } ---
 $equip = @()
 $rxE = '\[IT_(\w+)\]\s*=\s*\{\s*"([^"]+)"\s*,\s*\w+\s*,\s*\d+\s*,\s*(?:true|false)\s*,\s*(SLOT_\w+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*(?:true|false)\s*,\s*(\d+)\s*(?:,\s*(\d+)\s*)?)?\}'
 foreach ($m in [regex]::Matches($src, $rxE)) {
     if ($m.Groups[3].Value -eq 'SLOT_NONE') { continue }
     $equip += [pscustomobject]@{
+        Id   = 'IT_' + $m.Groups[1].Value
         Name = $m.Groups[2].Value
         Slot = $m.Groups[3].Value
         Atk  = [int]$m.Groups[4].Value
@@ -41,7 +99,7 @@ foreach ($m in [regex]::Matches($src, $rxE)) {
 $arrows = @()
 $rxA = '\[IT_(\w+)\]\s*=\s*\{\s*"([^"]+)"\s*,\s*\w+\s*,\s*\d+\s*,\s*(?:true|false)\s*,\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*,\s*(?:true|false)\s*,\s*\d+\s*,\s*(\d+)\s*\}'
 foreach ($m in [regex]::Matches($src, $rxA)) {
-    $arrows += [pscustomobject]@{ Name = $m.Groups[2].Value; Rng = [int]$m.Groups[3].Value }
+    $arrows += [pscustomobject]@{ Id = 'IT_' + $m.Groups[1].Value; Name = $m.Groups[2].Value; Rng = [int]$m.Groups[3].Value }
 }
 
 # --- monster stats: [MOB_X] = { "name", hp, dmg, def, ... } ---
@@ -79,6 +137,7 @@ if ($mFishBlock.Success) {
         $cooked = $m.Groups[3].Value -replace '^IT_',''
         $fish += [pscustomobject]@{
             Name=$m.Groups[1].Value; Tool=$m.Groups[4].Value
+            CookedId=$m.Groups[3].Value
             FishLvl=[int]$m.Groups[5].Value; CookLvl=[int]$m.Groups[6].Value
             Heal=$(if ($itemHeal.ContainsKey($cooked)) { $itemHeal[$cooked] } else { 0 })
         }
@@ -149,21 +208,21 @@ W '## Weapons'
 W ''
 W 'Worn in the weapon slot. The Magic bonus raises spell accuracy and max hit.'
 W ''
-W '| Weapon | Attack | Strength | Magic | Defence | Wield level |'
-W '|---|--:|--:|--:|--:|--:|'
+W '| | Weapon | Attack | Strength | Magic | Defence | Wield level |'
+W '|:-:|---|--:|--:|--:|--:|--:|'
 foreach ($w in ($equip | Where-Object { $_.Slot -eq 'SLOT_WEAPON' -and $_.Rng -eq 0 } | Sort-Object Lvl, Atk)) {
-    W ("| {0} | +{1} | +{2} | +{3} | +{4} | {5} |" -f $w.Name, $w.Atk, $w.Str, $w.Mag, $w.Def, $w.Lvl)
+    W ("| {0} | {1} | +{2} | +{3} | +{4} | +{5} | {6} |" -f (Item-Icon $w.Id), $w.Name, $w.Atk, $w.Str, $w.Mag, $w.Def, $w.Lvl)
 }
 W ''
 W '## Armour'
 W ''
 W 'Shields carry a small Attack bonus; wizard gear carries a Magic bonus.'
 W ''
-W '| Item | Slot | Attack | Defence | Magic | Wield level |'
-W '|---|---|--:|--:|--:|--:|'
+W '| | Item | Slot | Attack | Defence | Magic | Wield level |'
+W '|:-:|---|---|--:|--:|--:|--:|'
 foreach ($slot in 'SLOT_HELM','SLOT_SHIELD','SLOT_BODY') {
     foreach ($a in ($equip | Where-Object { $_.Slot -eq $slot -and $_.Rng -eq 0 } | Sort-Object Lvl, Name)) {
-        W ("| {0} | {1} | +{2} | +{3} | +{4} | {5} |" -f $a.Name, $slotLabel[$slot], $a.Atk, $a.Def, $a.Mag, $a.Lvl)
+        W ("| {0} | {1} | {2} | +{3} | +{4} | +{5} | {6} |" -f (Item-Icon $a.Id), $a.Name, $slotLabel[$slot], $a.Atk, $a.Def, $a.Mag, $a.Lvl)
     }
 }
 W ''
@@ -179,6 +238,8 @@ foreach ($id in $mobOrder) {
     $mob = $mobs[$id]
     $disp = $mob.Name.Substring(0,1).ToUpper() + $mob.Name.Substring(1)
     W ("### {0} - {1}" -f $disp, $mobNote[$id])
+    $micon = Mob-Icon ('MOB_' + $id)
+    if ($micon) { W $micon; W '' }
     W ("Hitpoints **{0}** | max hit **{1}** | defence **{2}**." -f $mob.HP, $mob.Hit, $mob.Def)
     if ($mobAlways.ContainsKey($id)) { W ''; W ("**{0}**" -f $mobAlways[$id]) }
     if ($mobExtra.ContainsKey($id)) {
@@ -188,12 +249,12 @@ foreach ($id in $mobOrder) {
     W ''
     $tbl = $drops[$mobTable[$id]]
     $total = ($tbl | Measure-Object Weight -Sum).Sum
-    W '| Drop | Qty | Chance |'
-    W '|---|--:|--:|'
+    W '| | Drop | Qty | Chance |'
+    W '|:-:|---|--:|--:|'
     foreach ($d in $tbl) {
         $pct = [math]::Round($d.Weight * 100.0 / $total)
         $qty = if ($d.Item -eq 'IT_NONE') { '-' } else { "$($d.Qty)" }
-        W ("| {0} | {1} | {2}% |" -f (Item-Label $d.Item), $qty, $pct)
+        W ("| {0} | {1} | {2} | {3}% |" -f (Item-Icon $d.Item), (Item-Label $d.Item), $qty, $pct)
     }
     W ''
 }
@@ -223,25 +284,25 @@ W 'max hit add the bow''s, the arrow''s and your ranged armour''s Ranged bonuses
 W 'Bows and arrows are fletched (use a knife on logs). **Mithril arrows need an'
 W 'oak shortbow or better** - a plain shortbow can''t draw them.'
 W ''
-W '| Bow | Ranged | Wield level |'
-W '|---|--:|--:|'
+W '| | Bow | Ranged | Wield level |'
+W '|:-:|---|--:|--:|'
 foreach ($b in ($equip | Where-Object { $_.Slot -eq 'SLOT_WEAPON' -and $_.Rng -gt 0 } | Sort-Object Lvl)) {
-    W ("| {0} | +{1} | {2} |" -f $b.Name, $b.Rng, $b.Lvl)
+    W ("| {0} | {1} | +{2} | {3} |" -f (Item-Icon $b.Id), $b.Name, $b.Rng, $b.Lvl)
 }
 W ''
-W '| Arrow | Ranged |'
-W '|---|--:|'
+W '| | Arrow | Ranged |'
+W '|:-:|---|--:|'
 foreach ($a in ($arrows | Sort-Object Rng)) {
-    W ("| {0} | +{1} |" -f $a.Name, $a.Rng)
+    W ("| {0} | {1} | +{2} |" -f (Item-Icon $a.Id), $a.Name, $a.Rng)
 }
 W ''
 W 'Ranged armour is crafted (see below) and worn for a Ranged bonus; it needs the'
 W 'listed Ranged level to wear.'
 W ''
-W '| Ranged armour | Slot | Ranged | Defence | Ranged level |'
-W '|---|---|--:|--:|--:|'
+W '| | Ranged armour | Slot | Ranged | Defence | Ranged level |'
+W '|:-:|---|---|--:|--:|--:|'
 foreach ($a in ($equip | Where-Object { $_.Rng -gt 0 -and $_.Slot -ne 'SLOT_WEAPON' } | Sort-Object Lvl, Name)) {
-    W ("| {0} | {1} | +{2} | +{3} | {4} |" -f $a.Name, $slotLabel[$a.Slot], $a.Rng, $a.Def, $a.Lvl)
+    W ("| {0} | {1} | {2} | +{3} | +{4} | {5} |" -f (Item-Icon $a.Id), $a.Name, $slotLabel[$a.Slot], $a.Rng, $a.Def, $a.Lvl)
 }
 W ''
 W '---'
@@ -254,10 +315,10 @@ W 'coins. Use a **needle** on the leather (with **thread** in your pack) to stit
 W 'ranged armour - both sold at the General Store. Dragonhide gear demands a high'
 W 'Crafting level but gives the best Ranged bonuses in the valley.'
 W ''
-W '| Stitch | Materials | Crafting level |'
-W '|---|---|--:|'
+W '| | Stitch | Materials | Crafting level |'
+W '|:-:|---|---|--:|'
 foreach ($c in $crafts) {
-    W ("| {0} | {1}x {2} + {3}x Thread | {4} |" -f (Item-Label $c.Result), $c.NHide, (Item-Label $c.Hide), $c.NThread, $c.Lvl)
+    W ("| {0} | {1} | {2}x {3} + {4}x Thread | {5} |" -f (Item-Icon $c.Result), (Item-Label $c.Result), $c.NHide, (Item-Label $c.Hide), $c.NThread, $c.Lvl)
 }
 W ''
 W '---'
@@ -268,11 +329,11 @@ W 'The tackle you carry decides the catch at a fishing spot. Cook the catch on'
 W 'a fire (it burns until your Cooking level reaches the listed level); eating'
 W 'the cooked fish restores the listed Hitpoints.'
 W ''
-W '| Fish | Fishing level | Tackle | Cooking level | Heals |'
-W '|---|--:|---|--:|--:|'
+W '| | Fish | Fishing level | Tackle | Cooking level | Heals |'
+W '|:-:|---|--:|---|--:|--:|'
 foreach ($fi in $fish) {
     $disp = $fi.Name.Substring(0,1).ToUpper() + $fi.Name.Substring(1)
-    W ("| {0} | {1} | {2} | {3} | {4} |" -f $disp, $fi.FishLvl, (Item-Label $fi.Tool), $fi.CookLvl, $fi.Heal)
+    W ("| {0} | {1} | {2} | {3} | {4} | {5} |" -f (Item-Icon $fi.CookedId), $disp, $fi.FishLvl, (Item-Label $fi.Tool), $fi.CookLvl, $fi.Heal)
 }
 W ''
 W '---'

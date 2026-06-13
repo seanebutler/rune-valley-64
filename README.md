@@ -13,8 +13,9 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
 
 - **Woodcutting** — chop trees (and oaks at level 15); trees fall to stumps
   and respawn
-- **Mining** — copper and tin near the west path, iron (level 15) and a deep
-  vein of **mithril** (level 30) further out; rocks deplete and respawn
+- **Mining** — copper and tin near the west path, iron (level 15), **coal**
+  (level 20) and a deep vein of **mithril** (level 30) further out; rocks
+  deplete and respawn
 - **Fishing** — the **tackle you carry** decides the catch at the rippling
   river spots: a **net** lands shrimp (level 1), a **fishing rod** trout
   (20), a **lobster pot** lobster (40), and a **harpoon** swordfish (50). Buy
@@ -95,21 +96,23 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   **coins** you earn from drops to buy gear and supplies, or flip to the Sell
   tab (Z) to offload loot for half its value. Your coin balance shows on the
   inventory and shop screens
-- **Smithing** — smelt copper + tin into bronze bars at the furnace by the
-  mine (iron smelts at 15, and fails half the time, as is tradition; **mithril**
-  at 30), then hammer out swords, helms, shields, platebodies and **arrowtips**
-  at the anvil. The full **mithril** set is now smithable from your own bars,
-  not just bought. Iron tools speed up gathering when carried
+- **Smithing** — smelt ore into bars at the furnace by the mine: copper + tin →
+  bronze; iron alone → iron (fails half the time, as is tradition); **iron + 1
+  coal → steel** (level 20); and **mithril ore + 2 coal → a mithril bar**
+  (level 30). Then hammer bars into swords, helms, shields, platebodies and
+  **arrowtips** at the anvil — the full **steel and mithril** sets are now
+  smithable from your own bars, not just bought. Iron tools speed up gathering
+  when carried
 - **Equipment** — open the worn-equipment screen (C-up), or press A on gear in
   your inventory to equip it. Four slots — weapon, shield, helm, body — each
   with Attack/Strength/Defence bonuses that feed straight into the combat
   formulas. **Worn gear is drawn on your character** — helm, platebody, sword
   and shield all show on the sprite in every facing
-- **Six gear tiers** — bronze, iron and now **mithril** are smithed from your
-  own bars; **steel and rune** are bought at the bazaar or won from the Warlord.
-  Each tier hits harder and defends better but demands a higher Attack (weapons)
-  or Defence (armour) level to wield — rune needs 40. A full rune set is the
-  late-game coin sink
+- **Six gear tiers** — bronze, iron, **steel and mithril** are smithed from your
+  own bars; **rune** is bought at the bazaar or won from the Warlord (steel and
+  mithril can still be bought too). Each tier hits harder and defends better but
+  demands a higher Attack (weapons) or Defence (armour) level to wield — rune
+  needs 40. A full rune set is the late-game coin sink
 - **Quests** — *Basic Training*: Sergeant Hardy at the cow pasture wants five
   cows felled, and rewards you with a jumpstart of combat xp (and a few coins).
   *The Chef's Little Problem*: Chef Bouillon by the bank path

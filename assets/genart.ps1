@@ -1862,6 +1862,11 @@ New-Recolor 'item_bronze_sword' 'item_dragonfire' $dfMap
 foreach ($dir in 'd','u','s') { New-Recolor "eq_bz_wep_$dir" "eq_df_wep_$dir" $dfMap }
 New-FlipX 'eq_df_wep_s' 'eq_df_wep_sl'
 
+# ---- Coal: a dark ore that fuels steel and mithril smelting ----
+New-Rock    'obj_rock_coal' '#161616'
+New-OreIcon 'item_coal'     '#101010'
+New-Recolor 'item_bronze_bar' 'item_steel_bar' $gearTiers['st']
+
 # ---- Mithril: a deep-blue ore deeper in the mine, smithed into bars/gear ----
 $mithFleck = '#4a5ac0'
 New-Rock    'obj_rock_mithril' $mithFleck

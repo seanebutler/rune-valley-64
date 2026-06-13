@@ -51,7 +51,7 @@ enum { OBJ_NONE, OBJ_TREE, OBJ_OAK, OBJ_STUMP, OBJ_ROCK_COPPER, OBJ_ROCK_TIN,
        OBJ_SHOP_GENERAL, OBJ_SHOP_WEAPON, OBJ_SHOP_ARMOR, OBJ_SHOP_MAGIC,
        OBJ_KNIGHT, OBJ_FENCE, OBJ_TUTOR,
        OBJ_ALTAR_WATER, OBJ_ALTAR_EARTH, OBJ_ALTAR_LAW, OBJ_ALTAR_CHAOS,
-       OBJ_ROCK_MITHRIL, OBJ_TANNER };
+       OBJ_ROCK_MITHRIL, OBJ_TANNER, OBJ_ROCK_COAL };
 
 enum { MAP_OVERWORLD, MAP_DUNGEON };
 
@@ -84,7 +84,7 @@ static const char *map_rows[MAP_H] = {
     "T.......C...N.......................ss~~~~.....T",
     "T.................1...2...3...4.....ss~~~~.....T",
     "T...................................ssF~~~.....T",
-    "T......I..I..m...O..................ss~~~~.....T",
+    "T......I..I..m.k.O.k................ss~~~~.....T",
     "T.....X......K......................ss~~~~.....T",
     "T.............................O.....ss~~~~..R..T",
     "T...................................ssF~~~.....T",
@@ -156,6 +156,7 @@ enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_COWHIDE, IT_LEATHER, IT_DRAGON_HIDE, IT_DRAGON_LEATHER,
        IT_NEEDLE, IT_THREAD,
        IT_LEATHER_COIF, IT_LEATHER_BODY, IT_DHIDE_COIF, IT_DHIDE_BODY,
+       IT_COAL, IT_STEEL_BAR,
        NUM_ITEMS };
 
 /* worn equipment slots; SLOT_NONE = item is not equippable */
@@ -245,7 +246,8 @@ enum {
     SPR_I_RAW_SWORDFISH, SPR_I_SWORDFISH,
     SPR_I_KNIFE, SPR_I_ARROW_SHAFT, SPR_I_BRONZE_TIPS, SPR_I_IRON_TIPS,
     SPR_I_BRONZE_ARROW, SPR_I_IRON_ARROW, SPR_I_SHORTBOW, SPR_I_OAK_BOW,
-    SPR_ROCK_M, SPR_TANNER,
+    SPR_ROCK_M, SPR_ROCK_COAL, SPR_TANNER,
+    SPR_I_COAL, SPR_I_STEEL_BAR,
     SPR_I_MITH_ORE, SPR_I_MITH_BAR, SPR_I_MITH_TIPS, SPR_I_MITH_ARROW,
     SPR_I_COWHIDE, SPR_I_LEATHER, SPR_I_DRAGON_HIDE, SPR_I_DRAGON_LEATHER,
     SPR_I_NEEDLE, SPR_I_THREAD,
@@ -330,7 +332,8 @@ static const char *spr_files[NUM_SPR] = {
     "item_raw_swordfish", "item_swordfish",
     "item_knife", "item_arrow_shaft", "item_bronze_tips", "item_iron_tips",
     "item_bronze_arrow", "item_iron_arrow", "item_shortbow", "item_oak_bow",
-    "obj_rock_mithril", "tanner_down_a",
+    "obj_rock_mithril", "obj_rock_coal", "tanner_down_a",
+    "item_coal", "item_steel_bar",
     "item_mith_ore", "item_mith_bar", "item_mith_tips", "item_mith_arrow",
     "item_cowhide", "item_leather", "item_dragon_hide", "item_dragon_leather",
     "item_needle", "item_thread",
@@ -419,6 +422,9 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     [IT_IRON_ARROW]   ={ "Iron arrow",    SPR_I_IRON_ARROW,   0, false, 0,0,0,0,0, true, 0, 7 },
     [IT_SHORTBOW]     ={ "Shortbow",      SPR_I_SHORTBOW,     0, false, SLOT_WEAPON,0,0,0,1,  false,0, 8 },
     [IT_OAK_BOW]      ={ "Oak shortbow",  SPR_I_OAK_BOW,      0, false, SLOT_WEAPON,0,0,0,20, false,0, 14 },
+    /* coal: fuels steel (1 iron + 1 coal) and mithril (1 ore + 2 coal) smelts */
+    [IT_COAL]         ={ "Coal",          SPR_I_COAL,         0, false },
+    [IT_STEEL_BAR]    ={ "Steel bar",     SPR_I_STEEL_BAR,    0, false },
     /* mithril: a deeper ore that smelts into bars for gear and arrowtips */
     [IT_MITH_ORE]     ={ "Mithril ore",   SPR_I_MITH_ORE,     0, false },
     [IT_MITH_BAR]     ={ "Mithril bar",   SPR_I_MITH_BAR,     0, false },
@@ -459,6 +465,7 @@ static const int item_value[NUM_ITEMS] = {
     [IT_RAW_SWORDFISH]=50, [IT_SWORDFISH]=100,
     [IT_KNIFE]=6, [IT_ARROW_SHAFT]=1, [IT_BRONZE_TIPS]=2, [IT_IRON_TIPS]=4,
     [IT_BRONZE_ARROW]=2, [IT_IRON_ARROW]=4, [IT_SHORTBOW]=25, [IT_OAK_BOW]=80,
+    [IT_COAL]=18, [IT_STEEL_BAR]=80,
     [IT_MITH_ORE]=60, [IT_MITH_BAR]=120, [IT_MITH_TIPS]=8, [IT_MITH_ARROW]=8,
     [IT_COWHIDE]=12, [IT_LEATHER]=20, [IT_DRAGON_HIDE]=120, [IT_DRAGON_LEATHER]=200,
     [IT_NEEDLE]=2, [IT_THREAD]=2,
@@ -936,6 +943,7 @@ static void load_overworld(void)
             case 'N': obj = OBJ_ROCK_TIN;    break;
             case 'I': obj = OBJ_ROCK_IRON;   break;
             case 'm': obj = OBJ_ROCK_MITHRIL;break;
+            case 'k': obj = OBJ_ROCK_COAL;   break;
             case 'Z': obj = OBJ_TANNER;      break;
             case 'F': ter = TER_WATER; obj = OBJ_FISH; break;
             case 'E': obj = OBJ_ESSENCE;    break;
@@ -1849,7 +1857,7 @@ static void tick_skilling(void)
     case ST_MINE: {
         int o = object[ay][ax];
         if (o != OBJ_ROCK_COPPER && o != OBJ_ROCK_TIN && o != OBJ_ROCK_IRON &&
-            o != OBJ_ROCK_MITHRIL && o != OBJ_ESSENCE) {
+            o != OBJ_ROCK_MITHRIL && o != OBJ_ROCK_COAL && o != OBJ_ESSENCE) {
             if (o == OBJ_ROCK_EMPTY) msg("There is no ore currently available in this rock.");
             stop_action(); break;
         }
@@ -1873,6 +1881,7 @@ static void tick_skilling(void)
         int ore, req, base, oxp, resp; const char *noun;
         switch (o) {
         case OBJ_ROCK_IRON:    ore=IT_IRON;     req=15; base=8+mn*3/2; oxp=350; resp=9;  noun="iron";        break;
+        case OBJ_ROCK_COAL:    ore=IT_COAL;     req=20; base=6+mn;     oxp=250; resp=7;  noun="coal";        break;
         case OBJ_ROCK_MITHRIL: ore=IT_MITH_ORE; req=30; base=4+mn;     oxp=600; resp=16; noun="mithril ore"; break;
         case OBJ_ROCK_COPPER:  ore=IT_COPPER;   req=1;  base=25+mn*2;  oxp=175; resp=4;  noun="copper";      break;
         default:               ore=IT_TIN;      req=1;  base=25+mn*2;  oxp=175; resp=4;  noun="tin";         break;
@@ -1973,6 +1982,35 @@ static void tick_skilling(void)
             sfx(SND_FIRE);
             msg("You smelt a bronze bar.");
             add_xp(SK_SMITH, 63, true);
+        } else if (has_item(IT_MITH_ORE)) {
+            /* mithril needs 2 coal to reach forging heat */
+            if (level_of(SK_SMITH) < 30) {
+                msg("You need a Smithing level of 30 to smelt mithril.");
+                stop_action(); break;
+            }
+            if (inv_count(IT_COAL) < 2) {
+                msg("Mithril needs 2 coal to smelt.");
+                stop_action(); break;
+            }
+            remove_item(IT_MITH_ORE);
+            remove_item(IT_COAL);
+            remove_item(IT_COAL);
+            add_item(IT_MITH_BAR);
+            sfx(SND_FIRE);
+            msg("You smelt a mithril bar.");
+            add_xp(SK_SMITH, 250, true);
+        } else if (has_item(IT_IRON) && has_item(IT_COAL)) {
+            /* iron + coal makes steel */
+            if (level_of(SK_SMITH) < 20) {
+                msg("You need a Smithing level of 20 to smelt steel.");
+                stop_action(); break;
+            }
+            remove_item(IT_IRON);
+            remove_item(IT_COAL);
+            add_item(IT_STEEL_BAR);
+            sfx(SND_FIRE);
+            msg("You smelt a steel bar.");
+            add_xp(SK_SMITH, 175, true);
         } else if (has_item(IT_IRON)) {
             if (level_of(SK_SMITH) < 15) {
                 msg("You need a Smithing level of 15 to smelt iron.");
@@ -1988,17 +2026,6 @@ static void tick_skilling(void)
             } else {
                 msg("The iron ore crumbles in the heat. Too impure.");
             }
-        } else if (has_item(IT_MITH_ORE)) {
-            if (level_of(SK_SMITH) < 30) {
-                msg("You need a Smithing level of 30 to smelt mithril.");
-                stop_action();
-                break;
-            }
-            remove_item(IT_MITH_ORE);
-            add_item(IT_MITH_BAR);
-            sfx(SND_FIRE);
-            msg("You smelt a mithril bar.");
-            add_xp(SK_SMITH, 250, true);
         } else {
             stop_action();
         }
@@ -2915,7 +2942,7 @@ static void interact(void)
         msg("You swing your axe at the tree.");
         break;
     case OBJ_ROCK_COPPER: case OBJ_ROCK_TIN: case OBJ_ROCK_IRON:
-    case OBJ_ROCK_MITHRIL: case OBJ_ESSENCE:
+    case OBJ_ROCK_MITHRIL: case OBJ_ROCK_COAL: case OBJ_ESSENCE:
         if (!has_pick()) { msg("You need a pickaxe to mine this rock."); return; }
         pl.state = ST_MINE; pl.act_timer = 2;
         msg("You swing your pick at the rock.");
@@ -3056,6 +3083,7 @@ static const char *context_hint(void)
     case OBJ_ROCK_TIN:    return "A: Mine Tin rock";
     case OBJ_ROCK_IRON:   return "A: Mine Iron rock";
     case OBJ_ROCK_MITHRIL:return "A: Mine Mithril rock";
+    case OBJ_ROCK_COAL:   return "A: Mine Coal rock";
     case OBJ_FISH:        return "A: Fish here";
     case OBJ_BOOTH:       return "A: Use Bank booth";
     case OBJ_FIRE:        return "A: Cook on Fire";
@@ -3169,9 +3197,10 @@ static void use_inv_item(int slot)
     case IT_ESSENCE:   msg("A chunk of raw magical essence."); break;
     case IT_DRAGONSTONE: msg("A priceless gem from the Dragon's hoard. Sell it for a fortune."); break;
     case IT_DRAGONFIRE: msg("The Dragonfire blade - it burns hot in hand and mind alike."); break;
-    case IT_BRONZE_BAR: case IT_IRON_BAR: case IT_MITH_BAR:
+    case IT_BRONZE_BAR: case IT_IRON_BAR: case IT_MITH_BAR: case IT_STEEL_BAR:
         msg("Take this to the anvil by the mine."); break;
-    case IT_MITH_ORE: msg("Mithril ore. Smelt it at the furnace (Smithing 30)."); break;
+    case IT_COAL: msg("Coal. Smelt iron+coal for steel, ore+2 coal for mithril."); break;
+    case IT_MITH_ORE: msg("Mithril ore. Smelt with 2 coal at the furnace (Smithing 30)."); break;
     case IT_COWHIDE: msg("Cowhide. Pelt the Tanner will cure it into leather."); break;
     case IT_DRAGON_HIDE: msg("Dragonhide. The Tanner can cure this into tough leather."); break;
     case IT_LEATHER: case IT_DRAGON_LEATHER:
@@ -3220,6 +3249,10 @@ static const struct { int item, bar, bars, lvl, xp_x10; } smith_list[] = {
     { IT_IRON_BODY,     IT_IRON_BAR,   3, 22, 750 },
     { IT_IRON_AXE,      IT_IRON_BAR,   1, 16, 250 },
     { IT_IRON_PICK,     IT_IRON_BAR,   1, 17, 250 },
+    { IT_STEEL_SWORD,   IT_STEEL_BAR,  1, 20, 375 },
+    { IT_STEEL_HELM,    IT_STEEL_BAR,  1, 23, 375 },
+    { IT_STEEL_SHIELD,  IT_STEEL_BAR,  2, 25, 750 },
+    { IT_STEEL_BODY,    IT_STEEL_BAR,  3, 28, 1125 },
     { IT_BRONZE_TIPS,   IT_BRONZE_BAR, 1,  5, 100 },
     { IT_IRON_TIPS,     IT_IRON_BAR,   1, 20, 250 },
     { IT_MITH_SWORD,    IT_MITH_BAR,   1, 30, 500 },
@@ -3716,6 +3749,7 @@ static void render(void)
             case OBJ_ROCK_TIN:    rdpq_sprite_blit(spr[SPR_ROCK_T], sx, sy, NULL); break;
             case OBJ_ROCK_IRON:   rdpq_sprite_blit(spr[SPR_ROCK_I], sx, sy, NULL); break;
             case OBJ_ROCK_MITHRIL:rdpq_sprite_blit(spr[SPR_ROCK_M], sx, sy, NULL); break;
+            case OBJ_ROCK_COAL:   rdpq_sprite_blit(spr[SPR_ROCK_COAL], sx, sy, NULL); break;
             case OBJ_ROCK_EMPTY:  rdpq_sprite_blit(spr[SPR_ROCK_E], sx, sy, NULL); break;
             case OBJ_FISH:
                 rdpq_sprite_blit(spr[anim_frame ? SPR_FISH_B : SPR_FISH_A], sx, sy, NULL);
@@ -4011,16 +4045,22 @@ static void render(void)
         }
     }
     else if (ui_mode == UI_SMITH) {
-        int px0 = 64, py0 = 12;
-        draw_panel(px0, py0, px0 + 192, py0 + 30 + SMITH_COUNT * 10);
+        int px0 = 64, py0 = 16;
+        const int VIS = 16;                 /* visible rows; the list scrolls */
+        int shown = SMITH_COUNT < VIS ? SMITH_COUNT : VIS;
+        draw_panel(px0, py0, px0 + 192, py0 + 30 + shown * 10);
         draw_text(1, px0 + 6, py0 + 8, "Anvil - Smithing");
         draw_text(6, px0 + 6, py0 + 18, "A: smith   B: close");
-        for (int i = 0; i < SMITH_COUNT; i++) {
+        int top = smith_cursor - VIS / 2; if (top < 0) top = 0;
+        if (top > SMITH_COUNT - VIS) top = SMITH_COUNT - VIS;
+        if (top < 0) top = 0;
+        for (int i = top; i < SMITH_COUNT && i < top + VIS; i++) {
             bool can = level_of(SK_SMITH) >= smith_list[i].lvl;
             const char *bar = smith_list[i].bar == IT_BRONZE_BAR ? "brz" :
-                              smith_list[i].bar == IT_IRON_BAR   ? "irn" : "mth";
+                              smith_list[i].bar == IT_IRON_BAR   ? "irn" :
+                              smith_list[i].bar == IT_STEEL_BAR  ? "stl" : "mth";
             draw_text(i == smith_cursor ? 1 : (can ? 0 : 6),
-                      px0 + 6, py0 + 30 + i * 10,
+                      px0 + 6, py0 + 30 + (i - top) * 10,
                       "%c %-15s %dx%s L%d",
                       i == smith_cursor ? '>' : ' ',
                       iteminfo[smith_list[i].item].name,
