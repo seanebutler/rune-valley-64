@@ -34,6 +34,12 @@
 #define WALK_SPEED     (TILE / 0.6f)        /* 1 tile per tick  */
 #define RUN_SPEED      (2 * TILE / 0.6f)    /* 2 tiles per tick */
 
+/* combat lunge/recoil: a short positional jab toward (attacker) or knockback
+   away from (defender) the foe, eased back to rest over a handful of frames */
+#define BUMP_FRAMES    9
+#define BUMP_LUNGE     6.0f
+#define BUMP_RECOIL    5.0f
+
 /* ------------------------------------------------------------ terrain & map */
 
 enum { TER_GRASS, TER_PATH, TER_SAND, TER_WATER, TER_BRIDGE, TER_WALL, TER_FLOOR,
@@ -519,6 +525,8 @@ static struct {
     int   regen;
     int   hitsplat, hitsplat_t;
     int   spawn_x, spawn_y;
+    float bump_x, bump_y;    /* combat lunge/recoil offset (decays to 0) */
+    int   bump_t;            /* frames of bump animation left */
 } pl;
 
 static int inv[INV_SIZE];
@@ -541,6 +549,8 @@ typedef struct {
     int   atk_cd, wander_cd;
     int   hitsplat, hitsplat_t;
     int   hurt_timer;        /* show hp bar briefly */
+    float bump_x, bump_y;    /* combat lunge/recoil offset (decays to 0) */
+    int   bump_t;            /* frames of bump animation left */
     int   special_cd;        /* boss: ranged-attack timer */
     int   phase;             /* boss: 0 normal, 1 enraged */
     bool  summoned;          /* spawned by a boss; vanishes (no respawn) on death */
@@ -1271,6 +1281,17 @@ static void player_die(void)
    would reload the map under the goblin loop and let auto-retaliate re-engage */
 static bool pending_death = false;
 
+/* kick an actor's render offset by `mag` px along (vx,vy); decays over
+   BUMP_FRAMES. attackers lunge toward the foe, defenders recoil away. */
+static void bump_set(float *bx, float *by, int *bt, float vx, float vy, float mag)
+{
+    float l = sqrtf(vx * vx + vy * vy);
+    if (l < 0.001f) { vx = 0; vy = -1; l = 1; }   /* degenerate: nudge up */
+    *bx = vx / l * mag;
+    *by = vy / l * mag;
+    *bt = BUMP_FRAMES;
+}
+
 static void hurt_player(int dmg)
 {
     pl.hp -= dmg;
@@ -1538,6 +1559,9 @@ static void player_attack(gob_t *g)
     if (p_hit > 95) p_hit = 95;
     if (p_hit < 5) p_hit = 5;
     int dmg = chance(p_hit) ? (rand() % (max_hit + 1)) : 0;
+    float vx = g->px - pl.px, vy = g->py - pl.py;
+    bump_set(&pl.bump_x, &pl.bump_y, &pl.bump_t, vx, vy, BUMP_LUNGE);
+    bump_set(&g->bump_x, &g->bump_y, &g->bump_t, vx, vy, BUMP_RECOIL);
     g->hp -= dmg;
     g->hitsplat = dmg;
     g->hitsplat_t = 40;
@@ -1560,6 +1584,9 @@ static void mob_attack(gob_t *g)
     int p_hit = mobinfo[g->type].hit_base - def;
     if (p_hit < 5) p_hit = 5;
     int dmg = chance(p_hit) ? (rand() % (mobinfo[g->type].max_dmg + 1)) : 0;
+    float vx = pl.px - g->px, vy = pl.py - g->py;
+    bump_set(&g->bump_x, &g->bump_y, &g->bump_t, vx, vy, BUMP_LUNGE);
+    bump_set(&pl.bump_x, &pl.bump_y, &pl.bump_t, vx, vy, BUMP_RECOIL);
     sfx(SND_HIT);
     hurt_player(dmg);
     if (pending_death) return;          /* dead - don't fight on */
@@ -1616,6 +1643,9 @@ static bool player_cast(gob_t *g)
     if (p_hit < 5) p_hit = 5;
     int maxhit = spellinfo[cast_spell].maxhit + mbonus / 10;   /* gear ups the cap */
     int dmg = chance(p_hit) ? (rand() % (maxhit + 1)) : 0;
+    float vx = g->px - pl.px, vy = g->py - pl.py;
+    bump_set(&pl.bump_x, &pl.bump_y, &pl.bump_t, vx, vy, BUMP_LUNGE);
+    bump_set(&g->bump_x, &g->bump_y, &g->bump_t, vx, vy, BUMP_RECOIL);
     g->hp -= dmg;
     g->hitsplat = dmg;
     g->hitsplat_t = 40;
@@ -1654,6 +1684,9 @@ static bool player_shoot(gob_t *g)
     if (p_hit < 5) p_hit = 5;
     int maxhit = 1 + (rng + rbonus) / 8;
     int dmg = chance(p_hit) ? (rand() % (maxhit + 1)) : 0;
+    float vx = g->px - pl.px, vy = g->py - pl.py;
+    bump_set(&pl.bump_x, &pl.bump_y, &pl.bump_t, vx, vy, BUMP_LUNGE);
+    bump_set(&g->bump_x, &g->bump_y, &g->bump_t, vx, vy, BUMP_RECOIL);
     g->hp -= dmg;
     g->hitsplat = dmg;
     g->hitsplat_t = 40;
@@ -1969,6 +2002,9 @@ static void dragon_breath(gob_t *g)
     spawn_proj(g->px, g->py - 8, pl.px, pl.py - 8, SPR_BOLT_FIRE);
     sfx(SND_FIRE);
     msg("The Ancient Dragon breathes a torrent of fire!");
+    float vx = pl.px - g->px, vy = pl.py - g->py;
+    bump_set(&g->bump_x, &g->bump_y, &g->bump_t, vx, vy, BUMP_LUNGE);
+    bump_set(&pl.bump_x, &pl.bump_y, &pl.bump_t, vx, vy, BUMP_RECOIL);
     hurt_player(dmg);
 }
 
@@ -3222,6 +3258,7 @@ static void update_movement(float dt)
             pl.py += dy / dist * step;
         }
     }
+    if (pl.bump_t > 0) pl.bump_t--;
 
     /* bot interpolation */
     for (int i = 0; i < MAX_BOT; i++) {
@@ -3246,6 +3283,7 @@ static void update_movement(float dt)
     for (int i = 0; i < num_gob; i++) {
         gob_t *g = &gob[i];
         if (!g->exists || g->dead) continue;
+        if (g->bump_t > 0) g->bump_t--;
         if (!g->moving) continue;
         float gx = g->mtx * TILE + 8, gy = g->mty * TILE + 12;
         float dx = gx - g->px, dy = gy - g->py;
@@ -3514,11 +3552,13 @@ static void render(void)
             if (!g->exists || g->dead) continue;
             if ((int)g->py / TILE != y) continue;
             const mobinfo_t *mi = &mobinfo[g->type];
-            int ex = ((int)(g->px - mi->w / 2) - cam_x) & ~1;
+            float bk = g->bump_t > 0 ? (float)g->bump_t / BUMP_FRAMES : 0;
+            int bx = (int)(g->bump_x * bk), by = (int)(g->bump_y * bk);
+            int ex = ((int)(g->px - mi->w / 2 + bx) - cam_x) & ~1;
             if (ex < -32 || ex > SCREEN_W) continue;
             int spr_id = anim_frame ? mi->spr_b : mi->spr_a;
             rdpq_sprite_blit(spr[spr_id], ex,
-                             (int)(g->py - (mi->h - 4)) - cam_y, NULL);
+                             (int)(g->py - (mi->h - 4) + by) - cam_y, NULL);
         }
 
         /* bots whose feet are in this row (surface only) */
@@ -3535,8 +3575,10 @@ static void render(void)
         /* player */
         if (pl_row == y) {
             int idx = actor_sprite(pl.facing, pl.moving, pl.walk_anim);
-            int px = ((int)(pl.px - 8) - cam_x) & ~1;
-            int py = (int)(pl.py - 20) - cam_y;
+            float bk = pl.bump_t > 0 ? (float)pl.bump_t / BUMP_FRAMES : 0;
+            int bx = (int)(pl.bump_x * bk), by = (int)(pl.bump_y * bk);
+            int px = ((int)(pl.px - 8 + bx) - cam_x) & ~1;
+            int py = (int)(pl.py - 20 + by) - cam_y;
             rdpq_sprite_blit(spr[SPR_PL_DOWN_A + idx], px, py, NULL);
             draw_player_equipment(px, py, pl.facing);
         }

@@ -28,7 +28,9 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   swordfish 16 HP — so a harpooned, well-cooked swordfish is serious healing
   for the dungeon
 - **Combat** — level-2 goblins roam east of the bridge; they are aggressive,
-  they hit 1s, and they drop bones
+  they hit 1s, and they drop bones. Every exchange plays out on screen: the
+  attacker **lunges** at its foe and the defender **recoils** away, so each
+  blow lands with a visible clash — melee, magic and ranged alike
 - **The training pasture** — just east of where you wash up, **Sergeant Hardy**
   keeps a fenced field of **cows** and a starter quest, *Basic Training*: fell
   five of them and he drills a jumpstart of combat experience into you. Cows are
