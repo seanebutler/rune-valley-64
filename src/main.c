@@ -89,12 +89,12 @@ static int16_t obj_timer[MAP_H][MAP_W];
 /* ------------------------------------------------------------ skills */
 
 enum { SK_ATT, SK_STR, SK_DEF, SK_HP, SK_WC, SK_MINE, SK_FISH, SK_FM, SK_COOK,
-       SK_PRAY, SK_RC, SK_SMITH, NUM_SKILLS };
+       SK_PRAY, SK_RC, SK_SMITH, SK_MAGIC, NUM_SKILLS };
 
 static const char *skill_names[NUM_SKILLS] = {
     "Attack", "Strength", "Defence", "Hitpoints", "Woodcutting",
     "Mining", "Fishing", "Firemaking", "Cooking", "Prayer", "Runecraft",
-    "Smithing"
+    "Smithing", "Magic"
 };
 
 static int32_t xp[NUM_SKILLS];        /* stored as xp * 10 */
@@ -131,10 +131,11 @@ enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
 enum { SLOT_NONE, SLOT_WEAPON, SLOT_SHIELD, SLOT_HELM, SLOT_BODY };
 #define NUM_SLOTS 4
 
-/* equip fields default to 0 (= SLOT_NONE, no bonus) for non-gear items */
+/* equip fields default to 0 (= SLOT_NONE, no bonus) for non-gear items;
+   stackable items share one inventory slot with a quantity */
 typedef struct {
     const char *name; int spr; int heal; bool tool;
-    int slot; int atk; int str; int def; int eqlvl;
+    int slot; int atk; int str; int def; int eqlvl; bool stackable;
 } iteminfo_t;
 
 /* ------------------------------------------------------------ sprites */
@@ -167,6 +168,7 @@ enum {
     SPR_I_BRONZE_SWORD, SPR_I_IRON_SWORD, SPR_I_IRON_AXE, SPR_I_IRON_PICK,
     SPR_I_BRONZE_HELM, SPR_I_IRON_HELM, SPR_I_BRONZE_SHIELD, SPR_I_IRON_SHIELD,
     SPR_I_BRONZE_BODY, SPR_I_IRON_BODY,
+    SPR_BOLT_AIR, SPR_BOLT_FIRE,
     NUM_SPR
 };
 
@@ -198,7 +200,8 @@ static const char *spr_files[NUM_SPR] = {
     "item_bronze_bar", "item_iron_bar", "item_hammer",
     "item_bronze_sword", "item_iron_sword", "item_iron_axe", "item_iron_pick",
     "item_bronze_helm", "item_iron_helm", "item_bronze_shield",
-    "item_iron_shield", "item_bronze_body", "item_iron_body"
+    "item_iron_shield", "item_bronze_body", "item_iron_body",
+    "obj_bolt_air", "obj_bolt_fire"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -219,8 +222,8 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     [IT_TINDER]     = { "Tinderbox",   SPR_I_TINDER,     0, true  },
     [IT_BONES]      = { "Bones",       SPR_I_BONES,      0, false },
     [IT_ESSENCE]    = { "Rune essence",SPR_I_ESSENCE,    0, false },
-    [IT_AIR_RUNE]   = { "Air rune",    SPR_I_AIR_RUNE,   0, false },
-    [IT_FIRE_RUNE]  = { "Fire rune",   SPR_I_FIRE_RUNE,  0, false },
+    [IT_AIR_RUNE]   = { "Air rune",    SPR_I_AIR_RUNE,   0, false, 0,0,0,0,0, true },
+    [IT_FIRE_RUNE]  = { "Fire rune",   SPR_I_FIRE_RUNE,  0, false, 0,0,0,0,0, true },
     [IT_BRONZE_BAR] = { "Bronze bar",  SPR_I_BRONZE_BAR, 0, false },
     [IT_IRON_BAR]   = { "Iron bar",    SPR_I_IRON_BAR,   0, false },
     [IT_HAMMER]     = { "Hammer",      SPR_I_HAMMER,     0, true  },
@@ -308,6 +311,7 @@ static struct {
 } pl;
 
 static int inv[INV_SIZE];
+static int inv_qty[INV_SIZE];      /* stack count per slot (1 for non-stackable) */
 static int bank[NUM_ITEMS];
 
 /* ------------------------------------------------------------ goblins */
@@ -334,10 +338,26 @@ static int num_gob = 0;
 /* ------------------------------------------------------------ UI state */
 
 typedef enum { UI_NONE, UI_INV, UI_SKILLS, UI_BANK, UI_HELP, UI_SMITH,
-               UI_DIALOG, UI_EQUIP } ui_t;
+               UI_DIALOG, UI_EQUIP, UI_SPELL } ui_t;
 static ui_t ui_mode = UI_NONE;
 static int smith_cursor = 0;
 static int equip_cursor = 0;
+
+/* magic: the selected combat spell (SPELL_MELEE = ordinary melee) */
+enum { SPELL_MELEE, SPELL_AIR, SPELL_FIRE, NUM_SPELLS };
+static const struct { const char *name; int rune; int maxhit; int lvl; int xp_x10; }
+spellinfo[NUM_SPELLS] = {
+    { "Melee",       IT_NONE,      0, 1,   0 },
+    { "Wind Strike", IT_AIR_RUNE,  2, 1,  55 },
+    { "Fire Strike", IT_FIRE_RUNE, 4, 13,100 },
+};
+static int cast_spell = SPELL_MELEE;
+static int spell_cursor = 0;
+
+/* spell projectiles (purely visual; damage applies on cast) */
+#define MAX_PROJ 6
+typedef struct { bool active; float x, y, tx, ty; int spr; } proj_t;
+static proj_t proj[MAX_PROJ];
 
 /* quest: The Chef's Little Problem */
 enum { QUEST_NONE, QUEST_ACTIVE, QUEST_DONE };
@@ -408,7 +428,7 @@ static void add_xp(int sk, int amount_x10, bool drop)
 static int inv_count(int item)
 {
     int n = 0;
-    for (int i = 0; i < INV_SIZE; i++) if (inv[i] == item) n++;
+    for (int i = 0; i < INV_SIZE; i++) if (inv[i] == item) n += inv_qty[i];
     return n;
 }
 
@@ -416,8 +436,12 @@ static bool has_item(int item) { return inv_count(item) > 0; }
 
 static bool add_item(int item)
 {
+    /* stackable items merge into their existing slot */
+    if (iteminfo[item].stackable)
+        for (int i = 0; i < INV_SIZE; i++)
+            if (inv[i] == item) { inv_qty[i]++; return true; }
     for (int i = 0; i < INV_SIZE; i++)
-        if (inv[i] == IT_NONE) { inv[i] = item; return true; }
+        if (inv[i] == IT_NONE) { inv[i] = item; inv_qty[i] = 1; return true; }
     msg("Your inventory is too full to carry any more.");
     return false;
 }
@@ -425,7 +449,10 @@ static bool add_item(int item)
 static bool remove_item(int item)
 {
     for (int i = 0; i < INV_SIZE; i++)
-        if (inv[i] == item) { inv[i] = IT_NONE; return true; }
+        if (inv[i] == item) {
+            if (--inv_qty[i] <= 0) { inv[i] = IT_NONE; inv_qty[i] = 0; }
+            return true;
+        }
     return false;
 }
 
@@ -515,7 +542,7 @@ static bool tile_walkable(int x, int y)
 /* ------------------------------------------------------------ saves (EEPROM 4K) */
 
 #define SAVE_MAGIC 0x52563634u     /* 'RV64' */
-#define SAVE_VERSION 3
+#define SAVE_VERSION 4
 
 typedef struct __attribute__((packed)) {
     uint32_t magic;
@@ -524,6 +551,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  tx, ty;
     int32_t  xp[NUM_SKILLS];
     uint8_t  inv[INV_SIZE];
+    uint8_t  inv_qty[INV_SIZE];
     uint16_t bank[NUM_ITEMS];
     uint8_t  run_energy;
     uint8_t  quest_state, quest_kills;
@@ -553,7 +581,10 @@ static void save_game(void)
     s.hp = pl.hp;
     s.tx = pl.tx; s.ty = pl.ty;
     for (int i = 0; i < NUM_SKILLS; i++) s.xp[i] = xp[i];
-    for (int i = 0; i < INV_SIZE; i++) s.inv[i] = inv[i];
+    for (int i = 0; i < INV_SIZE; i++) {
+        s.inv[i] = inv[i];
+        s.inv_qty[i] = inv_qty[i] > 255 ? 255 : inv_qty[i];
+    }
     for (int i = 0; i < NUM_ITEMS; i++) s.bank[i] = bank[i];
     s.run_energy = pl.run_energy;
     s.quest_state = quest_state;
@@ -593,8 +624,10 @@ static void load_game(void)
     save_t s;
     if (!save_peek(&s)) return;
     for (int i = 0; i < NUM_SKILLS; i++) xp[i] = s.xp[i];
-    for (int i = 0; i < INV_SIZE; i++)
+    for (int i = 0; i < INV_SIZE; i++) {
         inv[i] = s.inv[i] < NUM_ITEMS ? s.inv[i] : IT_NONE;
+        inv_qty[i] = (inv[i] == IT_NONE) ? 0 : (s.inv_qty[i] < 1 ? 1 : s.inv_qty[i]);
+    }
     for (int i = 0; i < NUM_ITEMS; i++) bank[i] = s.bank[i];
     int maxhp = level_of(SK_HP);
     pl.hp = (s.hp >= 1 && s.hp <= maxhp) ? s.hp : maxhp;
@@ -696,6 +729,52 @@ static void goblin_attack(gob_t *g)
         pl.fight_target = (int)(g - gob);
         pl.atk_cd = 2;
     }
+}
+
+static void spawn_proj(float x, float y, float tx, float ty, int spr)
+{
+    for (int i = 0; i < MAX_PROJ; i++)
+        if (!proj[i].active) {
+            proj[i] = (proj_t){ true, x, y, tx, ty, spr };
+            return;
+        }
+}
+
+/* returns false (and stops the fight) if the spell can't be cast */
+static bool player_cast(gob_t *g)
+{
+    int rune = spellinfo[cast_spell].rune;
+    if (level_of(SK_MAGIC) < spellinfo[cast_spell].lvl) {
+        msg("You need a Magic level of %d for that spell.",
+            spellinfo[cast_spell].lvl);
+        cast_spell = SPELL_MELEE;
+        return false;
+    }
+    if (!has_item(rune)) {
+        msg("You have run out of %s.", iteminfo[rune].name);
+        cast_spell = SPELL_MELEE;
+        return false;
+    }
+    remove_item(rune);
+    spawn_proj(pl.px, pl.py - 8, g->px, g->py - 8,
+               cast_spell == SPELL_FIRE ? SPR_BOLT_FIRE : SPR_BOLT_AIR);
+    sfx(SND_CRAFT);
+    int magic = level_of(SK_MAGIC);
+    int p_hit = 55 + magic * 2;
+    if (p_hit > 95) p_hit = 95;
+    int dmg = chance(p_hit) ? (rand() % (spellinfo[cast_spell].maxhit + 1)) : 0;
+    g->hp -= dmg;
+    g->hitsplat = dmg;
+    g->hitsplat_t = 40;
+    g->hurt_timer = 16;
+    g->aggro = true;
+    add_xp(SK_MAGIC, spellinfo[cast_spell].xp_x10, true);
+    if (dmg > 0) {
+        add_xp(SK_HP, dmg * 13, false);
+        add_xp(SK_MAGIC, dmg * 20, false);
+    }
+    if (g->hp <= 0) goblin_die(g);
+    return true;
 }
 
 /* ------------------------------------------------------------ skilling ticks */
@@ -878,15 +957,30 @@ static void tick_skilling(void)
         gob_t *g = &gob[pl.fight_target];
         if (!g->exists || g->dead) { stop_action(); break; }
         int d = cheb(pl.tx, pl.ty, g->tx, g->ty);
-        if (d <= 1) {
+        bool magic = (cast_spell != SPELL_MELEE);
+        int reach = magic ? 5 : 1;       /* spells strike from afar */
+        /* face the foe while fighting */
+        if (d >= 1) {
+            int fdx = (g->tx > pl.tx) - (g->tx < pl.tx);
+            int fdy = (g->ty > pl.ty) - (g->ty < pl.ty);
+            if (abs(g->tx - pl.tx) >= abs(g->ty - pl.ty)) {
+                if (fdx) pl.facing = fdx > 0 ? 3 : 2;
+            } else if (fdy) pl.facing = fdy > 0 ? 0 : 1;
+        }
+        if (d <= reach) {
             if (--pl.atk_cd <= 0) {
-                pl.atk_cd = 4;
-                player_attack(g);
+                if (magic) {
+                    pl.atk_cd = 5;
+                    if (!player_cast(g)) stop_action();
+                } else {
+                    pl.atk_cd = 4;
+                    player_attack(g);
+                }
             }
-        } else if (d > 6) {
+        } else if (d > (magic ? 8 : 6)) {
             stop_action();
         } else if (!pl.moving) {
-            /* chase one tile */
+            /* close the distance one tile */
             int dx = (g->tx > pl.tx) - (g->tx < pl.tx);
             int dy = (g->ty > pl.ty) - (g->ty < pl.ty);
             int nx = pl.tx + dx, ny = pl.ty + dy;
@@ -1344,6 +1438,19 @@ static gob_t *adjacent_goblin(void)
     return NULL;
 }
 
+static gob_t *nearest_goblin(int maxdist)
+{
+    gob_t *best = NULL;
+    int bestd = maxdist + 1;
+    for (int i = 0; i < num_gob; i++) {
+        gob_t *g = &gob[i];
+        if (!g->exists || g->dead) continue;
+        int d = cheb(pl.tx, pl.ty, g->tx, g->ty);
+        if (d < bestd) { bestd = d; best = g; }
+    }
+    return best;
+}
+
 static void dlg_line(const char *text)
 {
     if (dlg_count < 4) snprintf(dlg_buf[dlg_count++], sizeof dlg_buf[0], "%s", text);
@@ -1401,6 +1508,17 @@ static void chef_talk(void)
 
 static void interact(void)
 {
+    /* with a spell selected, A targets a goblin from range */
+    if (cast_spell != SPELL_MELEE) {
+        gob_t *g = nearest_goblin(5);
+        if (g) {
+            pl.state = ST_FIGHT;
+            pl.fight_target = (int)(g - gob);
+            pl.atk_cd = 1;
+            msg("You aim your %s at the goblin.", spellinfo[cast_spell].name);
+            return;
+        }
+    }
     gob_t *g = adjacent_goblin();
     if (g) {
         pl.state = ST_FIGHT;
@@ -1600,8 +1718,8 @@ static void use_inv_item(int slot)
         msg("You feel mightier just holding it."); break;
     case IT_IRON_AXE:  msg("A woodcutter's even better friend."); break;
     case IT_IRON_PICK: msg("Bites through rock with ease."); break;
-    case IT_AIR_RUNE:  msg("A rune imbued with the power of air."); break;
-    case IT_FIRE_RUNE: msg("A rune imbued with the power of fire."); break;
+    case IT_AIR_RUNE:  msg("Air runes. Pick a spell with C-left."); break;
+    case IT_FIRE_RUNE: msg("Fire runes. Pick a spell with C-left."); break;
     case IT_AXE:    msg("A woodcutter's best friend."); break;
     case IT_PICK:   msg("Used for mining rocks."); break;
     case IT_NET:    msg("Used to catch shrimp at fishing spots."); break;
@@ -1662,8 +1780,9 @@ static void bank_deposit_all(void)
     int n = 0;
     for (int i = 0; i < INV_SIZE; i++) {
         if (inv[i] == IT_NONE || iteminfo[inv[i]].tool) continue;
-        bank[inv[i]]++;
+        bank[inv[i]] += inv_qty[i];      /* whole stack at once */
         inv[i] = IT_NONE;
+        inv_qty[i] = 0;
         n++;
     }
     msg(n ? "You deposit your items." : "You have nothing to deposit.");
@@ -1681,8 +1800,22 @@ static void bank_withdraw(int row)
 
 /* ------------------------------------------------------------ movement */
 
+static void update_projectiles(float dt)
+{
+    for (int i = 0; i < MAX_PROJ; i++) {
+        if (!proj[i].active) continue;
+        float dx = proj[i].tx - proj[i].x, dy = proj[i].ty - proj[i].y;
+        float dist = sqrtf(dx * dx + dy * dy);
+        float step = 360.0f * dt;
+        if (step >= dist) { proj[i].active = false; continue; }
+        proj[i].x += dx / dist * step;
+        proj[i].y += dy / dist * step;
+    }
+}
+
 static void update_movement(float dt)
 {
+    update_projectiles(dt);
     float speed = (pl.run_on && pl.run_energy > 0) ? RUN_SPEED : WALK_SPEED;
     if (pl.moving) {
         float gx = pl.mtx * TILE + 8, gy = pl.mty * TILE + 12;
@@ -1944,6 +2077,16 @@ static void render(void)
         }
     }
 
+    /* ---- spell projectiles ---- */
+    rdpq_set_mode_copy(true);
+    for (int i = 0; i < MAX_PROJ; i++) {
+        if (!proj[i].active) continue;
+        int sx = ((int)proj[i].x - 4 - cam_x) & ~1;
+        int sy = (int)proj[i].y - 4 - cam_y;
+        if (sx < -8 || sx > SCREEN_W) continue;
+        rdpq_sprite_blit(spr[proj[i].spr], sx, sy, NULL);
+    }
+
     /* ---- hp bars & hitsplats ---- */
     for (int i = 0; i < num_gob; i++) {
         gob_t *g = &gob[i];
@@ -2024,11 +2167,13 @@ static void render(void)
 
     /* ---- HUD ---- */
     rdpq_set_mode_fill(RGBA32(20, 20, 20, 255));
-    rdpq_fill_rectangle(4, 4, 84, 28);
+    rdpq_fill_rectangle(4, 4, 90, 38);
     int maxhp = level_of(SK_HP);
     draw_text(pl.hp * 3 <= maxhp ? 3 : 4, 8, 14, "HP  %d/%d", pl.hp, maxhp);
     draw_text(pl.run_on ? 1 : 6, 8, 24, "Run %d%% %s", pl.run_energy,
               pl.run_on ? "(on)" : "");
+    draw_text(cast_spell == SPELL_MELEE ? 6 : 5, 8, 34, "Atk %s",
+              spellinfo[cast_spell].name);
 
     const char *hint = (ui_mode == UI_NONE) ? context_hint() : NULL;
     if (hint) {
@@ -2076,6 +2221,13 @@ static void render(void)
             int cy = py0 + 18 + (i / 4) * 18;
             rdpq_sprite_blit(spr[iteminfo[inv[i]].spr], cx, cy, NULL);
         }
+        /* stack counts, drawn over the top-left of stackable icons */
+        for (int i = 0; i < INV_SIZE; i++) {
+            if (inv[i] == IT_NONE || inv_qty[i] <= 1) continue;
+            int cx = px0 + 6 + (i % 4) * 19;
+            int cy = py0 + 18 + (i / 4) * 18;
+            draw_text(1, cx + 1, cy + 7, "%d", inv_qty[i]);
+        }
         draw_text(0, px0 + 6, py0 + 150, "%s",
                   inv[inv_cursor] != IT_NONE ? iteminfo[inv[inv_cursor]].name : "-");
     }
@@ -2087,8 +2239,10 @@ static void render(void)
             draw_text(0, px0 + 6, py0 + 24 + i * 10, "%-11s %2d",
                       skill_names[i], level_of(i));
         int att = level_of(SK_ATT), str = level_of(SK_STR), def = level_of(SK_DEF);
-        int cmb = (int)((def + level_of(SK_HP) + level_of(SK_PRAY) / 2) * 0.25f
-                        + (att + str) * 0.325f);
+        float base = (def + level_of(SK_HP) + level_of(SK_PRAY) / 2) * 0.25f;
+        float melee = (att + str) * 0.325f;
+        float mage = (level_of(SK_MAGIC) * 3 / 2) * 0.325f;
+        int cmb = (int)(base + (melee > mage ? melee : mage));
         draw_text(4, px0 + 6, py0 + 157, "Combat level: %d", cmb);
     }
     else if (ui_mode == UI_BANK) {
@@ -2156,6 +2310,30 @@ static void render(void)
         draw_text(4, px0 + 6, py0 + 130, "Defence  +%d", equip_def());
         draw_text(6, px0 + 6, py0 + 144, "A: remove   B: close");
     }
+    else if (ui_mode == UI_SPELL) {
+        int px0 = SCREEN_W - 142, py0 = 30;
+        draw_panel(px0, py0, px0 + 134, py0 + 110);
+        draw_text(1, px0 + 6, py0 + 12, "Spellbook");
+        draw_text(6, px0 + 6, py0 + 22, "A: select   B: close");
+        for (int i = 0; i < NUM_SPELLS; i++) {
+            bool can = level_of(SK_MAGIC) >= spellinfo[i].lvl;
+            int style = (i == spell_cursor) ? 1 : (i == cast_spell ? 4 : (can ? 0 : 6));
+            if (i == SPELL_MELEE)
+                draw_text(style, px0 + 6, py0 + 38 + i * 12, "%c %s",
+                          i == spell_cursor ? '>' : (i == cast_spell ? '*' : ' '),
+                          spellinfo[i].name);
+            else
+                draw_text(style, px0 + 6, py0 + 38 + i * 12, "%c %-11s L%d",
+                          i == spell_cursor ? '>' : (i == cast_spell ? '*' : ' '),
+                          spellinfo[i].name, spellinfo[i].lvl);
+        }
+        if (cast_spell == SPELL_MELEE)
+            draw_text(0, px0 + 6, py0 + 90, "Style: melee");
+        else
+            draw_text(0, px0 + 6, py0 + 90, "Cast: %s (%d)",
+                      iteminfo[spellinfo[cast_spell].rune].name,
+                      inv_count(spellinfo[cast_spell].rune));
+    }
     else if (ui_mode == UI_DIALOG) {
         int px0 = 36, py0 = 64;
         draw_panel(px0, py0, px0 + 248, py0 + 92);
@@ -2171,10 +2349,10 @@ static void render(void)
         draw_text(0, px0 + 8, py0 + 30, "Stick/D-Pad: walk   R: toggle run");
         draw_text(0, px0 + 8, py0 + 42, "A: interact with the world");
         draw_text(0, px0 + 8, py0 + 54, "B: inventory (A: use/equip, C-dn: drop)");
-        draw_text(0, px0 + 8, py0 + 66, "C-rt: skills  C-up: worn  L: music");
+        draw_text(0, px0 + 8, py0 + 66, "C-rt:skills C-up:worn C-lf:spells");
         draw_text(0, px0 + 8, py0 + 82, "Chop, mine, fish, cook, light fires,");
-        draw_text(0, px0 + 8, py0 + 94, "slay goblins, bury bones, smith and");
-        draw_text(0, px0 + 8, py0 + 106, "wear gear, bank your hard-won riches.");
+        draw_text(0, px0 + 8, py0 + 94, "smith and wear gear, craft runes and");
+        draw_text(0, px0 + 8, py0 + 106, "sling spells, slay goblins, bank loot.");
         draw_text(1, px0 + 8, py0 + 124, "Quest: The Chef's Little Problem");
         draw_text(0, px0 + 8, py0 + 136, "%s",
                   quest_state == QUEST_NONE ? "Not started - talk to the Chef." :
@@ -2230,6 +2408,10 @@ static void handle_input(void)
         ui_mode = (ui_mode == UI_SKILLS) ? UI_NONE : UI_SKILLS;
     if (pressed.c_up)
         ui_mode = (ui_mode == UI_EQUIP) ? UI_NONE : UI_EQUIP;
+    if (pressed.c_left) {
+        ui_mode = (ui_mode == UI_SPELL) ? UI_NONE : UI_SPELL;
+        spell_cursor = cast_spell;
+    }
 
     if (ui_mode == UI_INV) {
         if (pressed.b) { ui_mode = UI_NONE; return; }
@@ -2244,6 +2426,7 @@ static void handle_input(void)
             else {
                 msg("You discard the %s.", iteminfo[inv[inv_cursor]].name);
                 inv[inv_cursor] = IT_NONE;
+                inv_qty[inv_cursor] = 0;
             }
         }
         return;
@@ -2276,6 +2459,23 @@ static void handle_input(void)
         if (pressed.d_up    && equip_cursor >= 2) equip_cursor -= 2;
         if (pressed.d_down  && equip_cursor < 2) equip_cursor += 2;
         if (pressed.a) unequip(equip_cursor);
+        return;
+    }
+    if (ui_mode == UI_SPELL) {
+        if (pressed.b) { ui_mode = UI_NONE; return; }
+        if (pressed.d_up && spell_cursor > 0) spell_cursor--;
+        if (pressed.d_down && spell_cursor < NUM_SPELLS - 1) spell_cursor++;
+        if (pressed.a) {
+            if (spell_cursor != SPELL_MELEE &&
+                level_of(SK_MAGIC) < spellinfo[spell_cursor].lvl) {
+                msg("You need a Magic level of %d for that spell.",
+                    spellinfo[spell_cursor].lvl);
+            } else {
+                cast_spell = spell_cursor;
+                msg(cast_spell == SPELL_MELEE ? "You ready your weapon."
+                    : "You will now cast %s.", spellinfo[cast_spell].name);
+            }
+        }
         return;
     }
     if (ui_mode == UI_DIALOG) {
@@ -2367,10 +2567,14 @@ int main(void)
     pl.facing = 0;
     pl.run_energy = 100;
     pl.state = ST_IDLE;
-    for (int i = 0; i < INV_SIZE; i++) inv[i] = IT_NONE;
+    for (int i = 0; i < INV_SIZE; i++) { inv[i] = IT_NONE; inv_qty[i] = 0; }
     inv[0] = IT_AXE; inv[1] = IT_PICK; inv[2] = IT_NET; inv[3] = IT_TINDER;
     inv[4] = IT_HAMMER; inv[5] = IT_BRONZE_SWORD;
+    inv[6] = IT_AIR_RUNE; inv_qty[6] = 25;     /* a starter stack for Magic */
+    for (int i = 0; i < INV_SIZE; i++)
+        if (inv[i] != IT_NONE && inv_qty[i] == 0) inv_qty[i] = 1;
     for (int i = 0; i < NUM_SLOTS; i++) equipped[i] = IT_NONE;
+    cast_spell = SPELL_MELEE;
     memset(bank, 0, sizeof bank);
     for (int i = 0; i < CHAT_LINES; i++) chat[i][0] = 0;
 

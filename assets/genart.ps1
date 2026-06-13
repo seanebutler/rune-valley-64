@@ -829,6 +829,26 @@ Save-Sprite 'item_fire_rune' @{ 's'='#d8d8d0'; 'd'='#a8a8a0'; 'g'='#e85820'; 'y'
     '................',
     '................')
 
+# Spell projectiles (8x8 glowing bolts)
+Save-Sprite 'obj_bolt_air' @{ 'c'='#4aa0d8'; 'w'='#bef0ff' } @(
+    '........',
+    '..cccc..',
+    '.cwwwwc.',
+    '.cwwwwc.',
+    '.cwwwwc.',
+    '..cccc..',
+    '........',
+    '........')
+Save-Sprite 'obj_bolt_fire' @{ 'c'='#e85820'; 'w'='#ffe8a0' } @(
+    '........',
+    '..cccc..',
+    '.cwwwwc.',
+    '.cwwwwc.',
+    '.cwwwwc.',
+    '..cccc..',
+    '........',
+    '........')
+
 Write-Host "Generating smithing..."
 
 # Furnace: stone dome with glowing mouth

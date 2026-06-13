@@ -25,7 +25,12 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
 - **Prayer** — bury those bones
 - **Runecraft** — mine rune essence from the glittering rock in the northwest
   ruins (it never depletes) and bind it at the Air altar beside it, or brave
-  the goblin camp to reach the Fire altar (level 14)
+  the goblin camp to reach the Fire altar (level 14). Runes **stack** in a
+  single inventory slot, with the count drawn over the icon
+- **Magic** — open the spellbook (C-left) and pick Wind Strike (1 air rune) or
+  Fire Strike (1 fire rune, Magic 13). With a spell chosen, A flings a bolt at
+  the nearest goblin from up to five tiles away, spending a rune and earning
+  Magic xp. You start with 25 air runes to get going; craft more at the altar
 - **Smithing** — smelt copper + tin into bronze bars at the furnace by the
   mine (iron smelts at 15, and fails half the time, as is tradition), then
   hammer out swords, helms, shields, and platebodies at the anvil. Iron tools
@@ -68,6 +73,7 @@ visits and death. The title offers Continue when a valid save exists.
 | B | Inventory (A: use/eat/bury/light/equip, C-down: drop) |
 | C-right | Skills panel |
 | C-up | Worn equipment (A: unequip) |
+| C-left | Spellbook (A: choose spell / melee) |
 | Start | Help |
 | L | Music on/off |
 
