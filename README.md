@@ -13,8 +13,8 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
 
 - **Woodcutting** — chop trees (and oaks at level 15); trees fall to stumps
   and respawn
-- **Mining** — copper and tin near the west path, iron (level 15) further out;
-  rocks deplete and respawn
+- **Mining** — copper and tin near the west path, iron (level 15) and a deep
+  vein of **mithril** (level 30) further out; rocks deplete and respawn
 - **Fishing** — the **tackle you carry** decides the catch at the rippling
   river spots: a **net** lands shrimp (level 1), a **fishing rod** trout
   (20), a **lobster pot** lobster (40), and a **harpoon** swordfish (50). Buy
@@ -71,13 +71,21 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
 - **Ranged** — the third corner of the combat triangle. Equip a **bow** in the
   weapon slot and carry **arrows**, and A looses a shaft at the nearest goblin
   from up to five tiles away — spending one arrow, dealing damage scaled by your
-  Ranged level plus the bow's and arrow's bonuses, and training Ranged. A
-  **shortbow** (wield level 1) and **oak shortbow** (20) fire **bronze** and
-  **iron arrows**
+  Ranged level plus the bow's, arrow's and **ranged armour's** bonuses, and
+  training Ranged. A **shortbow** (wield level 1) and **oak shortbow** (20) fire
+  **bronze**, **iron** and **mithril arrows** — though mithril needs an oak
+  shortbow or better to draw
 - **Fletching** — use a **knife** on logs to open the fletching menu: whittle
   logs into **arrow shafts**, carve **shortbows** and **oak shortbows**, and
-  fix **arrowtips** (smithed from bronze/iron bars at the anvil, ten to a bar)
-  onto shafts to make finished arrows. Buy a knife at the General Store
+  fix **arrowtips** (smithed from bronze, iron or mithril bars at the anvil, ten
+  to a bar) onto shafts to make finished arrows. Buy a knife at the General Store
+- **Crafting** — the ranged path's armoury. Cows now drop **cowhide** and the
+  Ancient Dragon **dragonhide**; bring them to **Pelt the Tanner** by the cow
+  pasture to cure them into leather for a few coins. Then use a **needle** on the
+  leather (with **thread** in your pack — both at the General Store) to stitch
+  **ranged armour**: a **leather coif** and **body** for novices, and the prized
+  **dragonhide coif** and **body** that demand a high Crafting level and give the
+  best Ranged bonuses in the valley. It's all worn on your character
 - **Drop tables** — every monster drops bones plus a weighted roll: goblins
   give coins, runes and shrimp, skeletons drop coins, runes, ore and the odd
   wizard hat, and the **Goblin Warlord always pays out** — coins, a staff,
@@ -88,18 +96,20 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   tab (Z) to offload loot for half its value. Your coin balance shows on the
   inventory and shop screens
 - **Smithing** — smelt copper + tin into bronze bars at the furnace by the
-  mine (iron smelts at 15, and fails half the time, as is tradition), then
-  hammer out swords, helms, shields, and platebodies at the anvil. Iron tools
-  speed up gathering when carried
+  mine (iron smelts at 15, and fails half the time, as is tradition; **mithril**
+  at 30), then hammer out swords, helms, shields, platebodies and **arrowtips**
+  at the anvil. The full **mithril** set is now smithable from your own bars,
+  not just bought. Iron tools speed up gathering when carried
 - **Equipment** — open the worn-equipment screen (C-up), or press A on gear in
   your inventory to equip it. Four slots — weapon, shield, helm, body — each
   with Attack/Strength/Defence bonuses that feed straight into the combat
   formulas. **Worn gear is drawn on your character** — helm, platebody, sword
   and shield all show on the sprite in every facing
-- **Six gear tiers** — bronze and iron are smithed; **steel, mithril and rune**
-  are bought at the bazaar or won from the Warlord. Each tier hits harder and
-  defends better but demands a higher Attack (weapons) or Defence (armour)
-  level to wield — rune needs 40. A full rune set is the late-game coin sink
+- **Six gear tiers** — bronze, iron and now **mithril** are smithed from your
+  own bars; **steel and rune** are bought at the bazaar or won from the Warlord.
+  Each tier hits harder and defends better but demands a higher Attack (weapons)
+  or Defence (armour) level to wield — rune needs 40. A full rune set is the
+  late-game coin sink
 - **Quests** — *Basic Training*: Sergeant Hardy at the cow pasture wants five
   cows felled, and rewards you with a jumpstart of combat xp (and a few coins).
   *The Chef's Little Problem*: Chef Bouillon by the bank path

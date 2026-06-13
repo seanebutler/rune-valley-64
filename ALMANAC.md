@@ -60,9 +60,10 @@ Hitpoints **8** | max hit **1** | defence **0**.
 
 | Drop | Qty | Chance |
 |---|--:|--:|
-| Coins | 6 | 42% |
-| Raw shrimp | 1 | 12% |
-| Nothing | - | 46% |
+| Cowhide | 1 | 55% |
+| Coins | 6 | 25% |
+| Raw shrimp | 1 | 8% |
+| Nothing | - | 12% |
 
 ### Goblin - east of the bridge
 Hitpoints **5** | max hit **1** | defence **1**.
@@ -153,13 +154,14 @@ Hitpoints **150** | max hit **12** | defence **35**.
 
 | Drop | Qty | Chance |
 |---|--:|--:|
-| Coins | 1500 | 18% |
-| Rune body | 1 | 13% |
-| Rune sword | 1 | 12% |
-| Rune shield | 1 | 11% |
-| Rune helm | 1 | 11% |
-| Fire rune | 60 | 12% |
-| Dragonstone | 1 | 16% |
+| Coins | 1500 | 16% |
+| Rune body | 1 | 12% |
+| Rune sword | 1 | 11% |
+| Rune shield | 1 | 10% |
+| Rune helm | 1 | 10% |
+| Fire rune | 60 | 11% |
+| Dragonhide | 2 | 13% |
+| Dragonstone | 1 | 10% |
 | Dragonfire blade | 1 | 7% |
 
 ---
@@ -187,8 +189,9 @@ element; teleports are powered by Law runes (Home uses an Air rune).
 
 Equip a bow in the weapon slot and carry arrows, then fire at a goblin from up
 to five tiles away. Each shot spends one arrow and trains Ranged; accuracy and
-max hit add the bow's and the arrow's Ranged bonuses. Bows and arrows are
-fletched (open the Fletching menu by using a knife on logs).
+max hit add the bow's, the arrow's and your ranged armour's Ranged bonuses.
+Bows and arrows are fletched (use a knife on logs). **Mithril arrows need an
+oak shortbow or better** - a plain shortbow can't draw them.
 
 | Bow | Ranged | Wield level |
 |---|--:|--:|
@@ -199,6 +202,34 @@ fletched (open the Fletching menu by using a knife on logs).
 |---|--:|
 | Bronze arrow | +3 |
 | Iron arrow | +7 |
+| Mithril arrow | +12 |
+
+Ranged armour is crafted (see below) and worn for a Ranged bonus; it needs the
+listed Ranged level to wear.
+
+| Ranged armour | Slot | Ranged | Defence | Ranged level |
+|---|---|--:|--:|--:|
+| Leather body | Body | +4 | +4 | 1 |
+| Leather coif | Helm | +2 | +2 | 1 |
+| D'hide coif | Helm | +5 | +5 | 20 |
+| D'hide body | Body | +8 | +8 | 30 |
+
+---
+
+## Crafting
+
+Slay cows for **cowhide** (and the Ancient Dragon for **dragonhide**), then
+have **Pelt the Tanner** by the cow pasture cure them into leather for a few
+coins. Use a **needle** on the leather (with **thread** in your pack) to stitch
+ranged armour - both sold at the General Store. Dragonhide gear demands a high
+Crafting level but gives the best Ranged bonuses in the valley.
+
+| Stitch | Materials | Crafting level |
+|---|---|--:|
+| Leather coif | 1x Leather + 1x Thread | 5 |
+| Leather body | 3x Leather + 1x Thread | 14 |
+| D'hide coif | 1x Dragon leather + 1x Thread | 35 |
+| D'hide body | 2x Dragon leather + 1x Thread | 40 |
 
 ---
 

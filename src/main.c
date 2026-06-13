@@ -50,7 +50,8 @@ enum { OBJ_NONE, OBJ_TREE, OBJ_OAK, OBJ_STUMP, OBJ_ROCK_COPPER, OBJ_ROCK_TIN,
        OBJ_FURNACE, OBJ_ANVIL, OBJ_CHEF, OBJ_STAIRS_DOWN, OBJ_STAIRS_UP,
        OBJ_SHOP_GENERAL, OBJ_SHOP_WEAPON, OBJ_SHOP_ARMOR, OBJ_SHOP_MAGIC,
        OBJ_KNIGHT, OBJ_FENCE, OBJ_TUTOR,
-       OBJ_ALTAR_WATER, OBJ_ALTAR_EARTH, OBJ_ALTAR_LAW, OBJ_ALTAR_CHAOS };
+       OBJ_ALTAR_WATER, OBJ_ALTAR_EARTH, OBJ_ALTAR_LAW, OBJ_ALTAR_CHAOS,
+       OBJ_ROCK_MITHRIL, OBJ_TANNER };
 
 enum { MAP_OVERWORLD, MAP_DUNGEON };
 
@@ -68,7 +69,7 @@ static const char *map_rows[MAP_H] = {
     "T....T.................ppp.H..........~~~~.....T",
     "T.............T........ppp..LLLLLLLLL.~~~~.....T",
     "T......................p@p..L.M...M.L.~~~~.....T",
-    "T..T...................pppY.....M...L.~~~~.....T",
+    "T..T...................pppYZ....M...L.~~~~.....T",
     "T............O.........ppp..L.M...M.L.~~~~.....T",
     "T.......pppppppppppppppppp..L...M...L.~~~~.....T",
     "T.......pp.............ppp..LLLLLLLLL.~~~~.....T",
@@ -83,7 +84,7 @@ static const char *map_rows[MAP_H] = {
     "T.......C...N.......................ss~~~~.....T",
     "T.................1...2...3...4.....ss~~~~.....T",
     "T...................................ssF~~~.....T",
-    "T......I..I......O..................ss~~~~.....T",
+    "T......I..I..m...O..................ss~~~~.....T",
     "T.....X......K......................ss~~~~.....T",
     "T.............................O.....ss~~~~..R..T",
     "T...................................ssF~~~.....T",
@@ -102,12 +103,13 @@ static int16_t obj_timer[MAP_H][MAP_W];
 
 /* new skills go at the END so existing save indices (0-12) never shift */
 enum { SK_ATT, SK_STR, SK_DEF, SK_HP, SK_WC, SK_MINE, SK_FISH, SK_FM, SK_COOK,
-       SK_PRAY, SK_RC, SK_SMITH, SK_MAGIC, SK_RANGED, SK_FLETCH, NUM_SKILLS };
+       SK_PRAY, SK_RC, SK_SMITH, SK_MAGIC, SK_RANGED, SK_FLETCH, SK_CRAFT,
+       NUM_SKILLS };
 
 static const char *skill_names[NUM_SKILLS] = {
     "Attack", "Strength", "Defence", "Hitpoints", "Woodcutting",
     "Mining", "Fishing", "Firemaking", "Cooking", "Prayer", "Runecraft",
-    "Smithing", "Magic", "Ranged", "Fletching"
+    "Smithing", "Magic", "Ranged", "Fletching", "Crafting"
 };
 
 static int32_t xp[NUM_SKILLS];        /* stored as xp * 10 */
@@ -149,7 +151,12 @@ enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_RAW_TROUT, IT_TROUT, IT_RAW_LOBSTER, IT_LOBSTER,
        IT_RAW_SWORDFISH, IT_SWORDFISH,
        IT_KNIFE, IT_ARROW_SHAFT, IT_BRONZE_TIPS, IT_IRON_TIPS,
-       IT_BRONZE_ARROW, IT_IRON_ARROW, IT_SHORTBOW, IT_OAK_BOW, NUM_ITEMS };
+       IT_BRONZE_ARROW, IT_IRON_ARROW, IT_SHORTBOW, IT_OAK_BOW,
+       IT_MITH_ORE, IT_MITH_BAR, IT_MITH_TIPS, IT_MITH_ARROW,
+       IT_COWHIDE, IT_LEATHER, IT_DRAGON_HIDE, IT_DRAGON_LEATHER,
+       IT_NEEDLE, IT_THREAD,
+       IT_LEATHER_COIF, IT_LEATHER_BODY, IT_DHIDE_COIF, IT_DHIDE_BODY,
+       NUM_ITEMS };
 
 /* worn equipment slots; SLOT_NONE = item is not equippable */
 enum { SLOT_NONE, SLOT_WEAPON, SLOT_SHIELD, SLOT_HELM, SLOT_BODY };
@@ -238,6 +245,15 @@ enum {
     SPR_I_RAW_SWORDFISH, SPR_I_SWORDFISH,
     SPR_I_KNIFE, SPR_I_ARROW_SHAFT, SPR_I_BRONZE_TIPS, SPR_I_IRON_TIPS,
     SPR_I_BRONZE_ARROW, SPR_I_IRON_ARROW, SPR_I_SHORTBOW, SPR_I_OAK_BOW,
+    SPR_ROCK_M, SPR_TANNER,
+    SPR_I_MITH_ORE, SPR_I_MITH_BAR, SPR_I_MITH_TIPS, SPR_I_MITH_ARROW,
+    SPR_I_COWHIDE, SPR_I_LEATHER, SPR_I_DRAGON_HIDE, SPR_I_DRAGON_LEATHER,
+    SPR_I_NEEDLE, SPR_I_THREAD,
+    SPR_I_LEATHER_COIF, SPR_I_LEATHER_BODY, SPR_I_DHIDE_COIF, SPR_I_DHIDE_BODY,
+    SPR_EQ_LE_HELM_D, SPR_EQ_LE_HELM_U, SPR_EQ_LE_HELM_S, SPR_EQ_LE_HELM_SL,
+    SPR_EQ_LE_BODY_D, SPR_EQ_LE_BODY_U, SPR_EQ_LE_BODY_S, SPR_EQ_LE_BODY_SL,
+    SPR_EQ_DH_HELM_D, SPR_EQ_DH_HELM_U, SPR_EQ_DH_HELM_S, SPR_EQ_DH_HELM_SL,
+    SPR_EQ_DH_BODY_D, SPR_EQ_DH_BODY_U, SPR_EQ_DH_BODY_S, SPR_EQ_DH_BODY_SL,
     NUM_SPR
 };
 
@@ -313,7 +329,16 @@ static const char *spr_files[NUM_SPR] = {
     "item_raw_trout", "item_trout", "item_raw_lobster", "item_lobster",
     "item_raw_swordfish", "item_swordfish",
     "item_knife", "item_arrow_shaft", "item_bronze_tips", "item_iron_tips",
-    "item_bronze_arrow", "item_iron_arrow", "item_shortbow", "item_oak_bow"
+    "item_bronze_arrow", "item_iron_arrow", "item_shortbow", "item_oak_bow",
+    "obj_rock_mithril", "tanner_down_a",
+    "item_mith_ore", "item_mith_bar", "item_mith_tips", "item_mith_arrow",
+    "item_cowhide", "item_leather", "item_dragon_hide", "item_dragon_leather",
+    "item_needle", "item_thread",
+    "item_leather_coif", "item_leather_body", "item_dhide_coif", "item_dhide_body",
+    "eq_le_helm_d", "eq_le_helm_u", "eq_le_helm_s", "eq_le_helm_sl",
+    "eq_le_body_d", "eq_le_body_u", "eq_le_body_s", "eq_le_body_sl",
+    "eq_dh_helm_d", "eq_dh_helm_u", "eq_dh_helm_s", "eq_dh_helm_sl",
+    "eq_dh_body_d", "eq_dh_body_u", "eq_dh_body_s", "eq_dh_body_sl"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -394,6 +419,23 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     [IT_IRON_ARROW]   ={ "Iron arrow",    SPR_I_IRON_ARROW,   0, false, 0,0,0,0,0, true, 0, 7 },
     [IT_SHORTBOW]     ={ "Shortbow",      SPR_I_SHORTBOW,     0, false, SLOT_WEAPON,0,0,0,1,  false,0, 8 },
     [IT_OAK_BOW]      ={ "Oak shortbow",  SPR_I_OAK_BOW,      0, false, SLOT_WEAPON,0,0,0,20, false,0, 14 },
+    /* mithril: a deeper ore that smelts into bars for gear and arrowtips */
+    [IT_MITH_ORE]     ={ "Mithril ore",   SPR_I_MITH_ORE,     0, false },
+    [IT_MITH_BAR]     ={ "Mithril bar",   SPR_I_MITH_BAR,     0, false },
+    [IT_MITH_TIPS]    ={ "Mithril arrowtips",SPR_I_MITH_TIPS, 0, false, 0,0,0,0,0, true },
+    [IT_MITH_ARROW]   ={ "Mithril arrow", SPR_I_MITH_ARROW,   0, false, 0,0,0,0,0, true, 0, 12 },
+    /* crafting: cure hides into leather, stitch with needle + thread */
+    [IT_COWHIDE]      ={ "Cowhide",       SPR_I_COWHIDE,      0, false },
+    [IT_LEATHER]      ={ "Leather",       SPR_I_LEATHER,      0, false },
+    [IT_DRAGON_HIDE]  ={ "Dragonhide",    SPR_I_DRAGON_HIDE,  0, false },
+    [IT_DRAGON_LEATHER]={ "Dragon leather",SPR_I_DRAGON_LEATHER,0,false },
+    [IT_NEEDLE]       ={ "Needle",        SPR_I_NEEDLE,       0, true },
+    [IT_THREAD]       ={ "Thread",        SPR_I_THREAD,       0, false, 0,0,0,0,0, true },
+    /* ranged armour: worn for a Ranged accuracy bonus, needs Ranged to wear */
+    [IT_LEATHER_COIF] ={ "Leather coif",  SPR_I_LEATHER_COIF, 0, false, SLOT_HELM, 0,0,2,1,  false,0, 2 },
+    [IT_LEATHER_BODY] ={ "Leather body",  SPR_I_LEATHER_BODY, 0, false, SLOT_BODY, 0,0,4,1,  false,0, 4 },
+    [IT_DHIDE_COIF]   ={ "D'hide coif",   SPR_I_DHIDE_COIF,   0, false, SLOT_HELM, 0,0,5,20, false,0, 5 },
+    [IT_DHIDE_BODY]   ={ "D'hide body",   SPR_I_DHIDE_BODY,   0, false, SLOT_BODY, 0,0,8,30, false,0, 8 },
 };
 
 /* shop value in coins; buy price = value, sell price = value/2 (min 1).
@@ -417,6 +459,11 @@ static const int item_value[NUM_ITEMS] = {
     [IT_RAW_SWORDFISH]=50, [IT_SWORDFISH]=100,
     [IT_KNIFE]=6, [IT_ARROW_SHAFT]=1, [IT_BRONZE_TIPS]=2, [IT_IRON_TIPS]=4,
     [IT_BRONZE_ARROW]=2, [IT_IRON_ARROW]=4, [IT_SHORTBOW]=25, [IT_OAK_BOW]=80,
+    [IT_MITH_ORE]=60, [IT_MITH_BAR]=120, [IT_MITH_TIPS]=8, [IT_MITH_ARROW]=8,
+    [IT_COWHIDE]=12, [IT_LEATHER]=20, [IT_DRAGON_HIDE]=120, [IT_DRAGON_LEATHER]=200,
+    [IT_NEEDLE]=2, [IT_THREAD]=2,
+    [IT_LEATHER_COIF]=40, [IT_LEATHER_BODY]=80,
+    [IT_DHIDE_COIF]=400, [IT_DHIDE_BODY]=1200,
 };
 static int sell_price(int item) { int v = item_value[item]; return v ? (v / 2 < 1 ? 1 : v / 2) : 0; }
 
@@ -479,6 +526,13 @@ static int equip_rng(void)
 static bool is_bow(int item)
 {
     return item != IT_NONE && iteminfo[item].slot == SLOT_WEAPON &&
+           iteminfo[item].rng > 0;
+}
+/* ranged armour: worn gear (helm/body/shield) carrying a Ranged bonus */
+static bool is_ranged_armour(int item)
+{
+    int s = iteminfo[item].slot;
+    return (s == SLOT_HELM || s == SLOT_BODY || s == SLOT_SHIELD) &&
            iteminfo[item].rng > 0;
 }
 
@@ -587,10 +641,11 @@ static const mobinfo_t mobinfo[NUM_MOBS] = {
 
 typedef enum { UI_NONE, UI_INV, UI_SKILLS, UI_BANK, UI_HELP, UI_SMITH,
                UI_DIALOG, UI_EQUIP, UI_SPELL, UI_SHOP, UI_QUEST, UI_PRAYER,
-               UI_ALMANAC, UI_FLETCH } ui_t;
+               UI_ALMANAC, UI_FLETCH, UI_CRAFT } ui_t;
 static ui_t ui_mode = UI_NONE;
 static int smith_cursor = 0;
 static int fletch_cursor = 0;
+static int craft_cursor = 0;
 static int equip_cursor = 0;
 static int shop_id = 0, shop_mode = 0, shop_cursor = 0;   /* mode: 0 buy, 1 sell */
 
@@ -704,7 +759,7 @@ static int cow_kills = 0;
 
 /* dialog box */
 static const char *dlg_title = "";
-static char dlg_buf[4][44];
+static char dlg_buf[4][64];
 static int dlg_count = 0;
 
 typedef enum { STATE_TITLE, STATE_PLAY } gstate_t;
@@ -880,6 +935,8 @@ static void load_overworld(void)
             case 'C': obj = OBJ_ROCK_COPPER; break;
             case 'N': obj = OBJ_ROCK_TIN;    break;
             case 'I': obj = OBJ_ROCK_IRON;   break;
+            case 'm': obj = OBJ_ROCK_MITHRIL;break;
+            case 'Z': obj = OBJ_TANNER;      break;
             case 'F': ter = TER_WATER; obj = OBJ_FISH; break;
             case 'E': obj = OBJ_ESSENCE;    break;
             case 'A': obj = OBJ_ALTAR_AIR;  break;
@@ -1326,17 +1383,19 @@ static const drop_t demon_drops[] = {  /* the deepest boss pays the richest */
     { IT_RUNE_SHIELD, 1, 12 }, { IT_RUNE_BODY, 1, 8 }, { IT_FIRE_RUNE, 30, 14 },
     { IT_MITH_BODY, 1, 16 },
 };
-static const drop_t cow_drops[] = {   /* a few coins, the odd shrimp to keep you fed */
-    { IT_COINS, 6, 42 }, { IT_RAW_SHRIMP, 1, 12 }, { IT_NONE, 0, 46 },
+static const drop_t cow_drops[] = {   /* mostly cowhide for crafting, plus a few coins */
+    { IT_COWHIDE, 1, 55 }, { IT_COINS, 6, 25 }, { IT_RAW_SHRIMP, 1, 8 },
+    { IT_NONE, 0, 12 },
 };
 static const drop_t whelp_drops[] = {  /* floor-3 fodder: better than wights */
     { IT_COINS, 90, 26 }, { IT_FIRE_RUNE, 6, 20 }, { IT_SHRIMP, 2, 16 },
     { IT_MITH_HELM, 1, 4 }, { IT_NONE, 0, 34 },
 };
 static const drop_t dragon_drops[] = {  /* on top of a guaranteed coin+stone payout */
-    { IT_COINS, 1500, 18 }, { IT_RUNE_BODY, 1, 13 }, { IT_RUNE_SWORD, 1, 12 },
-    { IT_RUNE_SHIELD, 1, 11 }, { IT_RUNE_HELM, 1, 11 }, { IT_FIRE_RUNE, 60, 12 },
-    { IT_DRAGONSTONE, 1, 16 },
+    { IT_COINS, 1500, 16 }, { IT_RUNE_BODY, 1, 12 }, { IT_RUNE_SWORD, 1, 11 },
+    { IT_RUNE_SHIELD, 1, 10 }, { IT_RUNE_HELM, 1, 10 }, { IT_FIRE_RUNE, 60, 11 },
+    { IT_DRAGON_HIDE, 2, 13 },   /* tan into dragon leather for the best ranged armour */
+    { IT_DRAGONSTONE, 1, 10 },
     { IT_DRAGONFIRE, 1, 7 },   /* the rare unique: the Dragonfire blade */
 };
 
@@ -1403,7 +1462,8 @@ static void build_almanac(void)
     al_add(1, "== ARMOUR ==  (Defence, level to wield)");
     for (int it = 1; it < NUM_ITEMS; it++) {
         int s = iteminfo[it].slot;
-        if (s == SLOT_HELM || s == SLOT_SHIELD || s == SLOT_BODY)
+        if ((s == SLOT_HELM || s == SLOT_SHIELD || s == SLOT_BODY) &&
+            !is_ranged_armour(it))
             al_add(0, "%-16s D+%-2d %-6s L%d", iteminfo[it].name,
                    iteminfo[it].def, slot_names[s - 1], iteminfo[it].eqlvl);
     }
@@ -1448,13 +1508,17 @@ static void build_almanac(void)
         }
     }
 
-    al_add(1, "== RANGED ==  (bows: Rng/level; arrows: Rng)");
+    al_add(1, "== RANGED ==  (bows/armour: Rng/level; arrows: Rng)");
     for (int it = 1; it < NUM_ITEMS; it++)
         if (is_bow(it))
             al_add(0, "%-16s R+%-2d  L%d", iteminfo[it].name,
                    iteminfo[it].rng, iteminfo[it].eqlvl);
     for (int it = 1; it < NUM_ITEMS; it++)
-        if (iteminfo[it].slot != SLOT_WEAPON && iteminfo[it].rng > 0)
+        if (is_ranged_armour(it))
+            al_add(0, "%-16s R+%-2d D+%-2d L%d", iteminfo[it].name,
+                   iteminfo[it].rng, iteminfo[it].def, iteminfo[it].eqlvl);
+    for (int it = 1; it < NUM_ITEMS; it++)
+        if (iteminfo[it].slot == SLOT_NONE && iteminfo[it].rng > 0)
             al_add(0, "%-16s R+%d", iteminfo[it].name, iteminfo[it].rng);
 
     al_add(1, "== FISHING & FOOD ==  (tackle, levels, heal)");
@@ -1660,9 +1724,13 @@ static bool player_cast(gob_t *g)
     return true;
 }
 
-/* the arrow the bow will fire (best held first), -1 if none */
+/* the arrow the bow will fire (best held first), -1 if none usable.
+   mithril arrows need an oak shortbow or better (wield level 20+). */
 static int held_arrow(void)
 {
+    int bow = equipped[SLOT_WEAPON - 1];
+    bool bigbow = is_bow(bow) && iteminfo[bow].eqlvl >= 20;
+    if (bigbow && has_item(IT_MITH_ARROW)) return IT_MITH_ARROW;
     if (has_item(IT_IRON_ARROW))   return IT_IRON_ARROW;
     if (has_item(IT_BRONZE_ARROW)) return IT_BRONZE_ARROW;
     return -1;
@@ -1673,7 +1741,13 @@ static int held_arrow(void)
 static bool player_shoot(gob_t *g)
 {
     int arrow = held_arrow();
-    if (arrow < 0) { msg("You have no arrows for your bow."); return false; }
+    if (arrow < 0) {
+        if (has_item(IT_MITH_ARROW))
+            msg("Your bow is too weak for mithril arrows. Use an oak shortbow.");
+        else
+            msg("You have no arrows for your bow.");
+        return false;
+    }
     remove_item(arrow);
     spawn_proj(pl.px, pl.py - 8, g->px, g->py - 8, SPR_BOLT_AIR);
     sfx(SND_HIT);
@@ -1775,7 +1849,7 @@ static void tick_skilling(void)
     case ST_MINE: {
         int o = object[ay][ax];
         if (o != OBJ_ROCK_COPPER && o != OBJ_ROCK_TIN && o != OBJ_ROCK_IRON &&
-            o != OBJ_ESSENCE) {
+            o != OBJ_ROCK_MITHRIL && o != OBJ_ESSENCE) {
             if (o == OBJ_ROCK_EMPTY) msg("There is no ore currently available in this rock.");
             stop_action(); break;
         }
@@ -1795,20 +1869,25 @@ static void tick_skilling(void)
         if (--pl.act_timer > 0) break;
         pl.act_timer = 4;
         int mn = level_of(SK_MINE);
-        bool iron = (o == OBJ_ROCK_IRON);
-        if (iron && mn < 15) { msg("You need a Mining level of 15 to mine iron."); stop_action(); break; }
+        /* per-rock: ore item, level needed, success base, xp, respawn, noun */
+        int ore, req, base, oxp, resp; const char *noun;
+        switch (o) {
+        case OBJ_ROCK_IRON:    ore=IT_IRON;     req=15; base=8+mn*3/2; oxp=350; resp=9;  noun="iron";        break;
+        case OBJ_ROCK_MITHRIL: ore=IT_MITH_ORE; req=30; base=4+mn;     oxp=600; resp=16; noun="mithril ore"; break;
+        case OBJ_ROCK_COPPER:  ore=IT_COPPER;   req=1;  base=25+mn*2;  oxp=175; resp=4;  noun="copper";      break;
+        default:               ore=IT_TIN;      req=1;  base=25+mn*2;  oxp=175; resp=4;  noun="tin";         break;
+        }
+        if (mn < req) { msg("You need a Mining level of %d to mine that.", req); stop_action(); break; }
         if (inv_full()) { msg("Your inventory is too full to carry any more."); stop_action(); break; }
-        int p = (iron ? (8 + mn * 3 / 2) : (25 + mn * 2)) + pick_bonus();
+        int p = base + pick_bonus();
         if (p > 90) p = 90;
         if (chance(p)) {
             sfx(SND_MINE);
-            int item = iron ? IT_IRON : (o == OBJ_ROCK_COPPER ? IT_COPPER : IT_TIN);
-            add_item(item);
-            msg("You manage to mine some %s.",
-                iron ? "iron" : (item == IT_COPPER ? "copper" : "tin"));
-            add_xp(SK_MINE, iron ? 350 : 175, true);
+            add_item(ore);
+            msg("You manage to mine some %s.", noun);
+            add_xp(SK_MINE, oxp, true);
             object[ay][ax] = OBJ_ROCK_EMPTY;
-            obj_timer[ay][ax] = iron ? 9 : 4;
+            obj_timer[ay][ax] = resp;
             stop_action();
         } else {
             sfx(SND_MINE);
@@ -1909,6 +1988,17 @@ static void tick_skilling(void)
             } else {
                 msg("The iron ore crumbles in the heat. Too impure.");
             }
+        } else if (has_item(IT_MITH_ORE)) {
+            if (level_of(SK_SMITH) < 30) {
+                msg("You need a Smithing level of 30 to smelt mithril.");
+                stop_action();
+                break;
+            }
+            remove_item(IT_MITH_ORE);
+            add_item(IT_MITH_BAR);
+            sfx(SND_FIRE);
+            msg("You smelt a mithril bar.");
+            add_xp(SK_SMITH, 250, true);
         } else {
             stop_action();
         }
@@ -2738,6 +2828,51 @@ static void tutor_talk(void)
     ui_mode = UI_DIALOG;
 }
 
+/* the Tanner cures hides into leather for a coin fee per hide */
+#define TAN_COW_FEE 3
+#define TAN_DRAGON_FEE 20
+static void tanner_talk(void)
+{
+    dlg_title = "Pelt the Tanner";
+    dlg_count = 0;
+    int cow = inv_count(IT_COWHIDE), drag = inv_count(IT_DRAGON_HIDE);
+    if (cow == 0 && drag == 0) {
+        dlg_line("Bring me cowhide and I'll cure it into");
+        dlg_line("leather - stitch that with a needle and");
+        dlg_line("thread for armour. Dragonhide too, if");
+        dlg_line("you're bold enough to skin one.");
+        ui_mode = UI_DIALOG;
+        return;
+    }
+    int tanned = 0, spent = 0;
+    while (inv_count(IT_COWHIDE) > 0 && gp >= TAN_COW_FEE) {
+        remove_item(IT_COWHIDE); gp -= TAN_COW_FEE; add_item(IT_LEATHER);
+        tanned++; spent += TAN_COW_FEE;
+    }
+    while (inv_count(IT_DRAGON_HIDE) > 0 && gp >= TAN_DRAGON_FEE) {
+        remove_item(IT_DRAGON_HIDE); gp -= TAN_DRAGON_FEE;
+        add_item(IT_DRAGON_LEATHER);
+        tanned++; spent += TAN_DRAGON_FEE;
+    }
+    if (tanned > 0) {
+        char b[64];
+        snprintf(b, sizeof b, "There - %d hide%s cured for %d coins.",
+                 tanned, tanned == 1 ? "" : "s", spent);
+        dlg_line(b);
+        dlg_line("Fine work. Stitch it into ranged armour");
+        dlg_line("with a needle and thread.");
+        sfx_ui(SND_CRAFT);
+    } else {
+        dlg_line("Tanning isn't free, friend. Cowhide is");
+        char b[64];
+        snprintf(b, sizeof b, "%d coins a hide, dragonhide %d.",
+                 TAN_COW_FEE, TAN_DRAGON_FEE);
+        dlg_line(b);
+        dlg_line("Come back when your purse is heavier.");
+    }
+    ui_mode = UI_DIALOG;
+}
+
 static void interact(void)
 {
     /* with a spell selected, or a bow drawn, A targets a monster from range */
@@ -2779,7 +2914,8 @@ static void interact(void)
         pl.state = ST_CHOP; pl.act_timer = 2;
         msg("You swing your axe at the tree.");
         break;
-    case OBJ_ROCK_COPPER: case OBJ_ROCK_TIN: case OBJ_ROCK_IRON: case OBJ_ESSENCE:
+    case OBJ_ROCK_COPPER: case OBJ_ROCK_TIN: case OBJ_ROCK_IRON:
+    case OBJ_ROCK_MITHRIL: case OBJ_ESSENCE:
         if (!has_pick()) { msg("You need a pickaxe to mine this rock."); return; }
         pl.state = ST_MINE; pl.act_timer = 2;
         msg("You swing your pick at the rock.");
@@ -2844,7 +2980,8 @@ static void interact(void)
         }
         break;
     case OBJ_FURNACE:
-        if ((has_item(IT_COPPER) && has_item(IT_TIN)) || has_item(IT_IRON)) {
+        if ((has_item(IT_COPPER) && has_item(IT_TIN)) || has_item(IT_IRON) ||
+            has_item(IT_MITH_ORE)) {
             pl.state = ST_SMELT; pl.act_timer = 2;
             msg("You feed ore into the furnace.");
         } else {
@@ -2854,7 +2991,8 @@ static void interact(void)
     case OBJ_ANVIL:
         if (!has_item(IT_HAMMER)) {
             msg("You need a hammer to work the anvil.");
-        } else if (!has_item(IT_BRONZE_BAR) && !has_item(IT_IRON_BAR)) {
+        } else if (!has_item(IT_BRONZE_BAR) && !has_item(IT_IRON_BAR) &&
+                   !has_item(IT_MITH_BAR)) {
             msg("You need metal bars to smith. Smelt ore at the furnace.");
         } else {
             ui_mode = UI_SMITH;
@@ -2869,6 +3007,9 @@ static void interact(void)
         break;
     case OBJ_TUTOR:
         tutor_talk();
+        break;
+    case OBJ_TANNER:
+        tanner_talk();
         break;
     case OBJ_STAIRS_DOWN:
         if (cur_map == MAP_OVERWORLD) {
@@ -2914,6 +3055,7 @@ static const char *context_hint(void)
     case OBJ_ROCK_COPPER: return "A: Mine Copper rock";
     case OBJ_ROCK_TIN:    return "A: Mine Tin rock";
     case OBJ_ROCK_IRON:   return "A: Mine Iron rock";
+    case OBJ_ROCK_MITHRIL:return "A: Mine Mithril rock";
     case OBJ_FISH:        return "A: Fish here";
     case OBJ_BOOTH:       return "A: Use Bank booth";
     case OBJ_FIRE:        return "A: Cook on Fire";
@@ -2929,6 +3071,7 @@ static const char *context_hint(void)
     case OBJ_CHEF:        return "A: Talk to Chef Bouillon";
     case OBJ_KNIGHT:      return "A: Talk to Sir Garrick";
     case OBJ_TUTOR:       return "A: Talk to Sergeant Hardy";
+    case OBJ_TANNER:      return "A: Talk to Pelt the Tanner";
     case OBJ_STAIRS_DOWN:
         if (cur_map == MAP_OVERWORLD)
             return wquest == WQ_NONE ? "A: Dungeon (barred - see Sir Garrick)"
@@ -2955,7 +3098,8 @@ static void equip_from_inv(int invslot)
     int it = inv[invslot];
     int slot = iteminfo[it].slot;
     if (!slot) return;
-    int reqsk = is_bow(it) ? SK_RANGED : (slot == SLOT_WEAPON ? SK_ATT : SK_DEF);
+    int reqsk = (is_bow(it) || is_ranged_armour(it)) ? SK_RANGED
+                : (slot == SLOT_WEAPON ? SK_ATT : SK_DEF);
     if (level_of(reqsk) < iteminfo[it].eqlvl) {
         msg("You need %s level %d to wear that.",
             skill_names[reqsk], iteminfo[it].eqlvl);
@@ -3025,8 +3169,15 @@ static void use_inv_item(int slot)
     case IT_ESSENCE:   msg("A chunk of raw magical essence."); break;
     case IT_DRAGONSTONE: msg("A priceless gem from the Dragon's hoard. Sell it for a fortune."); break;
     case IT_DRAGONFIRE: msg("The Dragonfire blade - it burns hot in hand and mind alike."); break;
-    case IT_BRONZE_BAR: case IT_IRON_BAR:
+    case IT_BRONZE_BAR: case IT_IRON_BAR: case IT_MITH_BAR:
         msg("Take this to the anvil by the mine."); break;
+    case IT_MITH_ORE: msg("Mithril ore. Smelt it at the furnace (Smithing 30)."); break;
+    case IT_COWHIDE: msg("Cowhide. Pelt the Tanner will cure it into leather."); break;
+    case IT_DRAGON_HIDE: msg("Dragonhide. The Tanner can cure this into tough leather."); break;
+    case IT_LEATHER: case IT_DRAGON_LEATHER:
+        msg("Use a needle to stitch this into ranged armour."); break;
+    case IT_NEEDLE: ui_mode = UI_CRAFT; craft_cursor = 0; break;
+    case IT_THREAD: msg("Thread - for stitching leather with a needle."); break;
     case IT_HAMMER:    msg("For smithing at an anvil."); break;
     case IT_BRONZE_SWORD: case IT_IRON_SWORD:
         msg("You feel mightier just holding it."); break;
@@ -3046,10 +3197,12 @@ static void use_inv_item(int slot)
     case IT_HARPOON: msg("A harpoon - spears swordfish (Fishing 50)."); break;
     case IT_KNIFE:  ui_mode = UI_FLETCH; fletch_cursor = 0; break;
     case IT_ARROW_SHAFT: msg("Arrow shafts. Add arrowtips to fletch arrows."); break;
-    case IT_BRONZE_TIPS: case IT_IRON_TIPS:
+    case IT_BRONZE_TIPS: case IT_IRON_TIPS: case IT_MITH_TIPS:
         msg("Arrowtips. Use a knife to fletch them onto shafts."); break;
     case IT_BRONZE_ARROW: case IT_IRON_ARROW:
         msg("Arrows for your bow. Equip a bow, then A to shoot."); break;
+    case IT_MITH_ARROW:
+        msg("Mithril arrows - need an oak shortbow or better."); break;
     case IT_TINDER: msg("Useful for lighting fires."); break;
     }
 }
@@ -3069,6 +3222,11 @@ static const struct { int item, bar, bars, lvl, xp_x10; } smith_list[] = {
     { IT_IRON_PICK,     IT_IRON_BAR,   1, 17, 250 },
     { IT_BRONZE_TIPS,   IT_BRONZE_BAR, 1,  5, 100 },
     { IT_IRON_TIPS,     IT_IRON_BAR,   1, 20, 250 },
+    { IT_MITH_SWORD,    IT_MITH_BAR,   1, 30, 500 },
+    { IT_MITH_HELM,     IT_MITH_BAR,   1, 33, 500 },
+    { IT_MITH_SHIELD,   IT_MITH_BAR,   2, 35, 1000 },
+    { IT_MITH_BODY,     IT_MITH_BAR,   3, 38, 1500 },
+    { IT_MITH_TIPS,     IT_MITH_BAR,   1, 35, 500 },
 };
 #define SMITH_COUNT (int)(sizeof smith_list / sizeof smith_list[0])
 
@@ -3087,7 +3245,8 @@ static void smith_make(int row)
     }
     for (int i = 0; i < need; i++) remove_item(bar);
     /* a bar of metal yields a batch of arrowtips, otherwise a single piece */
-    int batch = (item == IT_BRONZE_TIPS || item == IT_IRON_TIPS) ? 10 : 1;
+    int batch = (item == IT_BRONZE_TIPS || item == IT_IRON_TIPS ||
+                 item == IT_MITH_TIPS) ? 10 : 1;
     for (int i = 0; i < batch; i++) add_item(item);
     sfx(SND_SMITH);
     if (batch > 1) msg("You hammer out %d %s.", batch, iteminfo[item].name);
@@ -3104,6 +3263,7 @@ fletch_list[] = {
     { IT_OAK_BOW,      1, IT_OAK_LOGS,    1, IT_NONE,         0, 20, 250 },
     { IT_BRONZE_ARROW,10, IT_ARROW_SHAFT,10, IT_BRONZE_TIPS, 10,  1, 130 },
     { IT_IRON_ARROW,  10, IT_ARROW_SHAFT,10, IT_IRON_TIPS,   10, 15, 250 },
+    { IT_MITH_ARROW,  10, IT_ARROW_SHAFT,10, IT_MITH_TIPS,   10, 30, 480 },
 };
 #define FLETCH_COUNT (int)(sizeof fletch_list / sizeof fletch_list[0])
 
@@ -3128,6 +3288,41 @@ static void fletch_make(int row)
     if (qty > 1) msg("You fletch %d %s.", qty, iteminfo[result].name);
     else         msg("You fletch a %s.", iteminfo[result].name);
     add_xp(SK_FLETCH, fletch_list[row].xp_x10, true);
+}
+
+/* ------------------------------------------------------------ crafting */
+
+/* stitch tanned leather + thread into ranged armour (open with a needle) */
+static const struct { int result, hide, n_hide, n_thread, lvl, xp_x10; }
+craft_list[] = {
+    { IT_LEATHER_COIF, IT_LEATHER,        1, 1,  5,  250 },
+    { IT_LEATHER_BODY, IT_LEATHER,        3, 1, 14,  500 },
+    { IT_DHIDE_COIF,   IT_DRAGON_LEATHER, 1, 1, 35, 1200 },
+    { IT_DHIDE_BODY,   IT_DRAGON_LEATHER, 2, 1, 40, 1800 },
+};
+#define CRAFT_COUNT (int)(sizeof craft_list / sizeof craft_list[0])
+
+static void craft_make(int row)
+{
+    if (row < 0 || row >= CRAFT_COUNT) return;
+    int result = craft_list[row].result;
+    int hide = craft_list[row].hide, nh = craft_list[row].n_hide;
+    int nt = craft_list[row].n_thread;
+    if (level_of(SK_CRAFT) < craft_list[row].lvl) {
+        msg("You need a Crafting level of %d for that.", craft_list[row].lvl);
+        return;
+    }
+    if (inv_count(hide) < nh || inv_count(IT_THREAD) < nt) {
+        msg("You need %dx %s and %dx thread for that.",
+            nh, iteminfo[hide].name, nt);
+        return;
+    }
+    for (int i = 0; i < nh; i++) remove_item(hide);
+    for (int i = 0; i < nt; i++) remove_item(IT_THREAD);
+    add_item(result);
+    sfx(SND_SMITH);
+    msg("You stitch together a %s.", iteminfo[result].name);
+    add_xp(SK_CRAFT, craft_list[row].xp_x10, true);
 }
 
 /* ------------------------------------------------------------ bank */
@@ -3173,7 +3368,7 @@ static const char *shop_names[NUM_SHOPS] = {
 };
 static const int shop_stock[NUM_SHOPS][20] = {
     { IT_AXE, IT_PICK, IT_NET, IT_ROD, IT_LOBSTER_POT, IT_HARPOON, IT_KNIFE,
-      IT_TINDER, IT_HAMMER, IT_RAW_SHRIMP, IT_SHRIMP, IT_NONE },
+      IT_NEEDLE, IT_THREAD, IT_TINDER, IT_HAMMER, IT_RAW_SHRIMP, IT_SHRIMP, IT_NONE },
     { IT_BRONZE_SWORD, IT_IRON_SWORD, IT_STEEL_SWORD, IT_MITH_SWORD, IT_RUNE_SWORD, IT_NONE },
     { IT_BRONZE_HELM, IT_BRONZE_SHIELD, IT_BRONZE_BODY,
       IT_IRON_HELM, IT_IRON_SHIELD, IT_IRON_BODY,
@@ -3391,6 +3586,10 @@ static int equip_overlay_base(int item)
     case IT_RUNE_BODY:     return SPR_EQ_RU_BODY_D;
     case IT_BANE:          return SPR_EQ_BANE_WEP_D;
     case IT_DRAGONFIRE:    return SPR_EQ_DF_WEP_D;
+    case IT_LEATHER_COIF:  return SPR_EQ_LE_HELM_D;
+    case IT_LEATHER_BODY:  return SPR_EQ_LE_BODY_D;
+    case IT_DHIDE_COIF:    return SPR_EQ_DH_HELM_D;
+    case IT_DHIDE_BODY:    return SPR_EQ_DH_BODY_D;
     default:               return -1;
     }
 }
@@ -3516,6 +3715,7 @@ static void render(void)
             case OBJ_ROCK_COPPER: rdpq_sprite_blit(spr[SPR_ROCK_C], sx, sy, NULL); break;
             case OBJ_ROCK_TIN:    rdpq_sprite_blit(spr[SPR_ROCK_T], sx, sy, NULL); break;
             case OBJ_ROCK_IRON:   rdpq_sprite_blit(spr[SPR_ROCK_I], sx, sy, NULL); break;
+            case OBJ_ROCK_MITHRIL:rdpq_sprite_blit(spr[SPR_ROCK_M], sx, sy, NULL); break;
             case OBJ_ROCK_EMPTY:  rdpq_sprite_blit(spr[SPR_ROCK_E], sx, sy, NULL); break;
             case OBJ_FISH:
                 rdpq_sprite_blit(spr[anim_frame ? SPR_FISH_B : SPR_FISH_A], sx, sy, NULL);
@@ -3537,6 +3737,7 @@ static void render(void)
             case OBJ_KNIGHT:     rdpq_sprite_blit(spr[SPR_KNIGHT], sx, sy - 8, NULL); break;
             case OBJ_FENCE:      rdpq_sprite_blit(spr[SPR_FENCE], sx, sy, NULL); break;
             case OBJ_TUTOR:      rdpq_sprite_blit(spr[SPR_TUTOR], sx, sy - 8, NULL); break;
+            case OBJ_TANNER:     rdpq_sprite_blit(spr[SPR_TANNER], sx, sy - 8, NULL); break;
             case OBJ_STAIRS_DOWN:rdpq_sprite_blit(spr[SPR_STAIRS_DOWN], sx, sy, NULL); break;
             case OBJ_STAIRS_UP:  rdpq_sprite_blit(spr[SPR_STAIRS_UP], sx, sy, NULL); break;
             case OBJ_SHOP_GENERAL:rdpq_sprite_blit(spr[SPR_STALL_GENERAL], sx, sy - 4, NULL); break;
@@ -3750,11 +3951,11 @@ static void render(void)
                   inv[inv_cursor] != IT_NONE ? iteminfo[inv[inv_cursor]].name : "-");
     }
     else if (ui_mode == UI_SKILLS) {
-        int px0 = SCREEN_W - 130, py0 = 16;
-        draw_panel(px0, py0, px0 + 124, py0 + 172);
-        draw_text(1, px0 + 6, py0 + 12, "Skills");
+        int px0 = SCREEN_W - 130, py0 = 12;
+        draw_panel(px0, py0, px0 + 124, py0 + 184);
+        draw_text(1, px0 + 6, py0 + 10, "Skills");
         for (int i = 0; i < NUM_SKILLS; i++)
-            draw_text(0, px0 + 6, py0 + 24 + i * 9, "%-11s %2d",
+            draw_text(0, px0 + 6, py0 + 22 + i * 9, "%-11s %2d",
                       skill_names[i], level_of(i));
         int att = level_of(SK_ATT), str = level_of(SK_STR), def = level_of(SK_DEF);
         float base = (def + level_of(SK_HP) + level_of(SK_PRAY) / 2) * 0.25f;
@@ -3763,7 +3964,7 @@ static void render(void)
         float mage = (level_of(SK_MAGIC) * 3 / 2) * 0.325f;
         float best = melee; if (rng > best) best = rng; if (mage > best) best = mage;
         int cmb = (int)(base + best);
-        draw_text(4, px0 + 6, py0 + 166, "Combat level: %d", cmb);
+        draw_text(4, px0 + 6, py0 + 176, "Combat level: %d", cmb);
     }
     else if (ui_mode == UI_BANK) {
         int n = bank_rows();
@@ -3810,20 +4011,20 @@ static void render(void)
         }
     }
     else if (ui_mode == UI_SMITH) {
-        int px0 = 64, py0 = 28;
-        draw_panel(px0, py0, px0 + 192, py0 + 184);
-        draw_text(1, px0 + 6, py0 + 12, "Anvil - Smithing");
-        draw_text(6, px0 + 6, py0 + 22, "A: smith   B: close");
+        int px0 = 64, py0 = 12;
+        draw_panel(px0, py0, px0 + 192, py0 + 30 + SMITH_COUNT * 10);
+        draw_text(1, px0 + 6, py0 + 8, "Anvil - Smithing");
+        draw_text(6, px0 + 6, py0 + 18, "A: smith   B: close");
         for (int i = 0; i < SMITH_COUNT; i++) {
             bool can = level_of(SK_SMITH) >= smith_list[i].lvl;
+            const char *bar = smith_list[i].bar == IT_BRONZE_BAR ? "brz" :
+                              smith_list[i].bar == IT_IRON_BAR   ? "irn" : "mth";
             draw_text(i == smith_cursor ? 1 : (can ? 0 : 6),
-                      px0 + 6, py0 + 34 + i * 12,
+                      px0 + 6, py0 + 30 + i * 10,
                       "%c %-15s %dx%s L%d",
                       i == smith_cursor ? '>' : ' ',
                       iteminfo[smith_list[i].item].name,
-                      smith_list[i].bars,
-                      smith_list[i].bar == IT_BRONZE_BAR ? "brz" : "irn",
-                      smith_list[i].lvl);
+                      smith_list[i].bars, bar, smith_list[i].lvl);
         }
     }
     else if (ui_mode == UI_FLETCH) {
@@ -3846,6 +4047,23 @@ static void render(void)
         else
             draw_text(0, px0 + 6, py0 + 98, "Needs %dx %s",
                       fletch_list[fc].n1, iteminfo[fletch_list[fc].in1].name);
+    }
+    else if (ui_mode == UI_CRAFT) {
+        int px0 = 56, py0 = 54;
+        draw_panel(px0, py0, px0 + 208, py0 + 98);
+        draw_text(1, px0 + 6, py0 + 12, "Crafting (needle)");
+        draw_text(6, px0 + 6, py0 + 22, "A: make   B: close");
+        for (int i = 0; i < CRAFT_COUNT; i++) {
+            bool can = level_of(SK_CRAFT) >= craft_list[i].lvl;
+            draw_text(i == craft_cursor ? 1 : (can ? 0 : 6),
+                      px0 + 6, py0 + 34 + i * 11, "%c %-15s L%d",
+                      i == craft_cursor ? '>' : ' ',
+                      iteminfo[craft_list[i].result].name, craft_list[i].lvl);
+        }
+        int cc = craft_cursor;
+        draw_text(0, px0 + 6, py0 + 86, "Needs %dx %s + %dx thread",
+                  craft_list[cc].n_hide, iteminfo[craft_list[cc].hide].name,
+                  craft_list[cc].n_thread);
     }
     else if (ui_mode == UI_EQUIP) {
         int px0 = SCREEN_W - 142, py0 = 30;
@@ -4133,6 +4351,13 @@ static void handle_input(void)
         if (pressed.d_up && fletch_cursor > 0) fletch_cursor--;
         if (pressed.d_down && fletch_cursor < FLETCH_COUNT - 1) fletch_cursor++;
         if (pressed.a) fletch_make(fletch_cursor);
+        return;
+    }
+    if (ui_mode == UI_CRAFT) {
+        if (pressed.b) { ui_mode = UI_NONE; return; }
+        if (pressed.d_up && craft_cursor > 0) craft_cursor--;
+        if (pressed.d_down && craft_cursor < CRAFT_COUNT - 1) craft_cursor++;
+        if (pressed.a) craft_make(craft_cursor);
         return;
     }
     if (ui_mode == UI_EQUIP) {

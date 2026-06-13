@@ -1862,6 +1862,94 @@ New-Recolor 'item_bronze_sword' 'item_dragonfire' $dfMap
 foreach ($dir in 'd','u','s') { New-Recolor "eq_bz_wep_$dir" "eq_df_wep_$dir" $dfMap }
 New-FlipX 'eq_df_wep_s' 'eq_df_wep_sl'
 
+# ---- Mithril: a deep-blue ore deeper in the mine, smithed into bars/gear ----
+$mithFleck = '#4a5ac0'
+New-Rock    'obj_rock_mithril' $mithFleck
+New-OreIcon 'item_mith_ore'    $mithFleck
+New-Recolor 'item_bronze_bar'  'item_mith_bar' $gearTiers['mi']
+New-TipIcon   'item_mith_tips'  '#7a8ae0'
+New-ArrowIcon 'item_mith_arrow' '#7a8ae0'
+
+# ---- Crafting: hides + leather, needle + thread ----
+function New-HideIcon([string]$name, [string]$body, [string]$dark) {
+    Save-Sprite $name @{ 'p'=$body; 'q'=$dark } @(
+        '................',
+        '................',
+        '....pppppp......',
+        '...pqppppqp.....',
+        '..ppppppppp.....',
+        '..pppppppppp....',
+        '..pppppppppp....',
+        '..qppppppppp....',
+        '...pppppppp.....',
+        '...pppppppq.....',
+        '....pppppp......',
+        '.....qppq.......',
+        '................',
+        '................',
+        '................',
+        '................')
+}
+New-HideIcon 'item_cowhide'        '#b8946a' '#8a6a44'
+New-HideIcon 'item_leather'        '#c89c64' '#9a7038'
+New-HideIcon 'item_dragon_hide'    '#5a8a46' '#3a6030'
+New-HideIcon 'item_dragon_leather' '#4a7038' '#2e5024'
+
+Save-Sprite 'item_needle' @{ 'n'='#d0d0d8'; 'e'='#9098a0'; 'v'='#f0f0f8' } @(
+    '.......e........',
+    '......e.e.......',
+    '......e.e.......',
+    '.......n........',
+    '.......n........',
+    '.......n........',
+    '.......n........',
+    '.......n........',
+    '.......n........',
+    '.......n........',
+    '.......n........',
+    '.......v........',
+    '................',
+    '................',
+    '................',
+    '................')
+Save-Sprite 'item_thread' @{ 's'='#b07840'; 't'='#e0d8a0' } @(
+    '................',
+    '................',
+    '....ssssssss....',
+    '....s......s....',
+    '....tttttttt....',
+    '....tttttttt....',
+    '....tttttttt....',
+    '....tttttttt....',
+    '....tttttttt....',
+    '....s......s....',
+    '....ssssssss....',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................')
+
+# ---- Ranged armour: brown leather and green dragonhide (icons + worn) ----
+$leatherMap = @{ '#b87f4e'='#9c6b3e'; '#94633a'='#6b4526'; '#d8a070'='#c49464' }
+$dhideMap   = @{ '#b87f4e'='#4a7a3a'; '#94633a'='#356029'; '#d8a070'='#6ea84e' }
+New-Recolor 'item_bronze_helm' 'item_leather_coif' $leatherMap
+New-Recolor 'item_bronze_body' 'item_leather_body' $leatherMap
+New-Recolor 'item_bronze_helm' 'item_dhide_coif'   $dhideMap
+New-Recolor 'item_bronze_body' 'item_dhide_body'   $dhideMap
+foreach ($pair in @(@('le',$leatherMap), @('dh',$dhideMap))) {
+    $tag = $pair[0]; $map = $pair[1]
+    foreach ($slot in 'helm','body') {
+        foreach ($dir in 'd','u','s') {
+            New-Recolor "eq_bz_${slot}_$dir" "eq_${tag}_${slot}_$dir" $map
+        }
+        New-FlipX "eq_${tag}_${slot}_s" "eq_${tag}_${slot}_sl"
+    }
+}
+
+# ---- Tanner NPC: a leather-aproned craftsman by the pasture ----
+New-Recolor 'pl_down_a' 'tanner_down_a' @{ '#3e5e7e' = '#8a5a30'; '#4a3320' = '#5a3a1e' }
+
 Write-Host "Generating title logo..."
 
 # 256 wide: CI4 TMEM pitch must stay 8-byte aligned (280 wide = 140B = broken)

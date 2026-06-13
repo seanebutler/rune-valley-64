@@ -85,6 +85,20 @@ if ($mFishBlock.Success) {
     }
 }
 
+# --- crafting recipes: { result, hide, n_hide, n_thread, lvl, xp } ---
+$crafts = @()
+$mCraftBlock = [regex]::Match($src, 'craft_list\[\]\s*=\s*\{(.*?)\};', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+if ($mCraftBlock.Success) {
+    $rxC = '\{\s*(IT_\w+)\s*,\s*(IT_\w+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,'
+    foreach ($m in [regex]::Matches($mCraftBlock.Groups[1].Value, $rxC)) {
+        $crafts += [pscustomobject]@{
+            Result=$m.Groups[1].Value; Hide=$m.Groups[2].Value
+            NHide=[int]$m.Groups[3].Value; NThread=[int]$m.Groups[4].Value
+            Lvl=[int]$m.Groups[5].Value
+        }
+    }
+}
+
 # --- mob -> drop-table name (parsed from the mob_drops() switch) ---
 $mobTable = @{}
 foreach ($m in [regex]::Matches($src, 'case\s+MOB_(\w+):\s*\*n\s*=\s*NDROPS\((\w+)\)')) {
@@ -148,7 +162,7 @@ W ''
 W '| Item | Slot | Attack | Defence | Magic | Wield level |'
 W '|---|---|--:|--:|--:|--:|'
 foreach ($slot in 'SLOT_HELM','SLOT_SHIELD','SLOT_BODY') {
-    foreach ($a in ($equip | Where-Object { $_.Slot -eq $slot } | Sort-Object Lvl, Name)) {
+    foreach ($a in ($equip | Where-Object { $_.Slot -eq $slot -and $_.Rng -eq 0 } | Sort-Object Lvl, Name)) {
         W ("| {0} | {1} | +{2} | +{3} | +{4} | {5} |" -f $a.Name, $slotLabel[$slot], $a.Atk, $a.Def, $a.Mag, $a.Lvl)
     }
 }
@@ -205,8 +219,9 @@ W '## Ranged'
 W ''
 W 'Equip a bow in the weapon slot and carry arrows, then fire at a goblin from up'
 W 'to five tiles away. Each shot spends one arrow and trains Ranged; accuracy and'
-W 'max hit add the bow''s and the arrow''s Ranged bonuses. Bows and arrows are'
-W 'fletched (open the Fletching menu by using a knife on logs).'
+W 'max hit add the bow''s, the arrow''s and your ranged armour''s Ranged bonuses.'
+W 'Bows and arrows are fletched (use a knife on logs). **Mithril arrows need an'
+W 'oak shortbow or better** - a plain shortbow can''t draw them.'
 W ''
 W '| Bow | Ranged | Wield level |'
 W '|---|--:|--:|'
@@ -218,6 +233,31 @@ W '| Arrow | Ranged |'
 W '|---|--:|'
 foreach ($a in ($arrows | Sort-Object Rng)) {
     W ("| {0} | +{1} |" -f $a.Name, $a.Rng)
+}
+W ''
+W 'Ranged armour is crafted (see below) and worn for a Ranged bonus; it needs the'
+W 'listed Ranged level to wear.'
+W ''
+W '| Ranged armour | Slot | Ranged | Defence | Ranged level |'
+W '|---|---|--:|--:|--:|'
+foreach ($a in ($equip | Where-Object { $_.Rng -gt 0 -and $_.Slot -ne 'SLOT_WEAPON' } | Sort-Object Lvl, Name)) {
+    W ("| {0} | {1} | +{2} | +{3} | {4} |" -f $a.Name, $slotLabel[$a.Slot], $a.Rng, $a.Def, $a.Lvl)
+}
+W ''
+W '---'
+W ''
+W '## Crafting'
+W ''
+W 'Slay cows for **cowhide** (and the Ancient Dragon for **dragonhide**), then'
+W 'have **Pelt the Tanner** by the cow pasture cure them into leather for a few'
+W 'coins. Use a **needle** on the leather (with **thread** in your pack) to stitch'
+W 'ranged armour - both sold at the General Store. Dragonhide gear demands a high'
+W 'Crafting level but gives the best Ranged bonuses in the valley.'
+W ''
+W '| Stitch | Materials | Crafting level |'
+W '|---|---|--:|'
+foreach ($c in $crafts) {
+    W ("| {0} | {1}x {2} + {3}x Thread | {4} |" -f (Item-Label $c.Result), $c.NHide, (Item-Label $c.Hide), $c.NThread, $c.Lvl)
 }
 W ''
 W '---'
