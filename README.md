@@ -26,6 +26,13 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
 - **Runecraft** — mine rune essence from the glittering rock in the northwest
   ruins (it never depletes) and bind it at the Air altar beside it, or brave
   the goblin camp to reach the Fire altar (level 14)
+- **Smithing** — smelt copper + tin into bronze bars at the furnace by the
+  mine (iron smelts at 15, and fails half the time, as is tradition), then
+  hammer out swords and iron tools at the anvil. Better gear applies
+  automatically: swords raise your max hit, iron tools speed up gathering
+- **A quest!** — *The Chef's Little Problem*: Chef Bouillon by the bank path
+  needs 3 goblins bashed and 2 cooked shrimp delivered. Chunky xp rewards,
+  as is right and proper
 - **Banking** — a bank with deposit-all and per-item withdrawal sits at the
   north end of the path
 - **Hitpoints** start at level 10, regenerate 1 per minute, and shrimp heal 3

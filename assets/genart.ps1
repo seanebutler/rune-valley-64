@@ -829,6 +829,103 @@ Save-Sprite 'item_fire_rune' @{ 's'='#d8d8d0'; 'd'='#a8a8a0'; 'g'='#e85820'; 'y'
     '................',
     '................')
 
+Write-Host "Generating smithing..."
+
+# Furnace: stone dome with glowing mouth
+Save-Sprite 'obj_furnace' @{ 'a'='#8a8a84'; 'b'='#62625c'; 'c'='#9c9c96'; 'o'='#f07820'; 'y'='#f8c83c' } @(
+    '................',
+    '....bbbbbbbb....',
+    '...bacccccab....',
+    '..baccccccccb...',
+    '..bacccccccab...',
+    '.baccccccccccb..',
+    '.bacccccccccab..',
+    '.baccbbbbbccab..',
+    '.bacbooooobcab..',
+    '.bacbooyoobcab..',
+    '.bacbooooobcab..',
+    '.bacbbooobbcab..',
+    '.baccbbbbbccab..',
+    '.bbbbbbbbbbbbb..',
+    '.bbbbbbbbbbbbb..',
+    '................')
+
+# Anvil on a wooden block
+Save-Sprite 'obj_anvil' @{ 'a'='#54545e'; 'b'='#3a3a44'; 'c'='#6e6e78'; 'w'='#6e5230'; 'd'='#553e22' } @(
+    '................',
+    '................',
+    '................',
+    '..accccccccca...',
+    '..aaaaaaaaaaa...',
+    '....baaaaab.....',
+    '.....baaab......',
+    '.....baaab......',
+    '....baaaaab.....',
+    '...baaaaaaab....',
+    '..wwwwwwwwwww...',
+    '..wwwwwwwwwww...',
+    '..dwwwwwwwwd....',
+    '..dddddddddd....',
+    '................',
+    '................')
+
+# Metal bars (ingots)
+Save-Sprite 'item_bronze_bar' @{ 'b'='#b87f4e'; 'd'='#94633a'; 'h'='#d8a070' } @(
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '....hhhhhhhh....',
+    '...hbbbbbbbbd...',
+    '..hbbbbbbbbbbd..',
+    '..dbbbbbbbbbbd..',
+    '..dddddddddddd..',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................')
+
+# Hammer
+Save-Sprite 'item_hammer' @{ 'a'='#7a7a84'; 'b'='#54545e'; 'h'='#6e5230'; 'd'='#553e22' } @(
+    '................',
+    '................',
+    '...aaaaaaa......',
+    '...aaaaaaab.....',
+    '...aaaaaaab.....',
+    '...baaaaabb.....',
+    '......hd........',
+    '......hd........',
+    '......hd........',
+    '......hd........',
+    '......hd........',
+    '......hd........',
+    '......hd........',
+    '......dd........',
+    '................',
+    '................')
+
+# Bronze sword (iron variant made by recolor below)
+Save-Sprite 'item_bronze_sword' @{ 'b'='#b87f4e'; 'd'='#94633a'; 'h'='#553e22'; 'g'='#c8a23c' } @(
+    '................',
+    '............bb..',
+    '...........bbb..',
+    '..........bbbd..',
+    '.........bbbd...',
+    '........bbbd....',
+    '.......bbbd.....',
+    '......bbbd......',
+    '..g..bbbd.......',
+    '...gbbbd........',
+    '....gbd.........',
+    '...ggg..........',
+    '..hh.gg.........',
+    '.hh...g.........',
+    '................',
+    '................')
+
 Write-Host "Generating bot recolors..."
 
 # Palette-swap the player sprites into bot variants (tunic + hair)
@@ -868,13 +965,38 @@ foreach ($set in 'bota','botb','botc') {
     }
 }
 
+# Chef NPC: white apron + chef hat (white "hair")
+New-Recolor 'pl_down_a' 'chef_down_a' @{ '#3e5e7e' = '#f0eee8'; '#4a3320' = '#f8f8f4' }
+
+# Left-facing variants: copy-mode blits cannot mirror (reversed S range is
+# undefined on real RDP hardware), so bake flipped sprites instead
+foreach ($set in 'pl','bota','botb','botc') {
+    foreach ($p in @{ side_a = 'side_la'; side_b = 'side_lb' }.GetEnumerator()) {
+        $src = New-Object System.Drawing.Bitmap((Join-Path $outDir "${set}_$($p.Key).png"))
+        $flipped = New-Object System.Drawing.Bitmap($src)
+        $src.Dispose()
+        $flipped.RotateFlip([System.Drawing.RotateFlipType]::RotateNoneFlipX)
+        $flipped.Save((Join-Path $outDir "${set}_$($p.Value).png"), [System.Drawing.Imaging.ImageFormat]::Png)
+        $flipped.Dispose()
+        Write-Host "  ${set}_$($p.Value)"
+    }
+}
+
+# Iron-tier recolors of bronze gear
+$ironMap = @{ '#b87f4e' = '#a8a8b2'; '#94633a' = '#83838d'; '#d8a070' = '#c8c8d2' }
+New-Recolor 'item_axe'          'item_iron_axe'   $ironMap
+New-Recolor 'item_pickaxe'      'item_iron_pick'  $ironMap
+New-Recolor 'item_bronze_bar'   'item_iron_bar'   $ironMap
+New-Recolor 'item_bronze_sword' 'item_iron_sword' $ironMap
+
 Write-Host "Generating title logo..."
 
-$lw = 280; $lh = 56
+# 256 wide: CI4 TMEM pitch must stay 8-byte aligned (280 wide = 140B = broken)
+$lw = 256; $lh = 56
 $bmp = New-Object System.Drawing.Bitmap($lw, $lh, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
 $g = [System.Drawing.Graphics]::FromImage($bmp)
 $g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::SingleBitPerPixelGridFit
-$font = New-Object System.Drawing.Font('Arial Black', 24, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
+$font = New-Object System.Drawing.Font('Arial Black', 22, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
 $fmt = New-Object System.Drawing.StringFormat
 $fmt.Alignment = [System.Drawing.StringAlignment]::Center
 $fmt.LineAlignment = [System.Drawing.StringAlignment]::Center
@@ -883,18 +1005,40 @@ $gold   = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(
 $g.DrawString('RUNE VALLEY 64', $font, $shadow, (New-Object System.Drawing.RectangleF(3, 3, $lw, $lh)), $fmt)
 $g.DrawString('RUNE VALLEY 64', $font, $gold,   (New-Object System.Drawing.RectangleF(0, 0, $lw, $lh)), $fmt)
 $g.Dispose()
-# slice into 4 strips of 14px so each sprite fits in TMEM (no chunked blits)
-for ($i = 0; $i -lt 4; $i++) {
-    $strip = New-Object System.Drawing.Bitmap($lw, 14, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
-    $sg = [System.Drawing.Graphics]::FromImage($strip)
-    $dst = New-Object System.Drawing.Rectangle(0, 0, $lw, 14)
-    $src = New-Object System.Drawing.Rectangle(0, ($i * 14), $lw, 14)
+# clean the GDI output to strict binary pixels (transparent / gold / shadow):
+# stray partial-alpha pixels from text rendering produce corrupt sprites
+$clean = New-Object System.Drawing.Bitmap($lw, $lh, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+for ($y = 0; $y -lt $lh; $y++) {
+    for ($x = 0; $x -lt $lw; $x++) {
+        $p = $bmp.GetPixel($x, $y)
+        if ($p.A -lt 128) {
+            $clean.SetPixel($x, $y, [System.Drawing.Color]::FromArgb(0, 0, 0, 0))
+        } elseif ($p.R -gt 120) {
+            $clean.SetPixel($x, $y, [System.Drawing.Color]::FromArgb(255, 248, 200, 60))
+        } else {
+            $clean.SetPixel($x, $y, [System.Drawing.Color]::FromArgb(255, 40, 28, 12))
+        }
+    }
+}
+$bmp.Dispose()
+$bmp = $clean
+
+# dice into 16 small tiles (4x4 grid of 64x14) so each sprite is a tiny,
+# comfortably TMEM-sized texture like every other sprite in the game
+for ($i = 0; $i -lt 16; $i++) {
+    $r = [int][math]::Floor($i / 4); $c = $i % 4
+    $tile = New-Object System.Drawing.Bitmap(64, 14, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    $sg = [System.Drawing.Graphics]::FromImage($tile)
+    $sg.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::NearestNeighbor
+    $sg.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::Half
+    $dst = New-Object System.Drawing.Rectangle(0, 0, 64, 14)
+    $src = New-Object System.Drawing.Rectangle(($c * 64), ($r * 14), 64, 14)
     $sg.DrawImage($bmp, $dst, $src, [System.Drawing.GraphicsUnit]::Pixel)
     $sg.Dispose()
-    $strip.Save((Join-Path $outDir "ui_logo_$i.png"), [System.Drawing.Imaging.ImageFormat]::Png)
-    $strip.Dispose()
-    Write-Host "  ui_logo_$i ($lw x 14)"
+    $tile.Save((Join-Path $outDir ("ui_logo_{0:d2}.png" -f $i)), [System.Drawing.Imaging.ImageFormat]::Png)
+    $tile.Dispose()
 }
+Write-Host "  ui_logo_00..15 (16 tiles of 64x14)"
 $bmp.Dispose()
 
 Write-Host "Done. PNGs in $outDir"

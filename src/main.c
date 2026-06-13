@@ -39,7 +39,8 @@
 enum { TER_GRASS, TER_PATH, TER_SAND, TER_WATER, TER_BRIDGE, TER_WALL, TER_FLOOR };
 enum { OBJ_NONE, OBJ_TREE, OBJ_OAK, OBJ_STUMP, OBJ_ROCK_COPPER, OBJ_ROCK_TIN,
        OBJ_ROCK_IRON, OBJ_ROCK_EMPTY, OBJ_FISH, OBJ_BOOTH, OBJ_FIRE,
-       OBJ_ESSENCE, OBJ_ALTAR_AIR, OBJ_ALTAR_FIRE };
+       OBJ_ESSENCE, OBJ_ALTAR_AIR, OBJ_ALTAR_FIRE,
+       OBJ_FURNACE, OBJ_ANVIL, OBJ_CHEF };
 
 static const char *map_rows[MAP_H] = {
     "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT~~~~TTTTTT",
@@ -52,7 +53,7 @@ static const char *map_rows[MAP_H] = {
     "T.................wfffffffffffw.......~~~~.....T",
     "T.................wwwwwpppwwwww.......~~~~.....T",
     "T......................ppp............~~~~.....T",
-    "T....T.................ppp............~~~~.....T",
+    "T....T.................ppp.H..........~~~~.....T",
     "T.............T........ppp.....T......~~~~.....T",
     "T......................p@p............~~~~.....T",
     "T..T...................ppp.......T....~~~~.....T",
@@ -61,7 +62,7 @@ static const char *map_rows[MAP_H] = {
     "T.......pp.............ppp............~~~~.....T",
     "T.......pp.............ppp......T.....~~~~.G...T",
     "T.......pp.............ppppppppppppppp====ppp..T",
-    "T.......pp............................~~~~.....T",
+    "T.......pp..U.V.......................~~~~.....T",
     "T.......pp..........................ss~~~~..G..T",
     "T.......pp..........................ss~~~~.....T",
     "T.......pp..........................ssF~~~..T..T",
@@ -88,11 +89,12 @@ static int16_t obj_timer[MAP_H][MAP_W];
 /* ------------------------------------------------------------ skills */
 
 enum { SK_ATT, SK_STR, SK_DEF, SK_HP, SK_WC, SK_MINE, SK_FISH, SK_FM, SK_COOK,
-       SK_PRAY, SK_RC, NUM_SKILLS };
+       SK_PRAY, SK_RC, SK_SMITH, NUM_SKILLS };
 
 static const char *skill_names[NUM_SKILLS] = {
     "Attack", "Strength", "Defence", "Hitpoints", "Woodcutting",
-    "Mining", "Fishing", "Firemaking", "Cooking", "Prayer", "Runecraft"
+    "Mining", "Fishing", "Firemaking", "Cooking", "Prayer", "Runecraft",
+    "Smithing"
 };
 
 static int32_t xp[NUM_SKILLS];        /* stored as xp * 10 */
@@ -119,7 +121,9 @@ static int level_of(int sk)
 
 enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_RAW_SHRIMP, IT_SHRIMP, IT_BURNT, IT_AXE, IT_PICK, IT_NET,
-       IT_TINDER, IT_BONES, IT_ESSENCE, IT_AIR_RUNE, IT_FIRE_RUNE, NUM_ITEMS };
+       IT_TINDER, IT_BONES, IT_ESSENCE, IT_AIR_RUNE, IT_FIRE_RUNE,
+       IT_BRONZE_BAR, IT_IRON_BAR, IT_HAMMER, IT_BRONZE_SWORD, IT_IRON_SWORD,
+       IT_IRON_AXE, IT_IRON_PICK, NUM_ITEMS };
 
 typedef struct { const char *name; int spr; int heal; bool tool; } iteminfo_t;
 
@@ -131,19 +135,26 @@ enum {
     SPR_TREE, SPR_OAK, SPR_STUMP, SPR_ROCK_C, SPR_ROCK_T, SPR_ROCK_I,
     SPR_ROCK_E, SPR_FISH_A, SPR_FISH_B, SPR_BOOTH, SPR_FIRE_A, SPR_FIRE_B,
     SPR_PL_DOWN_A, SPR_PL_DOWN_B, SPR_PL_UP_A, SPR_PL_UP_B,
-    SPR_PL_SIDE_A, SPR_PL_SIDE_B, SPR_GOB_A, SPR_GOB_B,
+    SPR_PL_SIDE_A, SPR_PL_SIDE_B, SPR_PL_SIDE_LA, SPR_PL_SIDE_LB,
+    SPR_GOB_A, SPR_GOB_B,
     SPR_I_LOGS, SPR_I_OAK_LOGS, SPR_I_COPPER, SPR_I_TIN, SPR_I_IRON,
     SPR_I_RAW_SHRIMP, SPR_I_SHRIMP, SPR_I_BURNT, SPR_I_AXE, SPR_I_PICK,
     SPR_I_NET, SPR_I_TINDER, SPR_I_BONES,
     SPR_ESSENCE, SPR_ALTAR_AIR, SPR_ALTAR_FIRE,
     SPR_I_ESSENCE, SPR_I_AIR_RUNE, SPR_I_FIRE_RUNE,
     SPR_BOTA_DOWN_A, SPR_BOTA_DOWN_B, SPR_BOTA_UP_A, SPR_BOTA_UP_B,
-    SPR_BOTA_SIDE_A, SPR_BOTA_SIDE_B,
+    SPR_BOTA_SIDE_A, SPR_BOTA_SIDE_B, SPR_BOTA_SIDE_LA, SPR_BOTA_SIDE_LB,
     SPR_BOTB_DOWN_A, SPR_BOTB_DOWN_B, SPR_BOTB_UP_A, SPR_BOTB_UP_B,
-    SPR_BOTB_SIDE_A, SPR_BOTB_SIDE_B,
+    SPR_BOTB_SIDE_A, SPR_BOTB_SIDE_B, SPR_BOTB_SIDE_LA, SPR_BOTB_SIDE_LB,
     SPR_BOTC_DOWN_A, SPR_BOTC_DOWN_B, SPR_BOTC_UP_A, SPR_BOTC_UP_B,
-    SPR_BOTC_SIDE_A, SPR_BOTC_SIDE_B,
+    SPR_BOTC_SIDE_A, SPR_BOTC_SIDE_B, SPR_BOTC_SIDE_LA, SPR_BOTC_SIDE_LB,
     SPR_LOGO_0, SPR_LOGO_1, SPR_LOGO_2, SPR_LOGO_3,
+    SPR_LOGO_4, SPR_LOGO_5, SPR_LOGO_6, SPR_LOGO_7,
+    SPR_LOGO_8, SPR_LOGO_9, SPR_LOGO_10, SPR_LOGO_11,
+    SPR_LOGO_12, SPR_LOGO_13, SPR_LOGO_14, SPR_LOGO_15,
+    SPR_FURNACE, SPR_ANVIL, SPR_CHEF,
+    SPR_I_BRONZE_BAR, SPR_I_IRON_BAR, SPR_I_HAMMER,
+    SPR_I_BRONZE_SWORD, SPR_I_IRON_SWORD, SPR_I_IRON_AXE, SPR_I_IRON_PICK,
     NUM_SPR
 };
 
@@ -154,6 +165,7 @@ static const char *spr_files[NUM_SPR] = {
     "obj_rock_iron", "obj_rock_empty", "obj_fish_a", "obj_fish_b", "obj_booth",
     "obj_fire_a", "obj_fire_b",
     "pl_down_a", "pl_down_b", "pl_up_a", "pl_up_b", "pl_side_a", "pl_side_b",
+    "pl_side_la", "pl_side_lb",
     "goblin_a", "goblin_b",
     "item_logs", "item_oak_logs", "item_copper_ore", "item_tin_ore",
     "item_iron_ore", "item_raw_shrimp", "item_shrimp", "item_burnt_shrimp",
@@ -161,12 +173,18 @@ static const char *spr_files[NUM_SPR] = {
     "obj_essence_rock", "obj_altar_air", "obj_altar_fire",
     "item_essence", "item_air_rune", "item_fire_rune",
     "bota_down_a", "bota_down_b", "bota_up_a", "bota_up_b",
-    "bota_side_a", "bota_side_b",
+    "bota_side_a", "bota_side_b", "bota_side_la", "bota_side_lb",
     "botb_down_a", "botb_down_b", "botb_up_a", "botb_up_b",
-    "botb_side_a", "botb_side_b",
+    "botb_side_a", "botb_side_b", "botb_side_la", "botb_side_lb",
     "botc_down_a", "botc_down_b", "botc_up_a", "botc_up_b",
-    "botc_side_a", "botc_side_b",
-    "ui_logo_0", "ui_logo_1", "ui_logo_2", "ui_logo_3"
+    "botc_side_a", "botc_side_b", "botc_side_la", "botc_side_lb",
+    "ui_logo_00", "ui_logo_01", "ui_logo_02", "ui_logo_03",
+    "ui_logo_04", "ui_logo_05", "ui_logo_06", "ui_logo_07",
+    "ui_logo_08", "ui_logo_09", "ui_logo_10", "ui_logo_11",
+    "ui_logo_12", "ui_logo_13", "ui_logo_14", "ui_logo_15",
+    "obj_furnace", "obj_anvil", "chef_down_a",
+    "item_bronze_bar", "item_iron_bar", "item_hammer",
+    "item_bronze_sword", "item_iron_sword", "item_iron_axe", "item_iron_pick"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -189,15 +207,22 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     [IT_ESSENCE]    = { "Rune essence",SPR_I_ESSENCE,    0, false },
     [IT_AIR_RUNE]   = { "Air rune",    SPR_I_AIR_RUNE,   0, false },
     [IT_FIRE_RUNE]  = { "Fire rune",   SPR_I_FIRE_RUNE,  0, false },
+    [IT_BRONZE_BAR] = { "Bronze bar",  SPR_I_BRONZE_BAR, 0, false },
+    [IT_IRON_BAR]   = { "Iron bar",    SPR_I_IRON_BAR,   0, false },
+    [IT_HAMMER]     = { "Hammer",      SPR_I_HAMMER,     0, true  },
+    [IT_BRONZE_SWORD]={ "Bronze sword",SPR_I_BRONZE_SWORD,0, true },
+    [IT_IRON_SWORD] = { "Iron sword",  SPR_I_IRON_SWORD, 0, true  },
+    [IT_IRON_AXE]   = { "Iron axe",    SPR_I_IRON_AXE,   0, true  },
+    [IT_IRON_PICK]  = { "Iron pick",   SPR_I_IRON_PICK,  0, true  },
 };
 
 /* ------------------------------------------------------------ audio */
 
 enum { SND_CHOP, SND_MINE, SND_SPLASH, SND_HIT, SND_EAT, SND_COOK, SND_FIRE,
-       SND_LEVELUP, SND_DEATH, SND_CRAFT, NUM_SND };
+       SND_LEVELUP, SND_DEATH, SND_CRAFT, SND_SMITH, NUM_SND };
 static const char *snd_files[NUM_SND] = {
     "chop", "mine", "splash", "hit", "eat", "cook", "fire", "levelup", "death",
-    "craft"
+    "craft", "smith"
 };
 static wav64_t snd[NUM_SND];
 static wav64_t music;
@@ -212,8 +237,8 @@ static void sfx_ui(int s) { wav64_play(&snd[s], CH_UI); }
 
 /* ------------------------------------------------------------ player */
 
-typedef enum { ST_IDLE, ST_CHOP, ST_MINE, ST_FISH, ST_COOK, ST_LIGHT, ST_FIGHT }
-    pstate_t;
+typedef enum { ST_IDLE, ST_CHOP, ST_MINE, ST_FISH, ST_COOK, ST_LIGHT, ST_FIGHT,
+               ST_SMELT } pstate_t;
 
 static struct {
     int   tx, ty;            /* current tile           */
@@ -262,8 +287,22 @@ static int num_gob = 0;
 
 /* ------------------------------------------------------------ UI state */
 
-typedef enum { UI_NONE, UI_INV, UI_SKILLS, UI_BANK, UI_HELP } ui_t;
+typedef enum { UI_NONE, UI_INV, UI_SKILLS, UI_BANK, UI_HELP, UI_SMITH,
+               UI_DIALOG } ui_t;
 static ui_t ui_mode = UI_NONE;
+static int smith_cursor = 0;
+
+/* quest: The Chef's Little Problem */
+enum { QUEST_NONE, QUEST_ACTIVE, QUEST_DONE };
+static int quest_state = QUEST_NONE;
+static int quest_kills = 0;
+#define QUEST_KILLS_NEEDED 3
+#define QUEST_SHRIMP_NEEDED 2
+
+/* dialog box */
+static const char *dlg_title = "";
+static char dlg_buf[4][44];
+static int dlg_count = 0;
 
 typedef enum { STATE_TITLE, STATE_PLAY } gstate_t;
 static gstate_t game_state = STATE_TITLE;
@@ -351,6 +390,18 @@ static bool inv_full(void)
 
 static int chance(int percent) { return (rand() % 100) < percent; }
 
+/* gear: the best tool/weapon you carry applies automatically */
+static bool has_axe(void)  { return has_item(IT_AXE) || has_item(IT_IRON_AXE); }
+static bool has_pick(void) { return has_item(IT_PICK) || has_item(IT_IRON_PICK); }
+static int axe_bonus(void)  { return has_item(IT_IRON_AXE) ? 12 : 0; }
+static int pick_bonus(void) { return has_item(IT_IRON_PICK) ? 12 : 0; }
+static int weapon_tier(void)
+{
+    if (has_item(IT_IRON_SWORD)) return 2;
+    if (has_item(IT_BRONZE_SWORD)) return 1;
+    return 0;
+}
+
 static int cheb(int x0, int y0, int x1, int y1)
 {
     int dx = abs(x0 - x1), dy = abs(y0 - y1);
@@ -386,6 +437,9 @@ static void init_map(void)
             case 'E': obj = OBJ_ESSENCE;    break;
             case 'A': obj = OBJ_ALTAR_AIR;  break;
             case 'R': obj = OBJ_ALTAR_FIRE; break;
+            case 'U': obj = OBJ_FURNACE;    break;
+            case 'V': obj = OBJ_ANVIL;      break;
+            case 'H': obj = OBJ_CHEF;       break;
             case 'G':
                 if (num_gob < MAX_GOB) {
                     gob_t *g = &gob[num_gob++];
@@ -420,7 +474,7 @@ static bool tile_walkable(int x, int y)
 /* ------------------------------------------------------------ saves (EEPROM 4K) */
 
 #define SAVE_MAGIC 0x52563634u     /* 'RV64' */
-#define SAVE_VERSION 1
+#define SAVE_VERSION 2
 
 typedef struct __attribute__((packed)) {
     uint32_t magic;
@@ -431,9 +485,13 @@ typedef struct __attribute__((packed)) {
     uint8_t  inv[INV_SIZE];
     uint16_t bank[NUM_ITEMS];
     uint8_t  run_energy;
+    uint8_t  quest_state, quest_kills;
     uint8_t  pad;
     uint16_t checksum;
+    uint8_t  pad2[6];          /* keep sizeof a multiple of the 8-byte block */
 } save_t;
+
+_Static_assert(sizeof(save_t) % 8 == 0, "save_t must be EEPROM-block aligned");
 
 static int save_timer = 0;
 
@@ -456,8 +514,25 @@ static void save_game(void)
     for (int i = 0; i < INV_SIZE; i++) s.inv[i] = inv[i];
     for (int i = 0; i < NUM_ITEMS; i++) s.bank[i] = bank[i];
     s.run_energy = pl.run_energy;
+    s.quest_state = quest_state;
+    s.quest_kills = quest_kills;
     s.checksum = save_checksum(&s);
-    eeprom_write_bytes((const uint8_t *)&s, 0, sizeof s);
+
+    /* write only the blocks that changed, and keep the audio mixer fed
+       between block writes: a long blocking EEPROM burst starves the
+       audio/rspq pipeline and corrupts the RDP stream */
+    uint8_t cur[sizeof(save_t)];
+    eeprom_read_bytes(cur, 0, sizeof cur);
+    const uint8_t *ns = (const uint8_t *)&s;
+    for (int b = 0; b < (int)(sizeof(save_t) / 8); b++) {
+        if (memcmp(cur + b * 8, ns + b * 8, 8) != 0)
+            eeprom_write(b, ns + b * 8);
+        if (audio_can_write()) {
+            short *abuf = audio_write_begin();
+            mixer_poll(abuf, audio_get_buffer_length());
+            audio_write_end();
+        }
+    }
     save_found = true;
 }
 
@@ -481,6 +556,8 @@ static void load_game(void)
     int maxhp = level_of(SK_HP);
     pl.hp = (s.hp >= 1 && s.hp <= maxhp) ? s.hp : maxhp;
     pl.run_energy = s.run_energy <= 100 ? s.run_energy : 100;
+    quest_state = s.quest_state <= QUEST_DONE ? s.quest_state : QUEST_NONE;
+    quest_kills = s.quest_kills <= QUEST_KILLS_NEEDED ? s.quest_kills : 0;
     if (tile_walkable(s.tx, s.ty)) { pl.tx = s.tx; pl.ty = s.ty; }
     pl.mtx = pl.tx; pl.mty = pl.ty;
     pl.px = pl.tx * TILE + 8; pl.py = pl.ty * TILE + 12;
@@ -521,6 +598,10 @@ static void goblin_die(gob_t *g)
     g->aggro = false;
     g->hurt_timer = 0;
     msg("You have defeated the goblin!");
+    if (quest_state == QUEST_ACTIVE && quest_kills < QUEST_KILLS_NEEDED) {
+        quest_kills++;
+        msg("Goblin bashed for the Chef! (%d/%d)", quest_kills, QUEST_KILLS_NEEDED);
+    }
     if (!inv_full()) {
         add_item(IT_BONES);
         msg("The goblin drops some bones. You take them.");
@@ -531,8 +612,9 @@ static void goblin_die(gob_t *g)
 static void player_attack(gob_t *g)
 {
     int att = level_of(SK_ATT), str = level_of(SK_STR);
-    int max_hit = 1 + str / 8;
-    int p_hit = 100 * (att + 8) / (att + 18);
+    int max_hit = 1 + str / 8 + weapon_tier();
+    int p_hit = 100 * (att + 8) / (att + 18) + weapon_tier() * 5;
+    if (p_hit > 95) p_hit = 95;
     int dmg = chance(p_hit) ? (rand() % (max_hit + 1)) : 0;
     g->hp -= dmg;
     g->hitsplat = dmg;
@@ -584,7 +666,7 @@ static void tick_skilling(void)
         bool oak = (o == OBJ_OAK);
         if (oak && wc < 15) { msg("You need a Woodcutting level of 15 to chop oaks."); stop_action(); break; }
         if (inv_full()) { msg("Your inventory is too full to carry any more."); stop_action(); break; }
-        int p = oak ? (10 + wc * 3 / 2) : (25 + wc * 2);
+        int p = (oak ? (10 + wc * 3 / 2) : (25 + wc * 2)) + axe_bonus();
         if (p > 90) p = 90;
         if (chance(p)) {
             sfx(SND_CHOP);
@@ -627,7 +709,7 @@ static void tick_skilling(void)
         bool iron = (o == OBJ_ROCK_IRON);
         if (iron && mn < 15) { msg("You need a Mining level of 15 to mine iron."); stop_action(); break; }
         if (inv_full()) { msg("Your inventory is too full to carry any more."); stop_action(); break; }
-        int p = iron ? (8 + mn * 3 / 2) : (25 + mn * 2);
+        int p = (iron ? (8 + mn * 3 / 2) : (25 + mn * 2)) + pick_bonus();
         if (p > 90) p = 90;
         if (chance(p)) {
             sfx(SND_MINE);
@@ -707,6 +789,37 @@ static void tick_skilling(void)
                 pl.moving = true;
                 pl.facing = 2;
             }
+            stop_action();
+        }
+        break;
+    }
+    case ST_SMELT: {
+        if (object[ay][ax] != OBJ_FURNACE) { stop_action(); break; }
+        if (--pl.act_timer > 0) break;
+        pl.act_timer = 3;
+        if (has_item(IT_COPPER) && has_item(IT_TIN)) {
+            remove_item(IT_COPPER);
+            remove_item(IT_TIN);
+            add_item(IT_BRONZE_BAR);
+            sfx(SND_FIRE);
+            msg("You smelt a bronze bar.");
+            add_xp(SK_SMITH, 63, true);
+        } else if (has_item(IT_IRON)) {
+            if (level_of(SK_SMITH) < 15) {
+                msg("You need a Smithing level of 15 to smelt iron.");
+                stop_action();
+                break;
+            }
+            remove_item(IT_IRON);
+            sfx(SND_FIRE);
+            if (chance(50)) {
+                add_item(IT_IRON_BAR);
+                msg("You smelt an iron bar.");
+                add_xp(SK_SMITH, 125, true);
+            } else {
+                msg("The iron ore crumbles in the heat. Too impure.");
+            }
+        } else {
             stop_action();
         }
         break;
@@ -1181,6 +1294,61 @@ static gob_t *adjacent_goblin(void)
     return NULL;
 }
 
+static void dlg_line(const char *text)
+{
+    if (dlg_count < 4) snprintf(dlg_buf[dlg_count++], sizeof dlg_buf[0], "%s", text);
+}
+
+static void chef_talk(void)
+{
+    dlg_title = "Chef Bouillon";
+    dlg_count = 0;
+    switch (quest_state) {
+    case QUEST_NONE:
+        dlg_line("Psst! Those rotten goblins across the");
+        dlg_line("river keep raiding my kitchen stores!");
+        dlg_line("Bash 3 of them, then bring me 2 cooked");
+        dlg_line("shrimp to restock. I'll reward you well!");
+        quest_state = QUEST_ACTIVE;
+        quest_kills = 0;
+        msg("Quest started: The Chef's Little Problem.");
+        break;
+    case QUEST_ACTIVE:
+        if (quest_kills >= QUEST_KILLS_NEEDED &&
+            inv_count(IT_SHRIMP) >= QUEST_SHRIMP_NEEDED) {
+            remove_item(IT_SHRIMP);
+            remove_item(IT_SHRIMP);
+            quest_state = QUEST_DONE;
+            dlg_line("You're a hero! My kitchen is safe and");
+            dlg_line("my shrimp are back on the menu.");
+            dlg_line("Let me teach you a few tricks of the");
+            dlg_line("trade. Do come back for a meal!");
+            sfx_ui(SND_LEVELUP);
+            msg("Quest complete: The Chef's Little Problem!");
+            add_xp(SK_COOK, 3000, false);
+            add_xp(SK_ATT, 3000, false);
+            msg("The Chef rewards your Cooking and Attack.");
+        } else {
+            char buf[44];
+            snprintf(buf, sizeof buf, "Goblins bashed: %d of %d.",
+                     quest_kills, QUEST_KILLS_NEEDED);
+            dlg_line(buf);
+            snprintf(buf, sizeof buf, "Cooked shrimp with you: %d of %d.",
+                     inv_count(IT_SHRIMP), QUEST_SHRIMP_NEEDED);
+            dlg_line(buf);
+            dlg_line("Hop to it, friend! My customers grow");
+            dlg_line("hungrier by the minute.");
+        }
+        break;
+    default:
+        dlg_line("My shrimp empire flourishes once more,");
+        dlg_line("thanks to you. You're always welcome");
+        dlg_line("at my table, hero.");
+        break;
+    }
+    ui_mode = UI_DIALOG;
+}
+
 static void interact(void)
 {
     gob_t *g = adjacent_goblin();
@@ -1204,12 +1372,12 @@ static void interact(void)
 
     switch (t.obj) {
     case OBJ_TREE: case OBJ_OAK:
-        if (!has_item(IT_AXE)) { msg("You need an axe to chop down this tree."); return; }
+        if (!has_axe()) { msg("You need an axe to chop down this tree."); return; }
         pl.state = ST_CHOP; pl.act_timer = 2;
         msg("You swing your axe at the tree.");
         break;
     case OBJ_ROCK_COPPER: case OBJ_ROCK_TIN: case OBJ_ROCK_IRON: case OBJ_ESSENCE:
-        if (!has_item(IT_PICK)) { msg("You need a pickaxe to mine this rock."); return; }
+        if (!has_pick()) { msg("You need a pickaxe to mine this rock."); return; }
         pl.state = ST_MINE; pl.act_timer = 2;
         msg("You swing your pick at the rock.");
         break;
@@ -1251,6 +1419,27 @@ static void interact(void)
             msg("The fire is nice and warm.");
         }
         break;
+    case OBJ_FURNACE:
+        if ((has_item(IT_COPPER) && has_item(IT_TIN)) || has_item(IT_IRON)) {
+            pl.state = ST_SMELT; pl.act_timer = 2;
+            msg("You feed ore into the furnace.");
+        } else {
+            msg("You need ores to smelt. Copper and tin make bronze.");
+        }
+        break;
+    case OBJ_ANVIL:
+        if (!has_item(IT_HAMMER)) {
+            msg("You need a hammer to work the anvil.");
+        } else if (!has_item(IT_BRONZE_BAR) && !has_item(IT_IRON_BAR)) {
+            msg("You need metal bars to smith. Smelt ore at the furnace.");
+        } else {
+            ui_mode = UI_SMITH;
+            smith_cursor = 0;
+        }
+        break;
+    case OBJ_CHEF:
+        chef_talk();
+        break;
     }
 }
 
@@ -1272,6 +1461,9 @@ static const char *context_hint(void)
     case OBJ_ESSENCE:     return "A: Mine Essence rock";
     case OBJ_ALTAR_AIR:   return "A: Craft runes at Air altar";
     case OBJ_ALTAR_FIRE:  return "A: Craft runes at Fire altar";
+    case OBJ_FURNACE:     return "A: Smelt ore at Furnace";
+    case OBJ_ANVIL:       return "A: Smith at Anvil";
+    case OBJ_CHEF:        return "A: Talk to Chef Bouillon";
     }
     return NULL;
 }
@@ -1319,6 +1511,13 @@ static void use_inv_item(int slot)
         msg("Ugh, there's nothing left of it. Best discard it.");
         break;
     case IT_ESSENCE:   msg("A chunk of raw magical essence."); break;
+    case IT_BRONZE_BAR: case IT_IRON_BAR:
+        msg("Take this to the anvil by the mine."); break;
+    case IT_HAMMER:    msg("For smithing at an anvil."); break;
+    case IT_BRONZE_SWORD: case IT_IRON_SWORD:
+        msg("You feel mightier just holding it."); break;
+    case IT_IRON_AXE:  msg("A woodcutter's even better friend."); break;
+    case IT_IRON_PICK: msg("Bites through rock with ease."); break;
     case IT_AIR_RUNE:  msg("A rune imbued with the power of air."); break;
     case IT_FIRE_RUNE: msg("A rune imbued with the power of fire."); break;
     case IT_AXE:    msg("A woodcutter's best friend."); break;
@@ -1326,6 +1525,34 @@ static void use_inv_item(int slot)
     case IT_NET:    msg("Used to catch shrimp at fishing spots."); break;
     case IT_TINDER: msg("Useful for lighting fires."); break;
     }
+}
+
+/* ------------------------------------------------------------ smithing */
+
+static const struct { int item, bar, lvl, xp_x10; } smith_list[] = {
+    { IT_BRONZE_SWORD, IT_BRONZE_BAR,  1, 125 },
+    { IT_IRON_SWORD,   IT_IRON_BAR,   15, 250 },
+    { IT_IRON_AXE,     IT_IRON_BAR,   16, 250 },
+    { IT_IRON_PICK,    IT_IRON_BAR,   17, 250 },
+};
+#define SMITH_COUNT (int)(sizeof smith_list / sizeof smith_list[0])
+
+static void smith_make(int row)
+{
+    if (row < 0 || row >= SMITH_COUNT) return;
+    int item = smith_list[row].item;
+    if (level_of(SK_SMITH) < smith_list[row].lvl) {
+        msg("You need a Smithing level of %d to make that.", smith_list[row].lvl);
+        return;
+    }
+    if (!remove_item(smith_list[row].bar)) {
+        msg("You need a %s for that.", iteminfo[smith_list[row].bar].name);
+        return;
+    }
+    add_item(item);
+    sfx(SND_SMITH);
+    msg("You hammer out a %s.", iteminfo[item].name);
+    add_xp(SK_SMITH, smith_list[row].xp_x10, true);
 }
 
 /* ------------------------------------------------------------ bank */
@@ -1467,16 +1694,18 @@ static void draw_text(int style, int x, int y, const char *fmt, ...)
     rdpq_text_print(&(rdpq_textparms_t){ .style_id = style }, FONT_ID, x, y, buf);
 }
 
-/* relative sprite index (0-5) within a 6-sprite actor set, + flip flag */
-static int actor_sprite(int facing, bool moving, float walk_anim, bool *flip)
+/* relative sprite index (0-7) within an 8-sprite actor set.
+   left-facing uses pre-flipped art: runtime mirroring (flip_x) reverses the
+   texture S range, which is undefined in RDP copy mode and crashes it */
+static int actor_sprite(int facing, bool moving, float walk_anim)
 {
     int frame = ((int)(walk_anim / 8)) & 1;
-    *flip = (facing == 2);
     int idx;
     switch (facing) {
-    case 0:  idx = 0; break;     /* down */
-    case 1:  idx = 2; break;     /* up   */
-    default: idx = 4; break;     /* side */
+    case 0:  idx = 0; break;     /* down  */
+    case 1:  idx = 2; break;     /* up    */
+    case 2:  idx = 6; break;     /* left  */
+    default: idx = 4; break;     /* right */
     }
     if (frame && moving) idx++;
     return idx;
@@ -1514,14 +1743,22 @@ static void render(void)
     if (cam_y < 0) cam_y = 0;
     if (cam_x > MAP_W * TILE - SCREEN_W) cam_x = MAP_W * TILE - SCREEN_W;
     if (cam_y > MAP_H * TILE - SCREEN_H) cam_y = MAP_H * TILE - SCREEN_H;
+    /* copy mode cannot draw 4bpp textures at odd screen X (sub-byte shift
+       is undefined on the RDP): keep the camera and every copy-mode blit
+       on even X so the whole frame stays aligned */
+    cam_x &= ~1;
 
     int tx0 = cam_x / TILE, ty0 = cam_y / TILE;
     int tx1 = (cam_x + SCREEN_W - 1) / TILE, ty1 = (cam_y + SCREEN_H - 1) / TILE;
     int water_frame = (frame_counter / 24) & 1;
     int anim_frame  = (frame_counter / 16) & 1;
 
-    /* ---- terrain (opaque, copy mode) ---- */
+    /* ---- terrain (opaque, copy mode) ----
+       batched by tile type: upload each texture once, then stamp cheap
+       texture rectangles. One blit per tile re-uploads ~340 textures per
+       frame, which overwhelms the RDP. */
     rdpq_set_mode_copy(false);
+    uint8_t cell[16][22];
     for (int y = ty0; y <= ty1; y++) {
         for (int x = tx0; x <= tx1; x++) {
             int s;
@@ -1535,7 +1772,21 @@ static void render(void)
             default:
                 s = ((x * 31 + y * 17) % 5 == 0) ? SPR_GRASS_B : SPR_GRASS_A;
             }
-            rdpq_sprite_blit(spr[s], x * TILE - cam_x, y * TILE - cam_y, NULL);
+            cell[y - ty0][x - tx0] = s;
+        }
+    }
+    for (int s = SPR_GRASS_A; s <= SPR_BRIDGE; s++) {
+        bool uploaded = false;
+        for (int y = ty0; y <= ty1; y++) {
+            for (int x = tx0; x <= tx1; x++) {
+                if (cell[y - ty0][x - tx0] != s) continue;
+                if (!uploaded) {
+                    rdpq_sprite_upload(TILE0, spr[s], NULL);
+                    uploaded = true;
+                }
+                int sx = x * TILE - cam_x, sy = y * TILE - cam_y;
+                rdpq_texture_rectangle(TILE0, sx, sy, sx + TILE, sy + TILE, 0, 0);
+            }
         }
     }
 
@@ -1566,6 +1817,9 @@ static void render(void)
             case OBJ_ESSENCE:    rdpq_sprite_blit(spr[SPR_ESSENCE], sx, sy, NULL); break;
             case OBJ_ALTAR_AIR:  rdpq_sprite_blit(spr[SPR_ALTAR_AIR], sx, sy, NULL); break;
             case OBJ_ALTAR_FIRE: rdpq_sprite_blit(spr[SPR_ALTAR_FIRE], sx, sy, NULL); break;
+            case OBJ_FURNACE:    rdpq_sprite_blit(spr[SPR_FURNACE], sx, sy, NULL); break;
+            case OBJ_ANVIL:      rdpq_sprite_blit(spr[SPR_ANVIL], sx, sy, NULL); break;
+            case OBJ_CHEF:       rdpq_sprite_blit(spr[SPR_CHEF], sx, sy - 8, NULL); break;
             }
         }
 
@@ -1574,28 +1828,29 @@ static void render(void)
             gob_t *g = &gob[i];
             if (!g->exists || g->dead) continue;
             if ((int)g->py / TILE != y) continue;
+            int ex = ((int)(g->px - 8) - cam_x) & ~1;
+            if (ex < -16 || ex > SCREEN_W) continue;
             rdpq_sprite_blit(spr[anim_frame ? SPR_GOB_B : SPR_GOB_A],
-                             g->px - 8 - cam_x, g->py - 12 - cam_y, NULL);
+                             ex, (int)(g->py - 12) - cam_y, NULL);
         }
 
         /* bots whose feet are in this row */
         for (int i = 0; i < MAX_BOT; i++) {
             bot_t *b = &bots[i];
             if ((int)b->py / TILE != y) continue;
-            bool flip;
-            int idx = actor_sprite(b->facing, b->moving, b->walk_anim, &flip);
-            rdpq_sprite_blit(spr[SPR_BOTA_DOWN_A + b->look * 6 + idx],
-                             b->px - 8 - cam_x, b->py - 20 - cam_y,
-                             &(rdpq_blitparms_t){ .flip_x = flip });
+            int ex = ((int)(b->px - 8) - cam_x) & ~1;
+            if (ex < -16 || ex > SCREEN_W) continue;
+            int idx = actor_sprite(b->facing, b->moving, b->walk_anim);
+            rdpq_sprite_blit(spr[SPR_BOTA_DOWN_A + b->look * 8 + idx],
+                             ex, (int)(b->py - 20) - cam_y, NULL);
         }
 
         /* player */
         if (pl_row == y) {
-            bool flip;
-            int idx = actor_sprite(pl.facing, pl.moving, pl.walk_anim, &flip);
+            int idx = actor_sprite(pl.facing, pl.moving, pl.walk_anim);
             rdpq_sprite_blit(spr[SPR_PL_DOWN_A + idx],
-                             pl.px - 8 - cam_x, pl.py - 20 - cam_y,
-                             &(rdpq_blitparms_t){ .flip_x = flip });
+                             ((int)(pl.px - 8) - cam_x) & ~1,
+                             (int)(pl.py - 20) - cam_y, NULL);
         }
     }
 
@@ -1626,8 +1881,12 @@ static void render(void)
         if (b->say_t <= 0) continue;
         b->say_t--;
         int w = strlen(b->say) * 6;
-        draw_text(1, (int)(b->px - cam_x) - w / 2, (int)(b->py - cam_y) - 26,
-                  "%s", b->say);
+        int bx = (int)(b->px - cam_x) - w / 2;
+        int by = (int)(b->py - cam_y) - 26;
+        if (bx < 2) bx = 2;
+        if (bx > SCREEN_W - w - 2) bx = SCREEN_W - w - 2;
+        if (by < 10 || by > SCREEN_H) continue;
+        draw_text(1, bx, by, "%s", b->say);
     }
 
     /* ---- xp drops ---- */
@@ -1642,12 +1901,12 @@ static void render(void)
 
     /* ---- title screen ---- */
     if (game_state == STATE_TITLE) {
-        /* logo is pre-sliced into TMEM-sized strips */
-        rdpq_set_mode_standard();
-        rdpq_mode_alphacompare(1);
-        int logo_x = (SCREEN_W - spr[SPR_LOGO_0]->width) / 2;
-        for (int i = 0; i < 4; i++)
-            rdpq_sprite_blit(spr[SPR_LOGO_0 + i], logo_x, 28 + i * 14, NULL);
+        /* gold logo: 4x4 grid of small copy-mode tiles (even X positions) */
+        rdpq_set_mode_copy(true);
+        int logo_x = (SCREEN_W - 256) / 2;
+        for (int i = 0; i < 16; i++)
+            rdpq_sprite_blit(spr[SPR_LOGO_0 + i],
+                             logo_x + (i % 4) * 64, 28 + (i / 4) * 14, NULL);
         rdpq_textparms_t center = { .style_id = 6, .align = ALIGN_CENTER,
                                     .width = SCREEN_W };
         rdpq_text_print(&center, FONT_ID, 0, 98,
@@ -1706,18 +1965,24 @@ static void render(void)
         int px0 = SCREEN_W - 88, py0 = 30;
         draw_panel(px0, py0, px0 + 82, py0 + 152);
         draw_text(1, px0 + 6, py0 + 12, "Inventory");
-        /* slots */
+        /* slots: one fill pass, then the cursor highlight */
+        rdpq_set_mode_fill(RGBA32(70, 60, 45, 255));
         for (int i = 0; i < INV_SIZE; i++) {
+            if (i == inv_cursor) continue;
             int cx = px0 + 6 + (i % 4) * 19;
             int cy = py0 + 18 + (i / 4) * 18;
-            rdpq_set_mode_fill(i == inv_cursor ? RGBA32(120, 100, 60, 255)
-                                               : RGBA32(70, 60, 45, 255));
+            rdpq_fill_rectangle(cx, cy, cx + 17, cy + 16);
+        }
+        rdpq_set_mode_fill(RGBA32(120, 100, 60, 255));
+        {
+            int cx = px0 + 6 + (inv_cursor % 4) * 19;
+            int cy = py0 + 18 + (inv_cursor / 4) * 18;
             rdpq_fill_rectangle(cx, cy, cx + 17, cy + 16);
         }
         rdpq_set_mode_copy(true);
         for (int i = 0; i < INV_SIZE; i++) {
             if (inv[i] == IT_NONE) continue;
-            int cx = px0 + 6 + (i % 4) * 19;
+            int cx = (px0 + 6 + (i % 4) * 19) & ~1;
             int cy = py0 + 18 + (i / 4) * 18;
             rdpq_sprite_blit(spr[iteminfo[inv[i]].spr], cx, cy, NULL);
         }
@@ -1725,8 +1990,8 @@ static void render(void)
                   inv[inv_cursor] != IT_NONE ? iteminfo[inv[inv_cursor]].name : "-");
     }
     else if (ui_mode == UI_SKILLS) {
-        int px0 = SCREEN_W - 130, py0 = 24;
-        draw_panel(px0, py0, px0 + 124, py0 + 152);
+        int px0 = SCREEN_W - 130, py0 = 22;
+        draw_panel(px0, py0, px0 + 124, py0 + 162);
         draw_text(1, px0 + 6, py0 + 12, "Skills");
         for (int i = 0; i < NUM_SKILLS; i++)
             draw_text(0, px0 + 6, py0 + 24 + i * 10, "%-11s %2d",
@@ -1734,7 +1999,7 @@ static void render(void)
         int att = level_of(SK_ATT), str = level_of(SK_STR), def = level_of(SK_DEF);
         int cmb = (int)((def + level_of(SK_HP) + level_of(SK_PRAY) / 2) * 0.25f
                         + (att + str) * 0.325f);
-        draw_text(4, px0 + 6, py0 + 147, "Combat level: %d", cmb);
+        draw_text(4, px0 + 6, py0 + 157, "Combat level: %d", cmb);
     }
     else if (ui_mode == UI_BANK) {
         int n = bank_rows();
@@ -1752,6 +2017,30 @@ static void render(void)
                       iteminfo[it].name, bank[it]);
         }
     }
+    else if (ui_mode == UI_SMITH) {
+        int px0 = 70, py0 = 50;
+        draw_panel(px0, py0, px0 + 180, py0 + 100);
+        draw_text(1, px0 + 6, py0 + 12, "Anvil - Smithing");
+        draw_text(6, px0 + 6, py0 + 22, "A: smith   B: close");
+        for (int i = 0; i < SMITH_COUNT; i++) {
+            bool can = level_of(SK_SMITH) >= smith_list[i].lvl;
+            draw_text(i == smith_cursor ? 1 : (can ? 0 : 6),
+                      px0 + 6, py0 + 38 + i * 12,
+                      "%c %-13s %s lv%d",
+                      i == smith_cursor ? '>' : ' ',
+                      iteminfo[smith_list[i].item].name,
+                      smith_list[i].bar == IT_BRONZE_BAR ? "brz" : "irn",
+                      smith_list[i].lvl);
+        }
+    }
+    else if (ui_mode == UI_DIALOG) {
+        int px0 = 36, py0 = 64;
+        draw_panel(px0, py0, px0 + 248, py0 + 92);
+        draw_text(1, px0 + 8, py0 + 14, "%s", dlg_title);
+        for (int i = 0; i < dlg_count; i++)
+            draw_text(0, px0 + 8, py0 + 30 + i * 12, "%s", dlg_buf[i]);
+        draw_text(6, px0 + 8, py0 + 86, "(A) close");
+    }
     else if (ui_mode == UI_HELP) {
         int px0 = 40, py0 = 26;
         draw_panel(px0, py0, px0 + 240, py0 + 150);
@@ -1761,10 +2050,13 @@ static void render(void)
         draw_text(0, px0 + 8, py0 + 54, "B: inventory (A: use, C-down: drop)");
         draw_text(0, px0 + 8, py0 + 66, "C-right: skills    L: music on/off");
         draw_text(0, px0 + 8, py0 + 82, "Chop trees, mine rocks, catch shrimp,");
-        draw_text(0, px0 + 8, py0 + 94, "light fires, cook food, slay goblins,");
-        draw_text(0, px0 + 8, py0 + 106, "bury bones and bank your riches.");
-        draw_text(6, px0 + 8, py0 + 126, "An original homage to old-school");
-        draw_text(6, px0 + 8, py0 + 138, "adventures. Press Start to close.");
+        draw_text(0, px0 + 8, py0 + 94, "light fires, cook, slay goblins, bury");
+        draw_text(0, px0 + 8, py0 + 106, "bones, smith gear, bank your riches.");
+        draw_text(1, px0 + 8, py0 + 124, "Quest: The Chef's Little Problem");
+        draw_text(0, px0 + 8, py0 + 136, "%s",
+                  quest_state == QUEST_NONE ? "Not started - talk to the Chef." :
+                  quest_state == QUEST_ACTIVE ? "In progress - see the Chef." :
+                  "Complete. The valley eats well.");
     }
 
     rdpq_detach_show();
@@ -1843,6 +2135,17 @@ static void handle_input(void)
         if (pressed.d_down && bank_cursor < n - 1) bank_cursor++;
         if (pressed.a) bank_withdraw(bank_cursor);
         if (pressed.z) bank_deposit_all();
+        return;
+    }
+    if (ui_mode == UI_SMITH) {
+        if (pressed.b) { ui_mode = UI_NONE; return; }
+        if (pressed.d_up && smith_cursor > 0) smith_cursor--;
+        if (pressed.d_down && smith_cursor < SMITH_COUNT - 1) smith_cursor++;
+        if (pressed.a) smith_make(smith_cursor);
+        return;
+    }
+    if (ui_mode == UI_DIALOG) {
+        if (pressed.a || pressed.b) ui_mode = UI_NONE;
         return;
     }
     if (ui_mode == UI_SKILLS || ui_mode == UI_HELP) {
@@ -1932,13 +2235,12 @@ int main(void)
     pl.state = ST_IDLE;
     for (int i = 0; i < INV_SIZE; i++) inv[i] = IT_NONE;
     inv[0] = IT_AXE; inv[1] = IT_PICK; inv[2] = IT_NET; inv[3] = IT_TINDER;
+    inv[4] = IT_HAMMER;
     memset(bank, 0, sizeof bank);
     for (int i = 0; i < CHAT_LINES; i++) chat[i][0] = 0;
 
-    {
-        save_t probe;
-        save_found = save_peek(&probe);
-    }
+    /* the save probe happens a few frames into the main loop: probing the
+       EEPROM in the middle of subsystem init destabilizes the joybus */
 
     uint64_t last_ms = get_ticks_ms();
     int tick_acc = 0;
@@ -1960,6 +2262,10 @@ int main(void)
         update_movement(dt_ms / 1000.0f);
 
         frame_counter++;
+        if (frame_counter == 10) {
+            save_t probe;
+            save_found = save_peek(&probe);
+        }
         render();
 
         if (audio_can_write()) {

@@ -161,6 +161,13 @@ $s.Note(1.08, 84, 0.45, 0.6, 2)   # C6
 $s.Note(1.08, 72, 0.45, 0.3, 1)   # C4 under
 $s.Save((P 'levelup')); Write-Host '  levelup'
 
+# smith: hammer clang on anvil
+$s = New-Object Synth($R, 0.32)
+$s.Sweep(0.0, 950, 890, 0.24, 0.5, 16)
+$s.Sweep(0.0, 1430, 1380, 0.12, 0.3, 26)
+$s.Noise(0.0, 0.04, 0.5, 80, 0.8)
+$s.Save((P 'smith')); Write-Host '  smith'
+
 # craft: runecrafting sparkle
 $s = New-Object Synth($R, 0.7)
 $s.Note(0.00, 88, 0.18, 0.35, 0)
