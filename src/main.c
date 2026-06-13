@@ -670,21 +670,21 @@ static int almanac_scroll = 0;
    spell, so it never becomes the standing cast_spell. */
 enum { SPELL_MELEE, SPELL_AIR, SPELL_WATER, SPELL_EARTH, SPELL_FIRE,
        SPELL_EBOLT, SPELL_FBOLT, SPELL_HOME, SPELL_BANK, SPELL_CAVE, NUM_SPELLS };
-/* rune2/runes2 is a second required rune (IT_NONE = none): bolts need a
-   Chaos rune on top of their element. */
+/* rune2/runes2 and rune3/runes3 are extra required runes (IT_NONE = none):
+   bolts need a Chaos rune on top of their element; teleports take a mix. */
 static const struct { const char *name; int rune; int runes; int rune2; int runes2;
-                      int maxhit; int lvl; int xp_x10; }
+                      int rune3; int runes3; int maxhit; int lvl; int xp_x10; }
 spellinfo[NUM_SPELLS] = {
-    { "Melee",         IT_NONE,       0, IT_NONE,       0, 0,  1,   0 },
-    { "Wind Strike",   IT_AIR_RUNE,   1, IT_NONE,       0, 2,  1,  55 },
-    { "Water Strike",  IT_WATER_RUNE, 1, IT_NONE,       0, 3,  5,  76 },
-    { "Earth Strike",  IT_EARTH_RUNE, 1, IT_NONE,       0, 4,  9,  95 },
-    { "Fire Strike",   IT_FIRE_RUNE,  1, IT_NONE,       0, 5, 13, 100 },
-    { "Earth Bolt",    IT_EARTH_RUNE, 3, IT_CHAOS_RUNE, 1, 7, 29, 190 },
-    { "Fire Bolt",     IT_FIRE_RUNE,  3, IT_CHAOS_RUNE, 1, 8, 35, 225 },
-    { "Home Teleport", IT_AIR_RUNE,   1, IT_NONE,       0, 0,  1,  35 },
-    { "Bank Teleport", IT_LAW_RUNE,   1, IT_NONE,       0, 0, 20,  90 },
-    { "Cave Teleport", IT_LAW_RUNE,   1, IT_NONE,       0, 0, 25, 110 },
+    { "Melee",         IT_NONE,       0, IT_NONE,       0, IT_NONE,      0, 0,  1,   0 },
+    { "Wind Strike",   IT_AIR_RUNE,   1, IT_NONE,       0, IT_NONE,      0, 2,  1,  55 },
+    { "Water Strike",  IT_WATER_RUNE, 1, IT_NONE,       0, IT_NONE,      0, 3,  5,  76 },
+    { "Earth Strike",  IT_EARTH_RUNE, 1, IT_NONE,       0, IT_NONE,      0, 4,  9,  95 },
+    { "Fire Strike",   IT_FIRE_RUNE,  1, IT_NONE,       0, IT_NONE,      0, 5, 13, 100 },
+    { "Earth Bolt",    IT_EARTH_RUNE, 3, IT_CHAOS_RUNE, 1, IT_NONE,      0, 7, 29, 190 },
+    { "Fire Bolt",     IT_FIRE_RUNE,  3, IT_CHAOS_RUNE, 1, IT_NONE,      0, 8, 35, 225 },
+    { "Home Teleport", IT_AIR_RUNE,   1, IT_LAW_RUNE,   1, IT_NONE,      0, 0,  1,  35 },
+    { "Bank Teleport", IT_LAW_RUNE,   1, IT_FIRE_RUNE,  1, IT_AIR_RUNE,  1, 0, 20,  90 },
+    { "Cave Teleport", IT_LAW_RUNE,   1, IT_WATER_RUNE, 1, IT_FIRE_RUNE, 1, 0, 25, 110 },
 };
 static int cast_spell = SPELL_MELEE;
 static int spell_cursor = 0;
@@ -1446,6 +1446,20 @@ static const drop_t *mob_drops(int type, int *n)
 }
 
 /* ---- the Almanac: an in-game reference of gear and monster stats/loot ---- */
+/* the leading word of a rune's name ("Air rune" -> "Air"), to keep rune-cost
+   lines compact; rotates a few buffers so several calls survive in one printf */
+static const char *rune_short(int item)
+{
+    static char b[4][12];
+    static int bi = 0;
+    bi = (bi + 1) & 3;
+    const char *n = iteminfo[item].name;
+    int i = 0;
+    for (; n[i] && n[i] != ' ' && i < 11; i++) b[bi][i] = n[i];
+    b[bi][i] = 0;
+    return b[bi];
+}
+
 static void al_add(int style, const char *fmt, ...)
 {
     if (almanac_count >= ALMANAC_MAX) return;
@@ -1501,19 +1515,27 @@ static void build_almanac(void)
 
     al_add(1, "== SPELLS ==  (spellbook, C-left)");
     for (int sp = 1; sp < NUM_SPELLS; sp++) {   /* skip Melee */
-        al_add(4, "%s (Magic %d)", spellinfo[sp].name, spellinfo[sp].lvl);
-        if (spellinfo[sp].maxhit > 0) {
-            if (spellinfo[sp].runes2 > 0)
-                al_add(6, "  max hit %d - %dx %s + %dx %s", spellinfo[sp].maxhit,
-                       spellinfo[sp].runes,  iteminfo[spellinfo[sp].rune].name,
-                       spellinfo[sp].runes2, iteminfo[spellinfo[sp].rune2].name);
-            else
-                al_add(6, "  max hit %d - %dx %s", spellinfo[sp].maxhit,
-                       spellinfo[sp].runes, iteminfo[spellinfo[sp].rune].name);
-        } else {
-            al_add(6, "  teleport - %dx %s",
-                   spellinfo[sp].runes, iteminfo[spellinfo[sp].rune].name);
-        }
+        if (sp == SPELL_CAVE)
+            al_add(4, "%s (Magic %d, Warlord's Bane reward)",
+                   spellinfo[sp].name, spellinfo[sp].lvl);
+        else
+            al_add(4, "%s (Magic %d)", spellinfo[sp].name, spellinfo[sp].lvl);
+        char pre[24];
+        if (spellinfo[sp].maxhit > 0)
+            snprintf(pre, sizeof pre, "max hit %d - ", spellinfo[sp].maxhit);
+        else
+            snprintf(pre, sizeof pre, "teleport - ");
+        int r1=spellinfo[sp].rune,  n1=spellinfo[sp].runes;
+        int r2=spellinfo[sp].rune2, n2=spellinfo[sp].runes2;
+        int r3=spellinfo[sp].rune3, n3=spellinfo[sp].runes3;
+        if (r3 != IT_NONE)
+            al_add(6, "  %s%dx %s + %dx %s + %dx %s", pre,
+                   n1, rune_short(r1), n2, rune_short(r2), n3, rune_short(r3));
+        else if (r2 != IT_NONE)
+            al_add(6, "  %s%dx %s + %dx %s", pre,
+                   n1, rune_short(r1), n2, rune_short(r2));
+        else
+            al_add(6, "  %s%dx %s", pre, n1, rune_short(r1));
     }
 
     al_add(1, "== RANGED ==  (bows/armour: Rng/level; arrows: Rng)");
@@ -1788,12 +1810,15 @@ static bool player_shoot(gob_t *g)
    and a fast-travel for bank/cave runs. */
 static void do_teleport(int spell, int tx, int ty, const char *where)
 {
-    int rune = spellinfo[spell].rune;
-    if (!has_item(rune)) {
-        msg("You have run out of %s.", iteminfo[rune].name);
-        return;
-    }
-    remove_item(rune);
+    int r[3] = { spellinfo[spell].rune, spellinfo[spell].rune2, spellinfo[spell].rune3 };
+    int n[3] = { spellinfo[spell].runes, spellinfo[spell].runes2, spellinfo[spell].runes3 };
+    for (int i = 0; i < 3; i++)
+        if (r[i] != IT_NONE && inv_count(r[i]) < n[i]) {
+            msg("You need %dx %s to teleport.", n[i], iteminfo[r[i]].name);
+            return;
+        }
+    for (int i = 0; i < 3; i++)
+        for (int k = 0; k < n[i]; k++) remove_item(r[i]);
     sfx_ui(SND_CRAFT);
     add_xp(SK_MAGIC, spellinfo[spell].xp_x10, true);
     if (cur_map != MAP_OVERWORLD) load_map(MAP_OVERWORLD);
@@ -1801,6 +1826,10 @@ static void do_teleport(int spell, int tx, int ty, const char *where)
     pl.state = ST_IDLE;
     msg("You teleport to %s.", where);
 }
+
+/* the Cave Teleport is a reward: it stays locked until The Warlord's Bane
+   is complete (Sir Garrick rewards it once the Warlord is slain) */
+static bool cave_unlocked(void) { return wquest >= WQ_DONE; }
 
 /* ------------------------------------------------------------ skilling ticks */
 
@@ -2740,8 +2769,9 @@ static void knight_talk(void)
     case WQ_SLAIN:
         wquest = WQ_DONE;
         dlg_line("Slain! You've lifted a shadow from the");
-        dlg_line("whole valley. Take this purse, and my");
-        dlg_line("deepest thanks, champion.");
+        dlg_line("valley. Take this purse - and let me");
+        dlg_line("teach you the Cave Teleport, so the");
+        dlg_line("dungeon mouth is ever a thought away.");
         sfx_ui(SND_LEVELUP);
         gp += 2000;
         add_xp(SK_ATT, 6000, false);
@@ -2750,6 +2780,7 @@ static void knight_talk(void)
         add_xp(SK_HP,  5000, false);
         msg("Quest complete: The Warlord's Bane!");
         msg("Sir Garrick rewards you with 2000 coins.");
+        msg("You learn the Cave Teleport spell!");
         break;
     default:   /* WQ_DONE - now the follow-up quest, The Demon Below */
         switch (dquest) {
@@ -4144,11 +4175,15 @@ static void render(void)
         draw_text(1, px0 + 6, py0 + 12, "Spellbook");
         draw_text(6, px0 + 6, py0 + 22, "A: select   B: close");
         for (int i = 0; i < NUM_SPELLS; i++) {
-            bool can = level_of(SK_MAGIC) >= spellinfo[i].lvl;
+            bool can = level_of(SK_MAGIC) >= spellinfo[i].lvl &&
+                       (i != SPELL_CAVE || cave_unlocked());
             int style = (i == spell_cursor) ? 1 : (i == cast_spell ? 4 : (can ? 0 : 6));
             char mark = (i == spell_cursor) ? '>' : (i == cast_spell ? '*' : ' ');
             if (i == SPELL_MELEE)
                 draw_text(style, px0 + 6, py0 + 34 + i * 11, "%c %s", mark,
+                          spellinfo[i].name);
+            else if (i == SPELL_CAVE && !cave_unlocked())
+                draw_text(style, px0 + 6, py0 + 34 + i * 11, "%c %s  (locked)", mark,
                           spellinfo[i].name);
             else
                 draw_text(style, px0 + 6, py0 + 34 + i * 11, "%c %s  L%d", mark,
@@ -4427,9 +4462,13 @@ static void handle_input(void)
                 ui_mode = UI_NONE;
                 return;
             } else if (spell_cursor == SPELL_CAVE) {
-                do_teleport(SPELL_CAVE, 7, 29, "the cave mouth");
-                ui_mode = UI_NONE;
-                return;
+                if (!cave_unlocked()) {
+                    msg("You haven't learned that yet. Slay the Warlord for Sir Garrick.");
+                } else {
+                    do_teleport(SPELL_CAVE, 7, 29, "the cave mouth");
+                    ui_mode = UI_NONE;
+                    return;
+                }
             } else {
                 cast_spell = spell_cursor;
                 msg(cast_spell == SPELL_MELEE ? "You ready your weapon."

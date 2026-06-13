@@ -61,11 +61,13 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   (lvl 29) and **Fire Bolt** (lvl 35), each needing **3 of its element plus a
   Chaos rune**. With a spell chosen, A flings a bolt at the nearest goblin from
   up to five tiles away, spending its runes and earning Magic xp. The book also
-  holds three **teleports**: **Home** (1 air, your dungeon escape to the surface
-  spawn), and — powered by the unique **Law rune** — **Bank** (lvl 20) and
-  **Cave** (lvl 25) for fast travel to the bank and the dungeon mouth. You start
-  with 25 air runes; craft more at the altars or buy any rune (chaos and law
-  included) at the Magic Shop.
+  holds three **teleports**, each taking its own mix of runes: **Home** (1 air +
+  1 law — your dungeon escape to the surface spawn), **Bank** (lvl 20; 1 law +
+  1 fire + 1 air) for the bank, and **Cave** (lvl 25; 1 law + 1 water + 1 fire)
+  for the dungeon mouth. The **Cave Teleport is locked** until you complete *The
+  Warlord's Bane* — Sir Garrick teaches it to you as part of the reward. You
+  start with 25 air runes; craft more at the altars or buy any rune (chaos and
+  law included) at the Magic Shop.
   **Wizard gear** — a staff, hat and robe carry a Magic bonus that boosts your
   spell accuracy and max hit (worn in the weapon/helm/body slots, drawn on your
   character). Win them as **monster drops**

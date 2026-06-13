@@ -113,17 +113,18 @@ foreach ($m in [regex]::Matches($src, '\[MOB_(\w+)\]\s*=\s*\{\s*"([^"]+)"\s*,\s*
     }
 }
 
-# --- spells: { "name", rune, runes, rune2, runes2, maxhit, lvl, xp } ---
+# --- spells: { "name", rune,runes, rune2,runes2, rune3,runes3, maxhit, lvl, xp } ---
 $spells = @()
 $mSpellBlock = [regex]::Match($src, 'spellinfo\[NUM_SPELLS\]\s*=\s*\{(.*?)\};', [System.Text.RegularExpressions.RegexOptions]::Singleline)
 if ($mSpellBlock.Success) {
-    $rxS = '\{\s*"([^"]+)"\s*,\s*(IT_\w+)\s*,\s*(\d+)\s*,\s*(IT_\w+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\}'
+    $rxS = '\{\s*"([^"]+)"\s*,\s*(IT_\w+)\s*,\s*(\d+)\s*,\s*(IT_\w+)\s*,\s*(\d+)\s*,\s*(IT_\w+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\}'
     foreach ($m in [regex]::Matches($mSpellBlock.Groups[1].Value, $rxS)) {
         if ($m.Groups[1].Value -eq 'Melee') { continue }
         $spells += [pscustomobject]@{
             Name=$m.Groups[1].Value; Rune=$m.Groups[2].Value; Runes=[int]$m.Groups[3].Value
             Rune2=$m.Groups[4].Value; Runes2=[int]$m.Groups[5].Value
-            MaxHit=[int]$m.Groups[6].Value; Lvl=[int]$m.Groups[7].Value
+            Rune3=$m.Groups[6].Value; Runes3=[int]$m.Groups[7].Value
+            MaxHit=[int]$m.Groups[8].Value; Lvl=[int]$m.Groups[9].Value
         }
     }
 }
@@ -263,16 +264,20 @@ W ''
 W '## Spells'
 W ''
 W 'Cast from the spellbook (C-left). Bolts need a Chaos rune on top of their'
-W 'element; teleports are powered by Law runes (Home uses an Air rune).'
+W 'element; each teleport takes its own mix of runes (Law, plus elemental runes).'
 W ''
 W '| Spell | Magic level | Runes | Max hit |'
 W '|---|--:|---|--:|'
 foreach ($sp in $spells) {
     $cost = "$($sp.Runes)x $(Item-Label $sp.Rune)"
     if ($sp.Runes2 -gt 0) { $cost += " + $($sp.Runes2)x $(Item-Label $sp.Rune2)" }
+    if ($sp.Runes3 -gt 0) { $cost += " + $($sp.Runes3)x $(Item-Label $sp.Rune3)" }
     $hit = if ($sp.MaxHit -gt 0) { "$($sp.MaxHit)" } else { 'teleport' }
-    W ("| {0} | {1} | {2} | {3} |" -f $sp.Name, $sp.Lvl, $cost, $hit)
+    $name = if ($sp.Name -eq 'Cave Teleport') { "$($sp.Name) *" } else { $sp.Name }
+    W ("| {0} | {1} | {2} | {3} |" -f $name, $sp.Lvl, $cost, $hit)
 }
+W ''
+W '*Cave Teleport is locked until you complete **The Warlord''s Bane** quest.'
 W ''
 W '---'
 W ''
