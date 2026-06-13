@@ -1092,6 +1092,113 @@ Save-Sprite 'eq_bz_shd_s' $eqPal @(
     '................','................','................','................',
     '................','................','................','................')
 
+Write-Host "Generating dungeon..."
+
+# Cave floor: dark stone noise
+New-NoiseTile 'tile_cave' @{ 'a'='#3a3a42'; 'b'='#2c2c34'; 'c'='#46464f' } 'a' @(,@('b',26),@('c',14)) 5005
+
+# Stairs down: a framed pit with descending steps
+Save-Sprite 'obj_stairs_down' @{ 's'='#7d7d78'; 'd'='#4a4a48'; 'k'='#15151a' } @(
+    '................',
+    '..ssssssssssss..',
+    '..s.ssssssss.s..',
+    '..s.dddddddd.s..',
+    '..s.ssssssss.s..',
+    '..s.dddddddd.s..',
+    '..s.kkkkkkkk.s..',
+    '..s.kkkkkkkk.s..',
+    '..ssssssssssss..',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................')
+# Stairs up: steps rising toward light
+Save-Sprite 'obj_stairs_up' @{ 's'='#7d7d78'; 'c'='#9a9a94'; 'w'='#d8d8d0' } @(
+    '................',
+    '..ssssssssssss..',
+    '..s.wwwwwwww.s..',
+    '..s.cccccccc.s..',
+    '..s.ssssssss.s..',
+    '..s.cccccccc.s..',
+    '..s.ssssssss.s..',
+    '..s.cccccccc.s..',
+    '..ssssssssssss..',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................')
+
+# Skeleton: 2 frames
+$skPal = @{ 'w'='#e8e4d8'; 'd'='#b8b4a4'; 'k'='#1a1a1a' }
+Save-Sprite 'skeleton_a' $skPal @(
+    '................',
+    '.....wwww.......',
+    '....wwwwww......',
+    '....wkwwkw......',
+    '....wwwwww......',
+    '.....wwww.......',
+    '......ww........',
+    '...wwwwwwww.....',
+    '...w.wwww.w.....',
+    '.....wwww.......',
+    '....wwwwww......',
+    '.....wddw.......',
+    '.....w..w.......',
+    '.....w..w.......',
+    '....ww..ww......',
+    '................')
+Save-Sprite 'skeleton_b' $skPal @(
+    '................',
+    '.....wwww.......',
+    '....wwwwww......',
+    '....wkwwkw......',
+    '....wwwwww......',
+    '.....wwww.......',
+    '......ww........',
+    '....wwwwww......',
+    '...w.wwww.w.....',
+    '...w.wwww.w.....',
+    '....wwwwww......',
+    '.....wddw.......',
+    '....ww..ww......',
+    '....w....w......',
+    '...ww....ww.....',
+    '................')
+
+# Boss: Goblin Warlord (24x24, single frame, hulking and green)
+$bsPal = @{ 'g'='#5a8a32'; 'd'='#46702a'; 'e'='#c83c1e'; 'w'='#e8e4d8'; 'k'='#1a1a1a'; 'l'='#6b4a2a' }
+Save-Sprite 'boss' $bsPal @(
+    '........................',
+    '........gggggggg........',
+    '.......gggggggggg.......',
+    '.....gg.gggggggg.gg.....',
+    '.....gg.gggggggg.gg.....',
+    '.......gggggggggg.......',
+    '.......gddddddddg.......',
+    '.......geeggggeeg.......',
+    '.......ggwwwwwwgg.......',
+    '........gkkkkkkg........',
+    '....dddggggggggggddd....',
+    '...dgggggggggggggggd....',
+    '...gggggggggggggggggg...',
+    '...gggggddgggggddgggg...',
+    '...gggggggggggggggggg...',
+    '...gggggggggggggggggg...',
+    '....llllllllllllllll....',
+    '....gggggg....gggggg....',
+    '....gggggg....gggggg....',
+    '....gggggg....gggggg....',
+    '....ggggg......ggggg....',
+    '....gggg......gggg......',
+    '...kkkkk......kkkkk.....',
+    '........................')
+
 Write-Host "Generating bot recolors..."
 
 # Palette-swap the player sprites into bot variants (tunic + hair)

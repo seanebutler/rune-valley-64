@@ -44,6 +44,11 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
 - **A quest!** — *The Chef's Little Problem*: Chef Bouillon by the bank path
   needs 3 goblins bashed and 2 cooked shrimp delivered. Chunky xp rewards,
   as is right and proper
+- **A dungeon** — find the cave stairs in the open field southwest of the
+  mine and descend into the gloom. Tougher **skeletons** roam the hall, and
+  the hulking **Goblin Warlord** (45 HP, hits hard) waits in the chamber
+  beyond the doorway. Slaying him pours out combat xp. Come armed, armoured,
+  and fed — and if you fall, you wake safely back on the surface
 - **Banking** — a bank with deposit-all and per-item withdrawal sits at the
   north end of the path
 - **Hitpoints** start at level 10, regenerate 1 per minute, and shrimp heal 3

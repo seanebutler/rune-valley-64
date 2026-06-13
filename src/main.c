@@ -27,7 +27,7 @@
 #define SCREEN_H       240
 #define TICK_MS        600          /* one game tick, OSRS style */
 #define INV_SIZE       28
-#define MAX_GOB        8
+#define MAX_GOB        16     /* overworld goblins, or dungeon skeletons + boss */
 #define MAX_XPDROP     8
 #define CHAT_LINES     6
 
@@ -36,11 +36,14 @@
 
 /* ------------------------------------------------------------ terrain & map */
 
-enum { TER_GRASS, TER_PATH, TER_SAND, TER_WATER, TER_BRIDGE, TER_WALL, TER_FLOOR };
+enum { TER_GRASS, TER_PATH, TER_SAND, TER_WATER, TER_BRIDGE, TER_WALL, TER_FLOOR,
+       TER_CAVE };
 enum { OBJ_NONE, OBJ_TREE, OBJ_OAK, OBJ_STUMP, OBJ_ROCK_COPPER, OBJ_ROCK_TIN,
        OBJ_ROCK_IRON, OBJ_ROCK_EMPTY, OBJ_FISH, OBJ_BOOTH, OBJ_FIRE,
        OBJ_ESSENCE, OBJ_ALTAR_AIR, OBJ_ALTAR_FIRE,
-       OBJ_FURNACE, OBJ_ANVIL, OBJ_CHEF };
+       OBJ_FURNACE, OBJ_ANVIL, OBJ_CHEF, OBJ_STAIRS_DOWN, OBJ_STAIRS_UP };
+
+enum { MAP_OVERWORLD, MAP_DUNGEON };
 
 static const char *map_rows[MAP_H] = {
     "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT~~~~TTTTTT",
@@ -72,7 +75,7 @@ static const char *map_rows[MAP_H] = {
     "T...................................ss~~~~...G.T",
     "T...................................ssF~~~.....T",
     "T......I..I......O..................ss~~~~.....T",
-    "T...................................ss~~~~.....T",
+    "T.....X.............................ss~~~~.....T",
     "T.............................O.....ss~~~~..R..T",
     "T...................................ssF~~~.....T",
     "T...................T...............ss~~~~.....T",
@@ -142,12 +145,13 @@ typedef struct {
 
 enum {
     SPR_GRASS_A, SPR_GRASS_B, SPR_PATH, SPR_SAND, SPR_WATER_A, SPR_WATER_B,
-    SPR_FLOOR, SPR_WALL, SPR_BRIDGE,
+    SPR_FLOOR, SPR_WALL, SPR_BRIDGE, SPR_CAVE,
     SPR_TREE, SPR_OAK, SPR_STUMP, SPR_ROCK_C, SPR_ROCK_T, SPR_ROCK_I,
     SPR_ROCK_E, SPR_FISH_A, SPR_FISH_B, SPR_BOOTH, SPR_FIRE_A, SPR_FIRE_B,
+    SPR_STAIRS_DOWN, SPR_STAIRS_UP,
     SPR_PL_DOWN_A, SPR_PL_DOWN_B, SPR_PL_UP_A, SPR_PL_UP_B,
     SPR_PL_SIDE_A, SPR_PL_SIDE_B, SPR_PL_SIDE_LA, SPR_PL_SIDE_LB,
-    SPR_GOB_A, SPR_GOB_B,
+    SPR_GOB_A, SPR_GOB_B, SPR_SKEL_A, SPR_SKEL_B, SPR_BOSS,
     SPR_I_LOGS, SPR_I_OAK_LOGS, SPR_I_COPPER, SPR_I_TIN, SPR_I_IRON,
     SPR_I_RAW_SHRIMP, SPR_I_SHRIMP, SPR_I_BURNT, SPR_I_AXE, SPR_I_PICK,
     SPR_I_NET, SPR_I_TINDER, SPR_I_BONES,
@@ -183,13 +187,14 @@ enum {
 
 static const char *spr_files[NUM_SPR] = {
     "tile_grass_a", "tile_grass_b", "tile_path", "tile_sand", "tile_water_a",
-    "tile_water_b", "tile_floor", "tile_wall", "tile_bridge",
+    "tile_water_b", "tile_floor", "tile_wall", "tile_bridge", "tile_cave",
     "obj_tree", "obj_oak", "obj_stump", "obj_rock_copper", "obj_rock_tin",
     "obj_rock_iron", "obj_rock_empty", "obj_fish_a", "obj_fish_b", "obj_booth",
     "obj_fire_a", "obj_fire_b",
+    "obj_stairs_down", "obj_stairs_up",
     "pl_down_a", "pl_down_b", "pl_up_a", "pl_up_b", "pl_side_a", "pl_side_b",
     "pl_side_la", "pl_side_lb",
-    "goblin_a", "goblin_b",
+    "goblin_a", "goblin_b", "skeleton_a", "skeleton_b", "boss",
     "item_logs", "item_oak_logs", "item_copper_ore", "item_tin_ore",
     "item_iron_ore", "item_raw_shrimp", "item_shrimp", "item_burnt_shrimp",
     "item_axe", "item_pickaxe", "item_net", "item_tinderbox", "item_bones",
@@ -335,6 +340,7 @@ static int bank[NUM_ITEMS];
 
 typedef struct {
     bool  exists;
+    int   type;              /* MOB_* */
     int   tx, ty, sx, sy;
     float px, py;
     int   mtx, mty;
@@ -350,7 +356,19 @@ typedef struct {
 
 static gob_t gob[MAX_GOB];
 static int num_gob = 0;
-#define GOB_MAX_HP 5
+
+/* monster types: stats, sprite, size, drop. mob_def lowers player accuracy;
+   hit_base is the mob's chance to land before the player's defence. */
+enum { MOB_GOBLIN, MOB_SKELETON, MOB_BOSS, NUM_MOBS };
+typedef struct {
+    const char *name; int max_hp; int max_dmg; int mob_def; int hit_base;
+    int aggro; int respawn; int spr_a, spr_b; int w, h;
+} mobinfo_t;
+static const mobinfo_t mobinfo[NUM_MOBS] = {
+    [MOB_GOBLIN]   = { "goblin",         5, 1,  1, 52, 3, 25, SPR_GOB_A,  SPR_GOB_B,  16, 16 },
+    [MOB_SKELETON] = { "skeleton",       9, 2,  6, 60, 4, 25, SPR_SKEL_A, SPR_SKEL_B, 16, 16 },
+    [MOB_BOSS]     = { "Goblin Warlord",45, 5, 15, 75, 6, 80, SPR_BOSS,   SPR_BOSS,   24, 24 },
+};
 
 /* ------------------------------------------------------------ UI state */
 
@@ -495,10 +513,27 @@ static int cheb(int x0, int y0, int x1, int y1)
 
 /* ------------------------------------------------------------ map */
 
-static void init_map(void)
+static int cur_map = MAP_OVERWORLD;
+static int stairs_x, stairs_y;     /* the stairs in the current map */
+
+static void spawn_mob(int type, int x, int y)
+{
+    if (num_gob >= MAX_GOB) return;
+    gob_t *g = &gob[num_gob++];
+    memset(g, 0, sizeof *g);
+    g->exists = true;
+    g->type = type;
+    g->tx = g->sx = g->mtx = x;
+    g->ty = g->sy = g->mty = y;
+    g->px = x * TILE + 8; g->py = y * TILE + 12;
+    g->hp = mobinfo[type].max_hp;
+}
+
+static void load_overworld(void)
 {
     num_gob = 0;
     pl.spawn_x = 24; pl.spawn_y = 12;
+    stairs_x = 6; stairs_y = 29;
     for (int y = 0; y < MAP_H; y++) {
         assertf(strlen(map_rows[y]) == MAP_W, "map row %d is %d chars", y,
                 (int)strlen(map_rows[y]));
@@ -525,17 +560,8 @@ static void init_map(void)
             case 'U': obj = OBJ_FURNACE;    break;
             case 'V': obj = OBJ_ANVIL;      break;
             case 'H': obj = OBJ_CHEF;       break;
-            case 'G':
-                if (num_gob < MAX_GOB) {
-                    gob_t *g = &gob[num_gob++];
-                    memset(g, 0, sizeof *g);
-                    g->exists = true;
-                    g->tx = g->sx = g->mtx = x;
-                    g->ty = g->sy = g->mty = y;
-                    g->px = x * TILE + 8; g->py = y * TILE + 12;
-                    g->hp = GOB_MAX_HP;
-                }
-                break;
+            case 'X': obj = OBJ_STAIRS_DOWN; stairs_x = x; stairs_y = y; break;
+            case 'G': spawn_mob(MOB_GOBLIN, x, y); break;
             case '@': ter = TER_PATH; pl.spawn_x = x; pl.spawn_y = y; break;
             }
             terrain[y][x] = ter;
@@ -544,6 +570,71 @@ static void init_map(void)
             obj_timer[y][x] = 0;
         }
     }
+}
+
+static void build_dungeon(void)
+{
+    num_gob = 0;
+    for (int y = 0; y < MAP_H; y++)
+        for (int x = 0; x < MAP_W; x++) {
+            bool wall = (x == 0 || y == 0 || x == MAP_W - 1 || y == MAP_H - 1);
+            terrain[y][x] = wall ? TER_WALL : TER_CAVE;
+            object[y][x] = OBJ_NONE;
+            obj_orig[y][x] = OBJ_NONE;
+            obj_timer[y][x] = 0;
+        }
+    /* a wall dividing the boss chamber (top) from the hall, with a doorway */
+    for (int x = 1; x < MAP_W - 1; x++)
+        if (x < 22 || x > 26) terrain[10][x] = TER_WALL;
+    /* a few pillars for texture */
+    static const int pillars[][2] = { {12,16},{35,16},{12,24},{35,24},{24,28} };
+    for (int i = 0; i < 5; i++) terrain[pillars[i][1]][pillars[i][0]] = TER_WALL;
+
+    /* stairs back to the surface, bottom-centre */
+    stairs_x = 24; stairs_y = 32;
+    object[stairs_y][stairs_x] = OBJ_STAIRS_UP;
+    obj_orig[stairs_y][stairs_x] = OBJ_STAIRS_UP;
+
+    /* skeletons roam the hall */
+    static const int skel[][2] = {
+        {6,14},{40,14},{18,18},{30,18},{10,22},{38,22},{24,24},{16,30},{32,30}
+    };
+    for (int i = 0; i < 9; i++) spawn_mob(MOB_SKELETON, skel[i][0], skel[i][1]);
+    /* the Warlord waits in the chamber beyond the doorway */
+    spawn_mob(MOB_BOSS, 24, 5);
+}
+
+static void load_map(int which)
+{
+    cur_map = which;
+    if (which == MAP_DUNGEON) build_dungeon();
+    else load_overworld();
+}
+
+static void place_player(int x, int y)
+{
+    pl.tx = pl.mtx = x;
+    pl.ty = pl.mty = y;
+    pl.px = x * TILE + 8; pl.py = y * TILE + 12;
+    pl.moving = false;
+    pl.state = ST_IDLE;
+}
+
+static void enter_dungeon(void)
+{
+    load_map(MAP_DUNGEON);
+    place_player(stairs_x, stairs_y + 1);   /* arrive below the up-stairs */
+    pl.facing = 0;
+    msg("You descend into the gloom of the dungeon.");
+    msg("Something large stirs beyond the doorway...");
+}
+
+static void exit_dungeon(void)
+{
+    load_map(MAP_OVERWORLD);
+    place_player(stairs_x, stairs_y + 1);    /* step out of the cave mouth */
+    pl.facing = 0;
+    msg("You climb back into the daylight.");
 }
 
 static bool tile_walkable(int x, int y)
@@ -669,12 +760,10 @@ static void player_die(void)
     msg("Oh dear, you are dead!");
     sfx_ui(SND_DEATH);
     pl.hp = level_of(SK_HP);
-    pl.tx = pl.spawn_x; pl.ty = pl.spawn_y;
-    pl.mtx = pl.tx; pl.mty = pl.ty;
-    pl.px = pl.tx * TILE + 8; pl.py = pl.ty * TILE + 12;
-    pl.moving = false;
-    pl.state = ST_IDLE;
     ui_mode = UI_NONE;
+    /* always wake up on the surface */
+    if (cur_map != MAP_OVERWORLD) load_map(MAP_OVERWORLD);
+    place_player(pl.spawn_x, pl.spawn_y);
     for (int i = 0; i < num_gob; i++) {
         gob[i].aggro = false;
         gob[i].hurt_timer = 0;
@@ -690,21 +779,31 @@ static void hurt_player(int dmg)
     if (pl.hp <= 0) player_die();
 }
 
-static void goblin_die(gob_t *g)
+static void mob_die(gob_t *g)
 {
+    const mobinfo_t *mi = &mobinfo[g->type];
     g->dead = true;
-    g->respawn = 25;
+    g->respawn = mi->respawn;
     g->aggro = false;
     g->hurt_timer = 0;
-    msg("You have defeated the goblin!");
-    if (quest_state == QUEST_ACTIVE && quest_kills < QUEST_KILLS_NEEDED) {
+    if (g->type == MOB_BOSS) {
+        msg("With a final roar, the Goblin Warlord falls!");
+        sfx_ui(SND_LEVELUP);
+        /* a hero's bounty of combat experience */
+        add_xp(SK_ATT, 4000, false);
+        add_xp(SK_STR, 4000, false);
+        add_xp(SK_DEF, 4000, false);
+        add_xp(SK_HP,  3000, false);
+        gratz_timer = 4;
+    } else {
+        msg("You have defeated the %s!", mi->name);
+    }
+    if (g->type == MOB_GOBLIN && quest_state == QUEST_ACTIVE &&
+        quest_kills < QUEST_KILLS_NEEDED) {
         quest_kills++;
         msg("Goblin bashed for the Chef! (%d/%d)", quest_kills, QUEST_KILLS_NEEDED);
     }
-    if (!inv_full()) {
-        add_item(IT_BONES);
-        msg("The goblin drops some bones. You take them.");
-    }
+    if (!inv_full()) add_item(IT_BONES);
     if (pl.state == ST_FIGHT) pl.state = ST_IDLE;
 }
 
@@ -713,8 +812,9 @@ static void player_attack(gob_t *g)
     int att = level_of(SK_ATT) + equip_atk();
     int str = level_of(SK_STR) + equip_str();
     int max_hit = 1 + str / 8;
-    int p_hit = 100 * (att + 8) / (att + 18);
+    int p_hit = 100 * (att + 8) / (att + 18) - mobinfo[g->type].mob_def * 2;
     if (p_hit > 95) p_hit = 95;
+    if (p_hit < 5) p_hit = 5;
     int dmg = chance(p_hit) ? (rand() % (max_hit + 1)) : 0;
     g->hp -= dmg;
     g->hitsplat = dmg;
@@ -729,15 +829,15 @@ static void player_attack(gob_t *g)
         add_xp(SK_HP,  dmg * 13, false);
         show_xpdrop(dmg * 52);
     }
-    if (g->hp <= 0) goblin_die(g);
+    if (g->hp <= 0) mob_die(g);
 }
 
-static void goblin_attack(gob_t *g)
+static void mob_attack(gob_t *g)
 {
     int def = level_of(SK_DEF) + equip_def();
-    int p_hit = 52 - def;
+    int p_hit = mobinfo[g->type].hit_base - def;
     if (p_hit < 5) p_hit = 5;
-    int dmg = chance(p_hit) ? (rand() % 2) : 0;
+    int dmg = chance(p_hit) ? (rand() % (mobinfo[g->type].max_dmg + 1)) : 0;
     sfx(SND_HIT);
     hurt_player(dmg);
     /* auto-retaliate */
@@ -777,8 +877,9 @@ static bool player_cast(gob_t *g)
                cast_spell == SPELL_FIRE ? SPR_BOLT_FIRE : SPR_BOLT_AIR);
     sfx(SND_CRAFT);
     int magic = level_of(SK_MAGIC);
-    int p_hit = 55 + magic * 2;
+    int p_hit = 55 + magic * 2 - mobinfo[g->type].mob_def * 2;
     if (p_hit > 95) p_hit = 95;
+    if (p_hit < 5) p_hit = 5;
     int dmg = chance(p_hit) ? (rand() % (spellinfo[cast_spell].maxhit + 1)) : 0;
     g->hp -= dmg;
     g->hitsplat = dmg;
@@ -790,7 +891,7 @@ static bool player_cast(gob_t *g)
         add_xp(SK_HP, dmg * 13, false);
         add_xp(SK_MAGIC, dmg * 20, false);
     }
-    if (g->hp <= 0) goblin_die(g);
+    if (g->hp <= 0) mob_die(g);
     return true;
 }
 
@@ -1055,7 +1156,7 @@ static void tick_goblins(void)
         if (g->dead) {
             if (--g->respawn <= 0 && gob_tile_free(g->sx, g->sy, g)) {
                 g->dead = false;
-                g->hp = GOB_MAX_HP;
+                g->hp = mobinfo[g->type].max_hp;
                 g->tx = g->mtx = g->sx;
                 g->ty = g->mty = g->sy;
                 g->px = g->sx * TILE + 8; g->py = g->sy * TILE + 12;
@@ -1067,15 +1168,15 @@ static void tick_goblins(void)
         if (g->hurt_timer > 0) g->hurt_timer--;
 
         int dp = cheb(g->tx, g->ty, pl.tx, pl.ty);
-        if (!g->aggro && dp <= 3) g->aggro = true;
+        if (!g->aggro && dp <= mobinfo[g->type].aggro) g->aggro = true;
 
         if (g->aggro) {
-            if (cheb(g->tx, g->ty, g->sx, g->sy) > 8) {
+            if (cheb(g->tx, g->ty, g->sx, g->sy) > 10) {
                 g->aggro = false;
             } else if (dp <= 1) {
                 if (--g->atk_cd <= 0) {
                     g->atk_cd = 4;
-                    goblin_attack(g);
+                    mob_attack(g);
                 }
             } else {
                 gob_step(g, pl.tx, pl.ty);
@@ -1392,15 +1493,16 @@ static void game_tick(void)
 
     tick_skilling();
     tick_goblins();
-    tick_bots();
+    if (cur_map == MAP_OVERWORLD) tick_bots();   /* bots stay on the surface */
 
     /* hp regen: 1 per minute */
     if (pl.hp < level_of(SK_HP) && ++pl.regen >= 100) {
         pl.regen = 0;
         pl.hp++;
     }
-    /* silent autosave every ~60s of play */
-    if (game_state == STATE_PLAY && ++save_timer >= 100) {
+    /* silent autosave every ~60s of overworld play (saves never record the
+       dungeon, so you always reload on the surface) */
+    if (game_state == STATE_PLAY && cur_map == MAP_OVERWORLD && ++save_timer >= 100) {
         save_timer = 0;
         save_game();
     }
@@ -1525,14 +1627,15 @@ static void chef_talk(void)
 
 static void interact(void)
 {
-    /* with a spell selected, A targets a goblin from range */
+    /* with a spell selected, A targets a monster from range */
     if (cast_spell != SPELL_MELEE) {
         gob_t *g = nearest_goblin(5);
         if (g) {
             pl.state = ST_FIGHT;
             pl.fight_target = (int)(g - gob);
             pl.atk_cd = 1;
-            msg("You aim your %s at the goblin.", spellinfo[cast_spell].name);
+            msg("You aim your %s at the %s.", spellinfo[cast_spell].name,
+                mobinfo[g->type].name);
             return;
         }
     }
@@ -1541,7 +1644,7 @@ static void interact(void)
         pl.state = ST_FIGHT;
         pl.fight_target = (int)(g - gob);
         pl.atk_cd = 2;
-        msg("You attack the goblin!");
+        msg("You attack the %s!", mobinfo[g->type].name);
         return;
     }
     target_t t;
@@ -1625,13 +1728,24 @@ static void interact(void)
     case OBJ_CHEF:
         chef_talk();
         break;
+    case OBJ_STAIRS_DOWN:
+        enter_dungeon();
+        break;
+    case OBJ_STAIRS_UP:
+        exit_dungeon();
+        break;
     }
 }
 
 /* hint string for the contextual action */
 static const char *context_hint(void)
 {
-    if (adjacent_goblin()) return "A: Attack Goblin (level 2)";
+    gob_t *am = adjacent_goblin();
+    if (am) {
+        static char buf[32];
+        snprintf(buf, sizeof buf, "A: Attack %s", mobinfo[am->type].name);
+        return buf;
+    }
     target_t t;
     if (!find_target(&t)) return NULL;
     switch (t.obj) {
@@ -1649,6 +1763,8 @@ static const char *context_hint(void)
     case OBJ_FURNACE:     return "A: Smelt ore at Furnace";
     case OBJ_ANVIL:       return "A: Smith at Anvil";
     case OBJ_CHEF:        return "A: Talk to Chef Bouillon";
+    case OBJ_STAIRS_DOWN: return "A: Descend into the dungeon";
+    case OBJ_STAIRS_UP:   return "A: Climb back to the surface";
     }
     return NULL;
 }
@@ -1993,15 +2109,15 @@ static void draw_player_equipment(int px, int py, int facing)
     }
 }
 
-static void draw_entity_hpbar(float sx, float sy, int hp, int maxhp)
+static void draw_entity_hpbar(float sx, float top, int hp, int maxhp, int w)
 {
-    int w = 16;
     int green = hp * w / maxhp;
+    if (green < 0) green = 0;
     rdpq_set_mode_fill(RGBA32(200, 30, 30, 255));
-    rdpq_fill_rectangle(sx - 8, sy - 26, sx - 8 + w, sy - 23);
+    rdpq_fill_rectangle(sx - w / 2, top, sx - w / 2 + w, top + 3);
     if (green > 0) {
         rdpq_set_mode_fill(RGBA32(40, 180, 40, 255));
-        rdpq_fill_rectangle(sx - 8, sy - 26, sx - 8 + green, sy - 23);
+        rdpq_fill_rectangle(sx - w / 2, top, sx - w / 2 + green, top + 3);
     }
 }
 
@@ -2051,13 +2167,14 @@ static void render(void)
             case TER_BRIDGE: s = SPR_BRIDGE; break;
             case TER_WALL:   s = SPR_WALL; break;
             case TER_FLOOR:  s = SPR_FLOOR; break;
+            case TER_CAVE:   s = SPR_CAVE; break;
             default:
                 s = ((x * 31 + y * 17) % 5 == 0) ? SPR_GRASS_B : SPR_GRASS_A;
             }
             cell[y - ty0][x - tx0] = s;
         }
     }
-    for (int s = SPR_GRASS_A; s <= SPR_BRIDGE; s++) {
+    for (int s = SPR_GRASS_A; s <= SPR_CAVE; s++) {
         bool uploaded = false;
         for (int y = ty0; y <= ty1; y++) {
             for (int x = tx0; x <= tx1; x++) {
@@ -2102,22 +2219,26 @@ static void render(void)
             case OBJ_FURNACE:    rdpq_sprite_blit(spr[SPR_FURNACE], sx, sy, NULL); break;
             case OBJ_ANVIL:      rdpq_sprite_blit(spr[SPR_ANVIL], sx, sy, NULL); break;
             case OBJ_CHEF:       rdpq_sprite_blit(spr[SPR_CHEF], sx, sy - 8, NULL); break;
+            case OBJ_STAIRS_DOWN:rdpq_sprite_blit(spr[SPR_STAIRS_DOWN], sx, sy, NULL); break;
+            case OBJ_STAIRS_UP:  rdpq_sprite_blit(spr[SPR_STAIRS_UP], sx, sy, NULL); break;
             }
         }
 
-        /* goblins whose feet are in this row */
+        /* monsters whose feet are in this row */
         for (int i = 0; i < num_gob; i++) {
             gob_t *g = &gob[i];
             if (!g->exists || g->dead) continue;
             if ((int)g->py / TILE != y) continue;
-            int ex = ((int)(g->px - 8) - cam_x) & ~1;
-            if (ex < -16 || ex > SCREEN_W) continue;
-            rdpq_sprite_blit(spr[anim_frame ? SPR_GOB_B : SPR_GOB_A],
-                             ex, (int)(g->py - 12) - cam_y, NULL);
+            const mobinfo_t *mi = &mobinfo[g->type];
+            int ex = ((int)(g->px - mi->w / 2) - cam_x) & ~1;
+            if (ex < -32 || ex > SCREEN_W) continue;
+            int spr_id = anim_frame ? mi->spr_b : mi->spr_a;
+            rdpq_sprite_blit(spr[spr_id], ex,
+                             (int)(g->py - (mi->h - 4)) - cam_y, NULL);
         }
 
-        /* bots whose feet are in this row */
-        for (int i = 0; i < MAX_BOT; i++) {
+        /* bots whose feet are in this row (surface only) */
+        for (int i = 0; i < MAX_BOT && cur_map == MAP_OVERWORLD; i++) {
             bot_t *b = &bots[i];
             if ((int)b->py / TILE != y) continue;
             int ex = ((int)(b->px - 8) - cam_x) & ~1;
@@ -2151,9 +2272,12 @@ static void render(void)
     for (int i = 0; i < num_gob; i++) {
         gob_t *g = &gob[i];
         if (!g->exists || g->dead) continue;
+        const mobinfo_t *mi = &mobinfo[g->type];
         float sx = g->px - cam_x, sy = g->py - cam_y;
-        if (g->hurt_timer > 0)
-            draw_entity_hpbar(sx, sy, g->hp, GOB_MAX_HP);
+        int top = (int)sy - (mi->h - 4) - 6;
+        /* the boss always shows its bar; lesser mobs only when recently hit */
+        if (g->hurt_timer > 0 || g->type == MOB_BOSS)
+            draw_entity_hpbar(sx, top, g->hp, mi->max_hp, mi->w + 8);
         if (g->hitsplat_t > 0) {
             g->hitsplat_t--;
             draw_hitsplat(sx, sy, g->hitsplat);
@@ -2163,13 +2287,13 @@ static void render(void)
         float sx = pl.px - cam_x, sy = pl.py - cam_y;
         if (pl.hitsplat_t > 0) {
             pl.hitsplat_t--;
-            draw_entity_hpbar(sx, sy - 8, pl.hp, level_of(SK_HP));
+            draw_entity_hpbar(sx, sy - 34, pl.hp, level_of(SK_HP), 16);
             draw_hitsplat(sx, sy, pl.hitsplat);
         }
     }
 
     /* ---- bot overhead chat ---- */
-    for (int i = 0; i < MAX_BOT; i++) {
+    for (int i = 0; i < MAX_BOT && cur_map == MAP_OVERWORLD; i++) {
         bot_t *b = &bots[i];
         if (b->say_t <= 0) continue;
         b->say_t--;
@@ -2410,10 +2534,11 @@ static void render(void)
         draw_text(0, px0 + 8, py0 + 42, "A: interact with the world");
         draw_text(0, px0 + 8, py0 + 54, "B: inventory (A: use/equip, C-dn: drop)");
         draw_text(0, px0 + 8, py0 + 66, "C-rt:skills C-up:worn C-lf:spells");
-        draw_text(0, px0 + 8, py0 + 82, "Chop, mine, fish, cook, light fires,");
-        draw_text(0, px0 + 8, py0 + 94, "smith and wear gear, craft runes and");
-        draw_text(0, px0 + 8, py0 + 106, "sling spells, slay goblins, bank loot.");
-        draw_text(1, px0 + 8, py0 + 124, "Quest: The Chef's Little Problem");
+        draw_text(0, px0 + 8, py0 + 80, "Chop, mine, fish, cook, smith, wear");
+        draw_text(0, px0 + 8, py0 + 90, "gear, craft runes, sling spells.");
+        draw_text(3, px0 + 8, py0 + 102, "A dungeon lurks SW of the mine -");
+        draw_text(3, px0 + 8, py0 + 112, "skeletons and the Warlord await!");
+        draw_text(1, px0 + 8, py0 + 126, "Quest: The Chef's Little Problem");
         draw_text(0, px0 + 8, py0 + 136, "%s",
                   quest_state == QUEST_NONE ? "Not started - talk to the Chef." :
                   quest_state == QUEST_ACTIVE ? "In progress - see the Chef." :
@@ -2616,7 +2741,7 @@ int main(void)
 
     /* game state */
     init_xp_table();
-    init_map();
+    load_map(MAP_OVERWORLD);
     init_bots();
     for (int i = 0; i < NUM_SKILLS; i++) xp[i] = 0;
     xp[SK_HP] = xp_table[10];                  /* hitpoints starts at 10 */
