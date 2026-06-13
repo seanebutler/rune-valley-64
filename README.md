@@ -23,11 +23,12 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
 - **Combat** — level-2 goblins roam east of the bridge; they are aggressive,
   they hit 1s, and they drop bones
 - **The training pasture** — just east of where you wash up, **Sergeant Hardy**
-  keeps a fenced field of **cows**. Talk to him for a one-time jumpstart of
-  combat experience, then chain-kill the herd: cows are plentiful, never
-  aggressive, barely scratch back, and respawn fast, so they level your Attack,
-  Strength and Defence far quicker (and more safely) than goblins. A gentle
-  on-ramp before the Warlord and Demon quests ask for higher combat levels
+  keeps a fenced field of **cows** and a starter quest, *Basic Training*: fell
+  five of them and he drills a jumpstart of combat experience into you. Cows are
+  plentiful, never aggressive, barely scratch back, and respawn fast, so the
+  herd levels your Attack, Strength and Defence far quicker (and more safely)
+  than goblins — a gentle on-ramp before the Warlord and Demon quests ask for
+  higher combat levels
 - **Prayer** — bury bones for Prayer xp, then spend it: open the prayer book
   (C-down) and toggle combat boosts across four categories — Attack, Strength,
   Defence and Magic. Each category has a basic prayer (Thick Skin, Burst of
@@ -72,7 +73,9 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   are bought at the bazaar or won from the Warlord. Each tier hits harder and
   defends better but demands a higher Attack (weapons) or Defence (armour)
   level to wield — rune needs 40. A full rune set is the late-game coin sink
-- **Quests** — *The Chef's Little Problem*: Chef Bouillon by the bank path
+- **Quests** — *Basic Training*: Sergeant Hardy at the cow pasture wants five
+  cows felled, and rewards you with a jumpstart of combat xp (and a few coins).
+  *The Chef's Little Problem*: Chef Bouillon by the bank path
   needs 3 goblins bashed and 2 cooked shrimp delivered. And *The Warlord's
   Bane*, a multi-stage epic: Sir Garrick by the cave mouth sends you to scout
   the dungeon (gather 5 bones), forge the legendary **Warlord's Bane** blade

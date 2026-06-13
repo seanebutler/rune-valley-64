@@ -564,6 +564,12 @@ static int dquest = DQ_NONE;
 #define DQ_REQ_DEF 30
 #define DQ_REQ_HP  30
 
+/* Basic Training - Sergeant Hardy's intro quest at the cow pasture */
+enum { CQ_NONE, CQ_STARTED, CQ_DONE };
+static int cquest = CQ_NONE;
+static int cow_kills = 0;
+#define CQ_COWS_NEEDED 5
+
 /* dialog box */
 static const char *dlg_title = "";
 static char dlg_buf[4][44];
@@ -876,7 +882,7 @@ static bool tile_walkable(int x, int y)
 /* ------------------------------------------------------------ saves (EEPROM 4K) */
 
 #define SAVE_MAGIC 0x52563634u     /* 'RV64' */
-#define SAVE_VERSION 9
+#define SAVE_VERSION 10
 
 typedef struct __attribute__((packed)) {
     uint32_t magic;
@@ -891,10 +897,11 @@ typedef struct __attribute__((packed)) {
     uint8_t  run_energy;
     uint8_t  quest_state, quest_kills;
     uint8_t  wquest, dquest;
+    uint8_t  cquest, cow_kills;   /* v10: Basic Training quest */
     uint8_t  equipped[NUM_SLOTS];
     uint8_t  pad;
     uint16_t checksum;
-    uint8_t  pad2[6];          /* keeps sizeof a multiple of the 8-byte block */
+    uint8_t  pad2[4];          /* keeps sizeof a multiple of the 8-byte block */
 } save_t;
 
 _Static_assert(sizeof(save_t) % 8 == 0, "save_t must be EEPROM-block aligned");
@@ -928,6 +935,8 @@ static void save_game(void)
     s.quest_kills = quest_kills;
     s.wquest = wquest;
     s.dquest = dquest;
+    s.cquest = cquest;
+    s.cow_kills = cow_kills;
     for (int i = 0; i < NUM_SLOTS; i++) s.equipped[i] = equipped[i];
     s.checksum = save_checksum(&s);
 
@@ -976,6 +985,8 @@ static void load_game(void)
     quest_kills = s.quest_kills <= QUEST_KILLS_NEEDED ? s.quest_kills : 0;
     wquest = s.wquest <= WQ_DONE ? s.wquest : WQ_NONE;
     dquest = s.dquest <= DQ_DONE ? s.dquest : DQ_NONE;
+    cquest = s.cquest <= CQ_DONE ? s.cquest : CQ_NONE;
+    cow_kills = s.cow_kills <= CQ_COWS_NEEDED ? s.cow_kills : 0;
     for (int i = 0; i < NUM_SLOTS; i++) {
         int it = s.equipped[i];
         /* only restore if it really belongs in this slot */
@@ -1114,6 +1125,10 @@ static void mob_die(gob_t *g)
         add_xp(SK_ATT, 60, false);
         add_xp(SK_STR, 60, false);
         add_xp(SK_DEF, 60, false);
+        if (cquest == CQ_STARTED && cow_kills < CQ_COWS_NEEDED) {
+            cow_kills++;
+            msg("Cow felled for Sergeant Hardy! (%d/%d)", cow_kills, CQ_COWS_NEEDED);
+        }
     } else {
         msg("You have defeated the %s!", mi->name);
     }
@@ -2143,29 +2158,52 @@ static void knight_talk(void)
     ui_mode = UI_DIALOG;
 }
 
-/* Sergeant Hardy: the combat tutor by the cow pasture. His first lesson is a
-   one-time jumpstart of combat xp; the gate (Attack under 10) makes it a
-   one-shot, since the grant pushes you past it. */
+/* Sergeant Hardy: the combat tutor at the cow pasture. His quest, Basic
+   Training, has you fell five cows; finishing it drills a jumpstart of combat
+   xp into you. The CQ_DONE state makes the reward a one-shot. */
 static void tutor_talk(void)
 {
     dlg_title = "Sergeant Hardy";
-    if (level_of(SK_ATT) < 10) {
-        add_xp(SK_ATT, 2000, false);
-        add_xp(SK_STR, 2000, false);
-        add_xp(SK_DEF, 2000, false);
-        add_xp(SK_HP,   800, false);
-        sfx_ui(SND_LEVELUP);
-        gratz_timer = 4;
-        dlg_line("New blood? Then here's a soldier's");
-        dlg_line("start - I've drilled some fight into");
-        dlg_line("you. Now bash these cows till it");
-        dlg_line("sticks; the goblins won't trouble you.");
-        msg("Sergeant Hardy teaches you the basics of combat.");
-    } else {
-        dlg_line("Keep at the cows, recruit - plenty of");
-        dlg_line("practice here and they barely kick back.");
-        dlg_line("Come back hardened and Sir Garrick by");
-        dlg_line("the cave may have real work for you.");
+    dlg_count = 0;
+    switch (cquest) {
+    case CQ_NONE:
+        dlg_line("New blood? Then earn your stripes.");
+        dlg_line("Fell five of these cows to prove you");
+        dlg_line("can swing a blade - then I'll drill");
+        dlg_line("some real fight into your arms.");
+        cquest = CQ_STARTED;
+        cow_kills = 0;
+        msg("Quest started: Basic Training.");
+        break;
+    case CQ_STARTED:
+        if (cow_kills >= CQ_COWS_NEEDED) {
+            cquest = CQ_DONE;
+            add_xp(SK_ATT, 2000, false);
+            add_xp(SK_STR, 2000, false);
+            add_xp(SK_DEF, 2000, false);
+            add_xp(SK_HP,   800, false);
+            gp += 50;
+            sfx_ui(SND_LEVELUP);
+            gratz_timer = 4;
+            dlg_line("Hah - a natural! There, I've drilled");
+            dlg_line("the basics into your arms and legs.");
+            dlg_line("Train on the herd to sharpen up, then");
+            dlg_line("see Sir Garrick by the cave for war.");
+            msg("Quest complete: Basic Training!");
+        } else {
+            dlg_line("Not done yet, recruit. Fresh cows");
+            dlg_line("wander in fast - keep swinging until");
+            dlg_line("five of them lie still in the field.");
+            msg("Basic Training: %d of %d cows felled.",
+                cow_kills, CQ_COWS_NEEDED);
+        }
+        break;
+    default:   /* CQ_DONE */
+        dlg_line("Good drilling, soldier. Train on the");
+        dlg_line("cows whenever you like - they barely");
+        dlg_line("kick back. Then take the fight to the");
+        dlg_line("goblins, and the dungeon below.");
+        break;
     }
     ui_mode = UI_DIALOG;
 }
@@ -3259,20 +3297,29 @@ static void render(void)
         draw_text(1, px0 + 8, py0 + 142, "(A) Quest Journal   (B) close");
     }
     else if (ui_mode == UI_QUEST) {
-        int px0 = 36, py0 = 28;
-        draw_panel(px0, py0, px0 + 248, py0 + 150);
-        draw_text(1, px0 + 8, py0 + 14, "Quest Journal");
+        int px0 = 36, py0 = 24;
+        draw_panel(px0, py0, px0 + 248, py0 + 164);
+        draw_text(1, px0 + 8, py0 + 12, "Quest Journal");
 
-        draw_text(4, px0 + 8, py0 + 32, "The Chef's Little Problem");
+        draw_text(4, px0 + 8, py0 + 28, "Basic Training");
+        if (cquest == CQ_NONE)
+            draw_text(0, px0 + 14, py0 + 38, "Seek Sergeant Hardy at the pasture.");
+        else if (cquest == CQ_STARTED)
+            draw_text(0, px0 + 14, py0 + 38, "Fell cows for Hardy: %d/%d.",
+                      cow_kills, CQ_COWS_NEEDED);
+        else
+            draw_text(6, px0 + 14, py0 + 38, "Complete - you've earned your stripes.");
+
+        draw_text(4, px0 + 8, py0 + 54, "The Chef's Little Problem");
         if (quest_state == QUEST_NONE)
-            draw_text(0, px0 + 14, py0 + 44, "Seek out Chef Bouillon by the bank.");
+            draw_text(0, px0 + 14, py0 + 64, "Seek out Chef Bouillon by the bank.");
         else if (quest_state == QUEST_ACTIVE)
-            draw_text(0, px0 + 14, py0 + 44, "Bash goblins %d/%d, cook 2 shrimp.",
+            draw_text(0, px0 + 14, py0 + 64, "Bash goblins %d/%d, cook 2 shrimp.",
                       quest_kills, QUEST_KILLS_NEEDED);
         else
-            draw_text(6, px0 + 14, py0 + 44, "Complete - the valley eats well.");
+            draw_text(6, px0 + 14, py0 + 64, "Complete - the valley eats well.");
 
-        draw_text(4, px0 + 8, py0 + 64, "The Warlord's Bane");
+        draw_text(4, px0 + 8, py0 + 80, "The Warlord's Bane");
         const char *wl;
         switch (wquest) {
         case WQ_NONE:    wl = "Seek Sir Garrick by the cave mouth."; break;
@@ -3282,13 +3329,13 @@ static void render(void)
         case WQ_SLAIN:   wl = "Return to Sir Garrick for reward."; break;
         default:         wl = "Complete - the Warlord is slain!"; break;
         }
-        draw_text(wquest >= WQ_DONE ? 6 : 0, px0 + 14, py0 + 76, "%s", wl);
+        draw_text(wquest >= WQ_DONE ? 6 : 0, px0 + 14, py0 + 90, "%s", wl);
         if (wquest == WQ_NONE)
-            draw_text(6, px0 + 14, py0 + 86, "(needs Att %d, Def %d, Smith %d)",
+            draw_text(6, px0 + 14, py0 + 100, "(needs Att %d, Def %d, Smith %d)",
                       WQ_REQ_ATT, WQ_REQ_DEF, WQ_REQ_SMITH);
 
         if (wquest >= WQ_DONE) {
-            draw_text(4, px0 + 8, py0 + 100, "The Demon Below");
+            draw_text(4, px0 + 8, py0 + 116, "The Demon Below");
             const char *dl;
             switch (dquest) {
             case DQ_NONE:    dl = "Sir Garrick has a deeper task..."; break;
@@ -3296,13 +3343,13 @@ static void render(void)
             case DQ_SLAIN:   dl = "Return to Sir Garrick for reward."; break;
             default:         dl = "Complete - the Demon is destroyed!"; break;
             }
-            draw_text(dquest >= DQ_DONE ? 6 : 0, px0 + 14, py0 + 112, "%s", dl);
+            draw_text(dquest >= DQ_DONE ? 6 : 0, px0 + 14, py0 + 126, "%s", dl);
             if (dquest == DQ_NONE)
-                draw_text(6, px0 + 14, py0 + 122, "(needs Att %d, Def %d, HP %d)",
+                draw_text(6, px0 + 14, py0 + 136, "(needs Att %d, Def %d, HP %d)",
                           DQ_REQ_ATT, DQ_REQ_DEF, DQ_REQ_HP);
         }
 
-        draw_text(6, px0 + 8, py0 + 138, "(A) back   (B) close");
+        draw_text(6, px0 + 8, py0 + 152, "(A) back   (B) close");
     }
 
     rdpq_detach_show();
@@ -3557,6 +3604,7 @@ int main(void)
     pray_drain_acc = pray_regen = 0;
     gp = 25;                      /* a few starter coins */
     quest_state = QUEST_NONE; quest_kills = 0; wquest = WQ_NONE; dquest = DQ_NONE;
+    cquest = CQ_NONE; cow_kills = 0;
     dungeon_floor = 1;
     memset(bank, 0, sizeof bank);
     for (int i = 0; i < CHAT_LINES; i++) chat[i][0] = 0;
