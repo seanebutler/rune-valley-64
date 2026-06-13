@@ -183,6 +183,25 @@ element; teleports are powered by Law runes (Home uses an Air rune).
 
 ---
 
+## Ranged
+
+Equip a bow in the weapon slot and carry arrows, then fire at a goblin from up
+to five tiles away. Each shot spends one arrow and trains Ranged; accuracy and
+max hit add the bow's and the arrow's Ranged bonuses. Bows and arrows are
+fletched (open the Fletching menu by using a knife on logs).
+
+| Bow | Ranged | Wield level |
+|---|--:|--:|
+| Shortbow | +8 | 1 |
+| Oak shortbow | +14 | 20 |
+
+| Arrow | Ranged |
+|---|--:|
+| Bronze arrow | +3 |
+| Iron arrow | +7 |
+
+---
+
 ## Fishing & food
 
 The tackle you carry decides the catch at a fishing spot. Cook the catch on

@@ -66,6 +66,16 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   **Wizard gear** — a staff, hat and robe carry a Magic bonus that boosts your
   spell accuracy and max hit (worn in the weapon/helm/body slots, drawn on your
   character). Win them as **monster drops**
+- **Ranged** — the third corner of the combat triangle. Equip a **bow** in the
+  weapon slot and carry **arrows**, and A looses a shaft at the nearest goblin
+  from up to five tiles away — spending one arrow, dealing damage scaled by your
+  Ranged level plus the bow's and arrow's bonuses, and training Ranged. A
+  **shortbow** (wield level 1) and **oak shortbow** (20) fire **bronze** and
+  **iron arrows**
+- **Fletching** — use a **knife** on logs to open the fletching menu: whittle
+  logs into **arrow shafts**, carve **shortbows** and **oak shortbows**, and
+  fix **arrowtips** (smithed from bronze/iron bars at the anvil, ten to a bar)
+  onto shafts to make finished arrows. Buy a knife at the General Store
 - **Drop tables** — every monster drops bones plus a weighted roll: goblins
   give coins, runes and shrimp, skeletons drop coins, runes, ore and the odd
   wizard hat, and the **Goblin Warlord always pays out** — coins, a staff,

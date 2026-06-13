@@ -7,3 +7,5 @@ assets/wav/
 runevalley *.png
 *.eeprom
 *.pak
+ares-*.log
+ares-*.log.err

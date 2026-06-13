@@ -20,9 +20,9 @@ function Item-Label($id) {
     return $k
 }
 
-# --- equippable items: [IT_X]={ "name", SPR, heal, bool, SLOT_Y, atk,str,def,lvl [,bool,mag] } ---
+# --- equippable items: [IT_X]={ "name", SPR, heal, bool, SLOT_Y, atk,str,def,lvl [,bool,mag[,rng]] } ---
 $equip = @()
-$rxE = '\[IT_(\w+)\]\s*=\s*\{\s*"([^"]+)"\s*,\s*\w+\s*,\s*\d+\s*,\s*(?:true|false)\s*,\s*(SLOT_\w+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*(?:true|false)\s*,\s*(\d+)\s*)?\}'
+$rxE = '\[IT_(\w+)\]\s*=\s*\{\s*"([^"]+)"\s*,\s*\w+\s*,\s*\d+\s*,\s*(?:true|false)\s*,\s*(SLOT_\w+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*(?:true|false)\s*,\s*(\d+)\s*(?:,\s*(\d+)\s*)?)?\}'
 foreach ($m in [regex]::Matches($src, $rxE)) {
     if ($m.Groups[3].Value -eq 'SLOT_NONE') { continue }
     $equip += [pscustomobject]@{
@@ -33,7 +33,15 @@ foreach ($m in [regex]::Matches($src, $rxE)) {
         Def  = [int]$m.Groups[6].Value
         Lvl  = [int]$m.Groups[7].Value
         Mag  = $(if ($m.Groups[8].Success) { [int]$m.Groups[8].Value } else { 0 })
+        Rng  = $(if ($m.Groups[9].Success) { [int]$m.Groups[9].Value } else { 0 })
     }
+}
+
+# --- arrows: stackable, slot 0, [...,bool,mag,rng] (a Ranged bonus, no slot) ---
+$arrows = @()
+$rxA = '\[IT_(\w+)\]\s*=\s*\{\s*"([^"]+)"\s*,\s*\w+\s*,\s*\d+\s*,\s*(?:true|false)\s*,\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*,\s*(?:true|false)\s*,\s*\d+\s*,\s*(\d+)\s*\}'
+foreach ($m in [regex]::Matches($src, $rxA)) {
+    $arrows += [pscustomobject]@{ Name = $m.Groups[2].Value; Rng = [int]$m.Groups[3].Value }
 }
 
 # --- monster stats: [MOB_X] = { "name", hp, dmg, def, ... } ---
@@ -129,7 +137,7 @@ W 'Worn in the weapon slot. The Magic bonus raises spell accuracy and max hit.'
 W ''
 W '| Weapon | Attack | Strength | Magic | Defence | Wield level |'
 W '|---|--:|--:|--:|--:|--:|'
-foreach ($w in ($equip | Where-Object { $_.Slot -eq 'SLOT_WEAPON' } | Sort-Object Lvl, Atk)) {
+foreach ($w in ($equip | Where-Object { $_.Slot -eq 'SLOT_WEAPON' -and $_.Rng -eq 0 } | Sort-Object Lvl, Atk)) {
     W ("| {0} | +{1} | +{2} | +{3} | +{4} | {5} |" -f $w.Name, $w.Atk, $w.Str, $w.Mag, $w.Def, $w.Lvl)
 }
 W ''
@@ -189,6 +197,27 @@ foreach ($sp in $spells) {
     if ($sp.Runes2 -gt 0) { $cost += " + $($sp.Runes2)x $(Item-Label $sp.Rune2)" }
     $hit = if ($sp.MaxHit -gt 0) { "$($sp.MaxHit)" } else { 'teleport' }
     W ("| {0} | {1} | {2} | {3} |" -f $sp.Name, $sp.Lvl, $cost, $hit)
+}
+W ''
+W '---'
+W ''
+W '## Ranged'
+W ''
+W 'Equip a bow in the weapon slot and carry arrows, then fire at a goblin from up'
+W 'to five tiles away. Each shot spends one arrow and trains Ranged; accuracy and'
+W 'max hit add the bow''s and the arrow''s Ranged bonuses. Bows and arrows are'
+W 'fletched (open the Fletching menu by using a knife on logs).'
+W ''
+W '| Bow | Ranged | Wield level |'
+W '|---|--:|--:|'
+foreach ($b in ($equip | Where-Object { $_.Slot -eq 'SLOT_WEAPON' -and $_.Rng -gt 0 } | Sort-Object Lvl)) {
+    W ("| {0} | +{1} | {2} |" -f $b.Name, $b.Rng, $b.Lvl)
+}
+W ''
+W '| Arrow | Ranged |'
+W '|---|--:|'
+foreach ($a in ($arrows | Sort-Object Rng)) {
+    W ("| {0} | +{1} |" -f $a.Name, $a.Rng)
 }
 W ''
 W '---'

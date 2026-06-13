@@ -94,13 +94,14 @@ static int16_t obj_timer[MAP_H][MAP_W];
 
 /* ------------------------------------------------------------ skills */
 
+/* new skills go at the END so existing save indices (0-12) never shift */
 enum { SK_ATT, SK_STR, SK_DEF, SK_HP, SK_WC, SK_MINE, SK_FISH, SK_FM, SK_COOK,
-       SK_PRAY, SK_RC, SK_SMITH, SK_MAGIC, NUM_SKILLS };
+       SK_PRAY, SK_RC, SK_SMITH, SK_MAGIC, SK_RANGED, SK_FLETCH, NUM_SKILLS };
 
 static const char *skill_names[NUM_SKILLS] = {
     "Attack", "Strength", "Defence", "Hitpoints", "Woodcutting",
     "Mining", "Fishing", "Firemaking", "Cooking", "Prayer", "Runecraft",
-    "Smithing", "Magic"
+    "Smithing", "Magic", "Ranged", "Fletching"
 };
 
 static int32_t xp[NUM_SKILLS];        /* stored as xp * 10 */
@@ -140,7 +141,9 @@ enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_WATER_RUNE, IT_EARTH_RUNE, IT_LAW_RUNE, IT_CHAOS_RUNE,
        IT_ROD, IT_LOBSTER_POT, IT_HARPOON,
        IT_RAW_TROUT, IT_TROUT, IT_RAW_LOBSTER, IT_LOBSTER,
-       IT_RAW_SWORDFISH, IT_SWORDFISH, NUM_ITEMS };
+       IT_RAW_SWORDFISH, IT_SWORDFISH,
+       IT_KNIFE, IT_ARROW_SHAFT, IT_BRONZE_TIPS, IT_IRON_TIPS,
+       IT_BRONZE_ARROW, IT_IRON_ARROW, IT_SHORTBOW, IT_OAK_BOW, NUM_ITEMS };
 
 /* worn equipment slots; SLOT_NONE = item is not equippable */
 enum { SLOT_NONE, SLOT_WEAPON, SLOT_SHIELD, SLOT_HELM, SLOT_BODY };
@@ -151,6 +154,7 @@ enum { SLOT_NONE, SLOT_WEAPON, SLOT_SHIELD, SLOT_HELM, SLOT_BODY };
 typedef struct {
     const char *name; int spr; int heal; bool tool;
     int slot; int atk; int str; int def; int eqlvl; bool stackable; int mag;
+    int rng;   /* ranged bonus (bows + arrows); 0 for everything else */
 } iteminfo_t;
 
 /* ------------------------------------------------------------ sprites */
@@ -226,6 +230,8 @@ enum {
     SPR_I_ROD, SPR_I_LOBSTER_POT, SPR_I_HARPOON,
     SPR_I_RAW_TROUT, SPR_I_TROUT, SPR_I_RAW_LOBSTER, SPR_I_LOBSTER,
     SPR_I_RAW_SWORDFISH, SPR_I_SWORDFISH,
+    SPR_I_KNIFE, SPR_I_ARROW_SHAFT, SPR_I_BRONZE_TIPS, SPR_I_IRON_TIPS,
+    SPR_I_BRONZE_ARROW, SPR_I_IRON_ARROW, SPR_I_SHORTBOW, SPR_I_OAK_BOW,
     NUM_SPR
 };
 
@@ -299,7 +305,9 @@ static const char *spr_files[NUM_SPR] = {
     "item_chaos_rune", "obj_altar_chaos",
     "item_rod", "item_lobster_pot", "item_harpoon",
     "item_raw_trout", "item_trout", "item_raw_lobster", "item_lobster",
-    "item_raw_swordfish", "item_swordfish"
+    "item_raw_swordfish", "item_swordfish",
+    "item_knife", "item_arrow_shaft", "item_bronze_tips", "item_iron_tips",
+    "item_bronze_arrow", "item_iron_arrow", "item_shortbow", "item_oak_bow"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -370,6 +378,16 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     [IT_LOBSTER]      ={ "Lobster",       SPR_I_LOBSTER,     12, false },
     [IT_RAW_SWORDFISH]={ "Raw swordfish", SPR_I_RAW_SWORDFISH,0, false },
     [IT_SWORDFISH]    ={ "Swordfish",     SPR_I_SWORDFISH,   16, false },
+    /* fletching + ranged: knife to fletch, shafts + smithed tips make arrows,
+       bows are fletched from logs. mag field stays 0; rng is the last field. */
+    [IT_KNIFE]        ={ "Knife",         SPR_I_KNIFE,        0, true },
+    [IT_ARROW_SHAFT]  ={ "Arrow shaft",   SPR_I_ARROW_SHAFT,  0, false, 0,0,0,0,0, true },
+    [IT_BRONZE_TIPS]  ={ "Bronze arrowtips",SPR_I_BRONZE_TIPS,0, false, 0,0,0,0,0, true },
+    [IT_IRON_TIPS]    ={ "Iron arrowtips",SPR_I_IRON_TIPS,    0, false, 0,0,0,0,0, true },
+    [IT_BRONZE_ARROW] ={ "Bronze arrow",  SPR_I_BRONZE_ARROW, 0, false, 0,0,0,0,0, true, 0, 3 },
+    [IT_IRON_ARROW]   ={ "Iron arrow",    SPR_I_IRON_ARROW,   0, false, 0,0,0,0,0, true, 0, 7 },
+    [IT_SHORTBOW]     ={ "Shortbow",      SPR_I_SHORTBOW,     0, false, SLOT_WEAPON,0,0,0,1,  false,0, 8 },
+    [IT_OAK_BOW]      ={ "Oak shortbow",  SPR_I_OAK_BOW,      0, false, SLOT_WEAPON,0,0,0,20, false,0, 14 },
 };
 
 /* shop value in coins; buy price = value, sell price = value/2 (min 1).
@@ -391,6 +409,8 @@ static const int item_value[NUM_ITEMS] = {
     [IT_ROD]=20, [IT_LOBSTER_POT]=40, [IT_HARPOON]=80,
     [IT_RAW_TROUT]=10, [IT_TROUT]=25, [IT_RAW_LOBSTER]=30, [IT_LOBSTER]=60,
     [IT_RAW_SWORDFISH]=50, [IT_SWORDFISH]=100,
+    [IT_KNIFE]=6, [IT_ARROW_SHAFT]=1, [IT_BRONZE_TIPS]=2, [IT_IRON_TIPS]=4,
+    [IT_BRONZE_ARROW]=2, [IT_IRON_ARROW]=4, [IT_SHORTBOW]=25, [IT_OAK_BOW]=80,
 };
 static int sell_price(int item) { int v = item_value[item]; return v ? (v / 2 < 1 ? 1 : v / 2) : 0; }
 
@@ -441,6 +461,19 @@ static int equip_mag(void)
     for (int i = 0; i < NUM_SLOTS; i++)
         if (equipped[i]) t += iteminfo[equipped[i]].mag;
     return t;
+}
+static int equip_rng(void)
+{
+    int t = 0;
+    for (int i = 0; i < NUM_SLOTS; i++)
+        if (equipped[i]) t += iteminfo[equipped[i]].rng;
+    return t;
+}
+/* a bow: a weapon whose bonus is ranged, not melee */
+static bool is_bow(int item)
+{
+    return item != IT_NONE && iteminfo[item].slot == SLOT_WEAPON &&
+           iteminfo[item].rng > 0;
 }
 
 /* ------------------------------------------------------------ audio */
@@ -544,9 +577,10 @@ static const mobinfo_t mobinfo[NUM_MOBS] = {
 
 typedef enum { UI_NONE, UI_INV, UI_SKILLS, UI_BANK, UI_HELP, UI_SMITH,
                UI_DIALOG, UI_EQUIP, UI_SPELL, UI_SHOP, UI_QUEST, UI_PRAYER,
-               UI_ALMANAC } ui_t;
+               UI_ALMANAC, UI_FLETCH } ui_t;
 static ui_t ui_mode = UI_NONE;
 static int smith_cursor = 0;
+static int fletch_cursor = 0;
 static int equip_cursor = 0;
 static int shop_id = 0, shop_mode = 0, shop_cursor = 0;   /* mode: 0 buy, 1 sell */
 
@@ -1340,7 +1374,7 @@ static void build_almanac(void)
 
     al_add(1, "== WEAPONS ==  (Atk/Str/Mag, level to wield)");
     for (int it = 1; it < NUM_ITEMS; it++)
-        if (iteminfo[it].slot == SLOT_WEAPON)
+        if (iteminfo[it].slot == SLOT_WEAPON && !is_bow(it))
             al_add(0, "%-16s A+%-2d S+%-2d M+%-2d  L%d", iteminfo[it].name,
                    iteminfo[it].atk, iteminfo[it].str, iteminfo[it].mag,
                    iteminfo[it].eqlvl);
@@ -1392,6 +1426,15 @@ static void build_almanac(void)
                    spellinfo[sp].runes, iteminfo[spellinfo[sp].rune].name);
         }
     }
+
+    al_add(1, "== RANGED ==  (bows: Rng/level; arrows: Rng)");
+    for (int it = 1; it < NUM_ITEMS; it++)
+        if (is_bow(it))
+            al_add(0, "%-16s R+%-2d  L%d", iteminfo[it].name,
+                   iteminfo[it].rng, iteminfo[it].eqlvl);
+    for (int it = 1; it < NUM_ITEMS; it++)
+        if (iteminfo[it].slot != SLOT_WEAPON && iteminfo[it].rng > 0)
+            al_add(0, "%-16s R+%d", iteminfo[it].name, iteminfo[it].rng);
 
     al_add(1, "== FISHING & FOOD ==  (tackle, levels, heal)");
     for (int f = 0; f < NUM_FISH; f++)
@@ -1582,6 +1625,44 @@ static bool player_cast(gob_t *g)
     if (dmg > 0) {
         add_xp(SK_HP, dmg * 13, false);
         add_xp(SK_MAGIC, dmg * 20, false);
+    }
+    if (g->hp <= 0) mob_die(g);
+    return true;
+}
+
+/* the arrow the bow will fire (best held first), -1 if none */
+static int held_arrow(void)
+{
+    if (has_item(IT_IRON_ARROW))   return IT_IRON_ARROW;
+    if (has_item(IT_BRONZE_ARROW)) return IT_BRONZE_ARROW;
+    return -1;
+}
+
+/* ranged: a bow looses the best arrow in the pack. returns false (stopping the
+   fight) when out of arrows. */
+static bool player_shoot(gob_t *g)
+{
+    int arrow = held_arrow();
+    if (arrow < 0) { msg("You have no arrows for your bow."); return false; }
+    remove_item(arrow);
+    spawn_proj(pl.px, pl.py - 8, g->px, g->py - 8, SPR_BOLT_AIR);
+    sfx(SND_HIT);
+    int rng = level_of(SK_RANGED);
+    int rbonus = equip_rng() + iteminfo[arrow].rng;
+    int p_hit = 60 + rng * 2 + rbonus - mobinfo[g->type].mob_def * 2;
+    if (p_hit > 95) p_hit = 95;
+    if (p_hit < 5) p_hit = 5;
+    int maxhit = 1 + (rng + rbonus) / 8;
+    int dmg = chance(p_hit) ? (rand() % (maxhit + 1)) : 0;
+    g->hp -= dmg;
+    g->hitsplat = dmg;
+    g->hitsplat_t = 40;
+    g->hurt_timer = 16;
+    g->aggro = true;
+    add_xp(SK_RANGED, 40, true);
+    if (dmg > 0) {
+        add_xp(SK_RANGED, dmg * 20, false);
+        add_xp(SK_HP, dmg * 13, false);
     }
     if (g->hp <= 0) mob_die(g);
     return true;
@@ -1805,7 +1886,8 @@ static void tick_skilling(void)
         if (!g->exists || g->dead) { stop_action(); break; }
         int d = cheb(pl.tx, pl.ty, g->tx, g->ty);
         bool magic = (cast_spell != SPELL_MELEE);
-        int reach = magic ? 5 : 1;       /* spells strike from afar */
+        bool ranged = !magic && is_bow(equipped[SLOT_WEAPON - 1]);
+        int reach = (magic || ranged) ? 5 : 1;   /* spells and bows strike from afar */
         /* face the foe while fighting */
         if (d >= 1) {
             int fdx = (g->tx > pl.tx) - (g->tx < pl.tx);
@@ -1819,12 +1901,15 @@ static void tick_skilling(void)
                 if (magic) {
                     pl.atk_cd = 5;
                     if (!player_cast(g)) stop_action();
+                } else if (ranged) {
+                    pl.atk_cd = 4;
+                    if (!player_shoot(g)) stop_action();
                 } else {
                     pl.atk_cd = 4;
                     player_attack(g);
                 }
             }
-        } else if (d > (magic ? 8 : 6)) {
+        } else if (d > ((magic || ranged) ? 8 : 6)) {
             stop_action();
         } else if (!pl.moving) {
             /* close the distance one tile */
@@ -2619,15 +2704,17 @@ static void tutor_talk(void)
 
 static void interact(void)
 {
-    /* with a spell selected, A targets a monster from range */
-    if (cast_spell != SPELL_MELEE) {
+    /* with a spell selected, or a bow drawn, A targets a monster from range */
+    bool ranged = (cast_spell == SPELL_MELEE) && is_bow(equipped[SLOT_WEAPON - 1]);
+    if (cast_spell != SPELL_MELEE || ranged) {
         gob_t *g = nearest_goblin(5);
         if (g) {
             pl.state = ST_FIGHT;
             pl.fight_target = (int)(g - gob);
             pl.atk_cd = 1;
-            msg("You aim your %s at the %s.", spellinfo[cast_spell].name,
-                mobinfo[g->type].name);
+            if (ranged) msg("You take aim at the %s.", mobinfo[g->type].name);
+            else msg("You aim your %s at the %s.", spellinfo[cast_spell].name,
+                     mobinfo[g->type].name);
             return;
         }
     }
@@ -2832,7 +2919,7 @@ static void equip_from_inv(int invslot)
     int it = inv[invslot];
     int slot = iteminfo[it].slot;
     if (!slot) return;
-    int reqsk = (slot == SLOT_WEAPON) ? SK_ATT : SK_DEF;
+    int reqsk = is_bow(it) ? SK_RANGED : (slot == SLOT_WEAPON ? SK_ATT : SK_DEF);
     if (level_of(reqsk) < iteminfo[it].eqlvl) {
         msg("You need %s level %d to wear that.",
             skill_names[reqsk], iteminfo[it].eqlvl);
@@ -2921,6 +3008,12 @@ static void use_inv_item(int slot)
     case IT_ROD:    msg("A fishing rod - lands trout at the spots (Fishing 20)."); break;
     case IT_LOBSTER_POT: msg("A lobster pot - catches lobster (Fishing 40)."); break;
     case IT_HARPOON: msg("A harpoon - spears swordfish (Fishing 50)."); break;
+    case IT_KNIFE:  ui_mode = UI_FLETCH; fletch_cursor = 0; break;
+    case IT_ARROW_SHAFT: msg("Arrow shafts. Add arrowtips to fletch arrows."); break;
+    case IT_BRONZE_TIPS: case IT_IRON_TIPS:
+        msg("Arrowtips. Use a knife to fletch them onto shafts."); break;
+    case IT_BRONZE_ARROW: case IT_IRON_ARROW:
+        msg("Arrows for your bow. Equip a bow, then A to shoot."); break;
     case IT_TINDER: msg("Useful for lighting fires."); break;
     }
 }
@@ -2938,6 +3031,8 @@ static const struct { int item, bar, bars, lvl, xp_x10; } smith_list[] = {
     { IT_IRON_BODY,     IT_IRON_BAR,   3, 22, 750 },
     { IT_IRON_AXE,      IT_IRON_BAR,   1, 16, 250 },
     { IT_IRON_PICK,     IT_IRON_BAR,   1, 17, 250 },
+    { IT_BRONZE_TIPS,   IT_BRONZE_BAR, 1,  5, 100 },
+    { IT_IRON_TIPS,     IT_IRON_BAR,   1, 20, 250 },
 };
 #define SMITH_COUNT (int)(sizeof smith_list / sizeof smith_list[0])
 
@@ -2955,10 +3050,48 @@ static void smith_make(int row)
         return;
     }
     for (int i = 0; i < need; i++) remove_item(bar);
-    add_item(item);
+    /* a bar of metal yields a batch of arrowtips, otherwise a single piece */
+    int batch = (item == IT_BRONZE_TIPS || item == IT_IRON_TIPS) ? 10 : 1;
+    for (int i = 0; i < batch; i++) add_item(item);
     sfx(SND_SMITH);
-    msg("You hammer out a %s.", iteminfo[item].name);
+    if (batch > 1) msg("You hammer out %d %s.", batch, iteminfo[item].name);
+    else           msg("You hammer out a %s.", iteminfo[item].name);
     add_xp(SK_SMITH, smith_list[row].xp_x10, true);
+}
+
+/* ------------------------------------------------------------ fletching */
+
+static const struct { int result, qty, in1, n1, in2, n2, lvl, xp_x10; }
+fletch_list[] = {
+    { IT_ARROW_SHAFT, 10, IT_LOGS,        1, IT_NONE,         0,  1,  50 },
+    { IT_SHORTBOW,     1, IT_LOGS,        1, IT_NONE,         0,  5,  80 },
+    { IT_OAK_BOW,      1, IT_OAK_LOGS,    1, IT_NONE,         0, 20, 250 },
+    { IT_BRONZE_ARROW,10, IT_ARROW_SHAFT,10, IT_BRONZE_TIPS, 10,  1, 130 },
+    { IT_IRON_ARROW,  10, IT_ARROW_SHAFT,10, IT_IRON_TIPS,   10, 15, 250 },
+};
+#define FLETCH_COUNT (int)(sizeof fletch_list / sizeof fletch_list[0])
+
+static void fletch_make(int row)
+{
+    if (row < 0 || row >= FLETCH_COUNT) return;
+    int result = fletch_list[row].result, qty = fletch_list[row].qty;
+    int in1 = fletch_list[row].in1, n1 = fletch_list[row].n1;
+    int in2 = fletch_list[row].in2, n2 = fletch_list[row].n2;
+    if (level_of(SK_FLETCH) < fletch_list[row].lvl) {
+        msg("You need a Fletching level of %d for that.", fletch_list[row].lvl);
+        return;
+    }
+    if (inv_count(in1) < n1 || (in2 != IT_NONE && inv_count(in2) < n2)) {
+        msg("You don't have the materials for that.");
+        return;
+    }
+    for (int i = 0; i < n1; i++) remove_item(in1);
+    for (int i = 0; i < n2; i++) remove_item(in2);
+    for (int i = 0; i < qty; i++) add_item(result);
+    sfx(SND_SMITH);
+    if (qty > 1) msg("You fletch %d %s.", qty, iteminfo[result].name);
+    else         msg("You fletch a %s.", iteminfo[result].name);
+    add_xp(SK_FLETCH, fletch_list[row].xp_x10, true);
 }
 
 /* ------------------------------------------------------------ bank */
@@ -3003,7 +3136,7 @@ static const char *shop_names[NUM_SHOPS] = {
     "General Store", "Weapon Shop", "Armoury", "Magic Shop"
 };
 static const int shop_stock[NUM_SHOPS][20] = {
-    { IT_AXE, IT_PICK, IT_NET, IT_ROD, IT_LOBSTER_POT, IT_HARPOON,
+    { IT_AXE, IT_PICK, IT_NET, IT_ROD, IT_LOBSTER_POT, IT_HARPOON, IT_KNIFE,
       IT_TINDER, IT_HAMMER, IT_RAW_SHRIMP, IT_SHRIMP, IT_NONE },
     { IT_BRONZE_SWORD, IT_IRON_SWORD, IT_STEEL_SWORD, IT_MITH_SWORD, IT_RUNE_SWORD, IT_NONE },
     { IT_BRONZE_HELM, IT_BRONZE_SHIELD, IT_BRONZE_BODY,
@@ -3507,8 +3640,12 @@ static void render(void)
     draw_text(pl.hp * 3 <= maxhp ? 3 : 4, 8, 14, "HP  %d/%d", pl.hp, maxhp);
     draw_text(pl.run_on ? 1 : 6, 8, 24, "Run %d%% %s", pl.run_energy,
               pl.run_on ? "(on)" : "");
-    draw_text(cast_spell == SPELL_MELEE ? 6 : 5, 8, 34, "Atk %s",
-              spellinfo[cast_spell].name);
+    if (cast_spell != SPELL_MELEE)
+        draw_text(5, 8, 34, "Atk %s", spellinfo[cast_spell].name);
+    else if (is_bow(equipped[SLOT_WEAPON - 1]))
+        draw_text(5, 8, 34, "Atk Ranged");
+    else
+        draw_text(6, 8, 34, "Atk Melee");
     bool praying = false;
     for (int i = 0; i < NUM_PRAYERS; i++) if (pray_on[i]) praying = true;
     draw_text(praying ? 4 : 6, 8, 44, "Pray %d/%d", pray_pts, pray_max());
@@ -3571,18 +3708,20 @@ static void render(void)
                   inv[inv_cursor] != IT_NONE ? iteminfo[inv[inv_cursor]].name : "-");
     }
     else if (ui_mode == UI_SKILLS) {
-        int px0 = SCREEN_W - 130, py0 = 22;
-        draw_panel(px0, py0, px0 + 124, py0 + 162);
+        int px0 = SCREEN_W - 130, py0 = 16;
+        draw_panel(px0, py0, px0 + 124, py0 + 172);
         draw_text(1, px0 + 6, py0 + 12, "Skills");
         for (int i = 0; i < NUM_SKILLS; i++)
-            draw_text(0, px0 + 6, py0 + 24 + i * 10, "%-11s %2d",
+            draw_text(0, px0 + 6, py0 + 24 + i * 9, "%-11s %2d",
                       skill_names[i], level_of(i));
         int att = level_of(SK_ATT), str = level_of(SK_STR), def = level_of(SK_DEF);
         float base = (def + level_of(SK_HP) + level_of(SK_PRAY) / 2) * 0.25f;
         float melee = (att + str) * 0.325f;
+        float rng = (level_of(SK_RANGED) * 3 / 2) * 0.325f;
         float mage = (level_of(SK_MAGIC) * 3 / 2) * 0.325f;
-        int cmb = (int)(base + (melee > mage ? melee : mage));
-        draw_text(4, px0 + 6, py0 + 157, "Combat level: %d", cmb);
+        float best = melee; if (rng > best) best = rng; if (mage > best) best = mage;
+        int cmb = (int)(base + best);
+        draw_text(4, px0 + 6, py0 + 166, "Combat level: %d", cmb);
     }
     else if (ui_mode == UI_BANK) {
         int n = bank_rows();
@@ -3629,21 +3768,42 @@ static void render(void)
         }
     }
     else if (ui_mode == UI_SMITH) {
-        int px0 = 64, py0 = 36;
-        draw_panel(px0, py0, px0 + 192, py0 + 166);
+        int px0 = 64, py0 = 28;
+        draw_panel(px0, py0, px0 + 192, py0 + 184);
         draw_text(1, px0 + 6, py0 + 12, "Anvil - Smithing");
         draw_text(6, px0 + 6, py0 + 22, "A: smith   B: close");
         for (int i = 0; i < SMITH_COUNT; i++) {
             bool can = level_of(SK_SMITH) >= smith_list[i].lvl;
             draw_text(i == smith_cursor ? 1 : (can ? 0 : 6),
                       px0 + 6, py0 + 34 + i * 12,
-                      "%c %-12s %dx%s L%d",
+                      "%c %-15s %dx%s L%d",
                       i == smith_cursor ? '>' : ' ',
                       iteminfo[smith_list[i].item].name,
                       smith_list[i].bars,
                       smith_list[i].bar == IT_BRONZE_BAR ? "brz" : "irn",
                       smith_list[i].lvl);
         }
+    }
+    else if (ui_mode == UI_FLETCH) {
+        int px0 = 56, py0 = 48;
+        draw_panel(px0, py0, px0 + 208, py0 + 110);
+        draw_text(1, px0 + 6, py0 + 12, "Fletching (knife)");
+        draw_text(6, px0 + 6, py0 + 22, "A: fletch   B: close");
+        for (int i = 0; i < FLETCH_COUNT; i++) {
+            bool can = level_of(SK_FLETCH) >= fletch_list[i].lvl;
+            draw_text(i == fletch_cursor ? 1 : (can ? 0 : 6),
+                      px0 + 6, py0 + 34 + i * 12, "%c %dx %-13s L%d",
+                      i == fletch_cursor ? '>' : ' ', fletch_list[i].qty,
+                      iteminfo[fletch_list[i].result].name, fletch_list[i].lvl);
+        }
+        int fc = fletch_cursor;
+        if (fletch_list[fc].in2 != IT_NONE)
+            draw_text(0, px0 + 6, py0 + 98, "Needs %dx %s + %dx %s",
+                      fletch_list[fc].n1, iteminfo[fletch_list[fc].in1].name,
+                      fletch_list[fc].n2, iteminfo[fletch_list[fc].in2].name);
+        else
+            draw_text(0, px0 + 6, py0 + 98, "Needs %dx %s",
+                      fletch_list[fc].n1, iteminfo[fletch_list[fc].in1].name);
     }
     else if (ui_mode == UI_EQUIP) {
         int px0 = SCREEN_W - 142, py0 = 30;
@@ -3924,6 +4084,13 @@ static void handle_input(void)
         if (pressed.d_up && smith_cursor > 0) smith_cursor--;
         if (pressed.d_down && smith_cursor < SMITH_COUNT - 1) smith_cursor++;
         if (pressed.a) smith_make(smith_cursor);
+        return;
+    }
+    if (ui_mode == UI_FLETCH) {
+        if (pressed.b) { ui_mode = UI_NONE; return; }
+        if (pressed.d_up && fletch_cursor > 0) fletch_cursor--;
+        if (pressed.d_down && fletch_cursor < FLETCH_COUNT - 1) fletch_cursor++;
+        if (pressed.a) fletch_make(fletch_cursor);
         return;
     }
     if (ui_mode == UI_EQUIP) {
