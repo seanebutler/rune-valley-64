@@ -8,8 +8,9 @@ music are original — no Jagex assets are used.
 
 ## The game
 
-You wash up in Rune Valley with an axe, a pickaxe, a small net and a
-tinderbox. The world runs on a **600 ms game tick**, just like the classic:
+You wash up on the shore of **Oakhaven**, a frontier corner of Rune Valley,
+with an axe, a pickaxe, a small net and a tinderbox. The world runs on a
+**600 ms game tick**, just like the classic:
 
 - **Woodcutting** — chop trees (and oaks at level 15); trees fall to stumps
   and respawn
@@ -137,12 +138,18 @@ tinderbox. The world runs on a **600 ms game tick**, just like the classic:
   Below* — a follow-up gated behind it (Attack/Defence/Hitpoints 30): descend
   to the dungeon's second floor and destroy the Demon for 5000 coins and a
   fortune in xp. Track them all in the Quest Journal (Start, then A)
+- **The Oakhaven Diary** — an achievement diary for the area: a checklist of
+  twelve feats spanning combat, skilling and quests (fell the cows, slay each
+  boss, reach Crafting 50, enchant jewelry, and so on). Each one ticks off
+  automatically the moment you earn it and pays a coin reward; finish the lot
+  for a hero's bounty. Open it from the help screen (Start, then A). Future
+  areas will bring their own diaries
 - **The Almanac** — an in-game reference for everything with numbers. Open it
-  from the help screen (Start, then A twice) for a scrollable listing of every
-  weapon's Attack/Strength/Magic bonuses and level requirement, every piece of
-  armour's Defence, and every monster's hitpoints, max hit, defence and full
-  **loot table with drop chances**. No wiki required — and the same tables are
-  mirrored in [ALMANAC.md](ALMANAC.md) for quick reference out of game
+  from the help screen (Start, then A three times) for a scrollable listing of
+  every weapon's Attack/Strength/Magic bonuses and level requirement, every
+  piece of armour's Defence, and every monster's hitpoints, max hit, defence
+  and full **loot table with drop chances**. No wiki required — and the same
+  tables are mirrored in [ALMANAC.md](ALMANAC.md) for quick reference out of game
 - **A three-floor dungeon** — find the cave stairs in the open field southwest
   of the mine and descend into the gloom. **Floor 1**: tougher **skeletons**
   and the hulking **Goblin Warlord** (45 HP) in the chamber beyond the doorway.
@@ -196,7 +203,7 @@ layout is migrated automatically on first load).
 | C-up | Worn equipment (A: unequip) |
 | C-left | Spellbook (A: choose spell / cast Home Teleport) |
 | C-down | Prayer book (A: toggle prayer) |
-| Start | Help (A: Quest Journal, then A: Almanac) |
+| Start | Help (A: Quest Journal → Oakhaven Diary → Almanac) |
 | L | Music on/off |
 
 ## Building

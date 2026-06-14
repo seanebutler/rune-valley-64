@@ -672,7 +672,7 @@ static const mobinfo_t mobinfo[NUM_MOBS] = {
 
 typedef enum { UI_NONE, UI_INV, UI_SKILLS, UI_BANK, UI_HELP, UI_SMITH,
                UI_DIALOG, UI_EQUIP, UI_SPELL, UI_SHOP, UI_QUEST, UI_PRAYER,
-               UI_ALMANAC, UI_FLETCH, UI_CRAFT } ui_t;
+               UI_ALMANAC, UI_FLETCH, UI_CRAFT, UI_DIARY } ui_t;
 static ui_t ui_mode = UI_NONE;
 static int smith_cursor = 0;
 static int fletch_cursor = 0;
@@ -769,6 +769,7 @@ static int quest_kills = 0;
 /* The Warlord's Bane - a multi-stage quest from the Knight */
 enum { WQ_NONE, WQ_STARTED, WQ_SCOUTED, WQ_ARMED, WQ_SLAIN, WQ_DONE };
 static int wquest = WQ_NONE;
+static uint32_t diary_done = 0;    /* Oakhaven achievement-diary completion bits */
 #define WQ_BONES_NEEDED 5
 #define WQ_BARS_NEEDED  2
 #define WQ_COIN_COST    300
@@ -1164,7 +1165,8 @@ typedef struct __attribute__((packed)) {
     uint8_t  inv_qty[SAVE_CAP_INV];
     uint8_t  equipped[SAVE_CAP_SLOTS];
     uint16_t bank[SAVE_CAP_ITEMS];
-    uint8_t  reserved[32];         /* future scalar fields; zero in older saves */
+    uint32_t diary;               /* Oakhaven diary completion bitmask */
+    uint8_t  reserved[28];        /* future scalar fields; zero in older saves */
     uint16_t checksum;
     uint8_t  pad2[3];              /* align sizeof to the 8-byte EEPROM block */
 } save_t;
@@ -1230,6 +1232,7 @@ static void save_game(void)
     s.cquest = cquest;
     s.cow_kills = cow_kills;
     for (int i = 0; i < NUM_SLOTS; i++) s.equipped[i] = equipped[i];
+    s.diary = diary_done;
     s.checksum = csum_bytes(&s, offsetof(save_t, checksum));
 
     /* write only the blocks that changed, and keep the audio mixer fed
@@ -1309,6 +1312,7 @@ static void apply_save(const save_t *s)
     dquest = s->dquest <= DQ_DONE ? s->dquest : DQ_NONE;
     cquest = s->cquest <= CQ_DONE ? s->cquest : CQ_NONE;
     cow_kills = s->cow_kills <= CQ_COWS_NEEDED ? s->cow_kills : 0;
+    diary_done = s->diary;
     for (int i = 0; i < NUM_SLOTS; i++) {
         int it = s->equipped[i];
         /* only restore if it really belongs in this slot */
@@ -1598,6 +1602,89 @@ static void build_almanac(void)
     }
 }
 
+/* ---- the Oakhaven Achievement Diary: area goals with milestone rewards ---- */
+static int combat_level(void)
+{
+    int att = level_of(SK_ATT), str = level_of(SK_STR);
+    float base = (level_of(SK_DEF) + level_of(SK_HP) + level_of(SK_PRAY) / 2) * 0.25f;
+    float melee = (att + str) * 0.325f;
+    float rng = (level_of(SK_RANGED) * 3 / 2) * 0.325f;
+    float mage = (level_of(SK_MAGIC) * 3 / 2) * 0.325f;
+    float best = melee; if (rng > best) best = rng; if (mage > best) best = mage;
+    return (int)(base + best);
+}
+static int total_level(void)
+{
+    int t = 0;
+    for (int i = 0; i < NUM_SKILLS; i++) t += level_of(i);
+    return t;
+}
+
+enum { DTASK_BASIC, DTASK_CHEF, DTASK_WARLORD, DTASK_DEMON,
+       DTASK_MINE40, DTASK_SMITH40, DTASK_CRAFT50, DTASK_COMBAT50, DTASK_TOTAL300,
+       DTASK_DRAGON, DTASK_ENCHANT, DTASK_ARMOUR, NUM_DTASK };
+static const char *diary_desc[NUM_DTASK] = {
+    "Complete Basic Training",
+    "Complete The Chef's Problem",
+    "Complete The Warlord's Bane",
+    "Complete The Demon Below",
+    "Reach Mining 40 (mine gold)",
+    "Reach Smithing 40",
+    "Reach Crafting 50",
+    "Reach combat level 50",
+    "Reach a total level of 300",
+    "Slay the Ancient Dragon",
+    "Enchant dragonstone jewelry",
+    "Craft a piece of ranged armour",
+};
+static const int diary_reward[NUM_DTASK] = {   /* coins awarded per task */
+    200, 200, 300, 400, 500, 500, 500, 750, 750, 1500, 500, 500,
+};
+#define DIARY_ALL_MASK ((1u << NUM_DTASK) - 1u)
+#define DIARY_CLAIMED  (1u << 31)      /* full-completion bonus already paid */
+
+/* derivable tasks (levels/quests); event tasks are set at their event */
+static bool diary_check(int t)
+{
+    switch (t) {
+    case DTASK_BASIC:    return cquest == CQ_DONE;
+    case DTASK_CHEF:     return quest_state == QUEST_DONE;
+    case DTASK_WARLORD:  return wquest >= WQ_DONE;
+    case DTASK_DEMON:    return dquest >= DQ_DONE;
+    case DTASK_MINE40:   return level_of(SK_MINE) >= 40;
+    case DTASK_SMITH40:  return level_of(SK_SMITH) >= 40;
+    case DTASK_CRAFT50:  return level_of(SK_CRAFT) >= 50;
+    case DTASK_COMBAT50: return combat_level() >= 50;
+    case DTASK_TOTAL300: return total_level() >= 300;
+    default:             return false;
+    }
+}
+
+static void diary_complete(int t)
+{
+    if (t < 0 || t >= NUM_DTASK || (diary_done & (1u << t))) return;
+    diary_done |= (1u << t);
+    gp += diary_reward[t];
+    sfx_ui(SND_LEVELUP);
+    gratz_timer = 3;
+    msg("Oakhaven task done: %s! (+%d coins)", diary_desc[t], diary_reward[t]);
+    if ((diary_done & DIARY_ALL_MASK) == DIARY_ALL_MASK && !(diary_done & DIARY_CLAIMED)) {
+        diary_done |= DIARY_CLAIMED;
+        gp += 5000;
+        add_xp(SK_ATT, 8000, false); add_xp(SK_STR, 8000, false);
+        add_xp(SK_DEF, 8000, false); add_xp(SK_HP, 6000, false);
+        msg("OAKHAVEN DIARY COMPLETE! A hero's bounty: 5000 coins!");
+    }
+}
+
+/* re-evaluate the derivable tasks (cheap; called each tick and on opening) */
+static void diary_refresh(void)
+{
+    for (int t = 0; t < NUM_DTASK; t++)
+        if (!(diary_done & (1u << t)) && diary_check(t))
+            diary_complete(t);
+}
+
 static void mob_die(gob_t *g)
 {
     const mobinfo_t *mi = &mobinfo[g->type];
@@ -1653,6 +1740,7 @@ static void mob_die(gob_t *g)
         if (!inv_full()) add_item(IT_DRAGONSTONE);
         msg("You plunder its hoard: 2500 coins and a Dragonstone!");
         gratz_timer = 4;
+        diary_complete(DTASK_DRAGON);
     } else {
         msg("You have defeated the %s!", mi->name);
     }
@@ -1901,6 +1989,7 @@ static void do_enchant(void)
     sfx_ui(SND_LEVELUP);
     add_xp(SK_MAGIC, spellinfo[SPELL_ENCHANT].xp_x10, true);
     msg("The gem flares - you enchant a %s!", iteminfo[made].name);
+    diary_complete(DTASK_ENCHANT);
 }
 
 /* ------------------------------------------------------------ skilling ticks */
@@ -2656,6 +2745,8 @@ static void game_tick(void)
             pray_pts++;
         }
     }
+    /* tick off any newly-earned Oakhaven diary tasks (levels/quests) */
+    if (game_state == STATE_PLAY) diary_refresh();
     /* silent autosave every ~60s of overworld play (saves never record the
        dungeon, so you always reload on the surface) */
     if (game_state == STATE_PLAY && cur_map == MAP_OVERWORLD && ++save_timer >= 100) {
@@ -3486,6 +3577,7 @@ static void craft_make(int row)
     sfx(SND_SMITH);
     msg("You craft a %s.", iteminfo[result].name);
     add_xp(SK_CRAFT, craft_list[row].xp_x10, true);
+    if (is_ranged_armour(result)) diary_complete(DTASK_ARMOUR);
 }
 
 /* ------------------------------------------------------------ bank */
@@ -4122,14 +4214,7 @@ static void render(void)
         for (int i = 0; i < NUM_SKILLS; i++)
             draw_text(0, px0 + 6, py0 + 22 + i * 9, "%-11s %2d",
                       skill_names[i], level_of(i));
-        int att = level_of(SK_ATT), str = level_of(SK_STR), def = level_of(SK_DEF);
-        float base = (def + level_of(SK_HP) + level_of(SK_PRAY) / 2) * 0.25f;
-        float melee = (att + str) * 0.325f;
-        float rng = (level_of(SK_RANGED) * 3 / 2) * 0.325f;
-        float mage = (level_of(SK_MAGIC) * 3 / 2) * 0.325f;
-        float best = melee; if (rng > best) best = rng; if (mage > best) best = mage;
-        int cmb = (int)(base + best);
-        draw_text(4, px0 + 6, py0 + 176, "Combat level: %d", cmb);
+        draw_text(4, px0 + 6, py0 + 176, "Combat level: %d", combat_level());
     }
     else if (ui_mode == UI_BANK) {
         int n = bank_rows();
@@ -4346,7 +4431,7 @@ static void render(void)
         draw_text(0, px0 + 8, py0 + 98, "wear gear, sling spells, shop, quest.");
         draw_text(3, px0 + 8, py0 + 112, "A three-floor dungeon lurks SW: Warlord,");
         draw_text(3, px0 + 8, py0 + 122, "Demon, then the Ancient Dragon below!");
-        draw_text(1, px0 + 8, py0 + 142, "(A) Journal, then Almanac   (B) close");
+        draw_text(1, px0 + 8, py0 + 142, "(A) Journal / Diary / Almanac   (B) close");
     }
     else if (ui_mode == UI_QUEST) {
         int px0 = 36, py0 = 24;
@@ -4401,7 +4486,25 @@ static void render(void)
                           DQ_REQ_ATT, DQ_REQ_DEF, DQ_REQ_HP);
         }
 
-        draw_text(6, px0 + 8, py0 + 152, "(A) Almanac   (B) close");
+        draw_text(6, px0 + 8, py0 + 152, "(A) Diary   (B) close");
+    }
+    else if (ui_mode == UI_DIARY) {
+        int px0 = 28, py0 = 12;
+        draw_panel(px0, py0, px0 + 264, py0 + 200);
+        int done = 0;
+        for (int t = 0; t < NUM_DTASK; t++) if (diary_done & (1u << t)) done++;
+        draw_text(1, px0 + 8, py0 + 12, "Oakhaven Diary");
+        draw_text(5, px0 + 176, py0 + 12, "%d / %d", done, NUM_DTASK);
+        for (int t = 0; t < NUM_DTASK; t++) {
+            bool d = (diary_done & (1u << t)) != 0;
+            draw_text(d ? 4 : 0, px0 + 8, py0 + 28 + t * 12, "%s %s",
+                      d ? "[x]" : "[ ]", diary_desc[t]);
+        }
+        if ((diary_done & DIARY_ALL_MASK) == DIARY_ALL_MASK)
+            draw_text(4, px0 + 8, py0 + 174, "A hero of Oakhaven - every task done!");
+        else
+            draw_text(6, px0 + 8, py0 + 174, "Finish them all for a grand reward.");
+        draw_text(6, px0 + 8, py0 + 188, "(A) Almanac   (B) close");
     }
     else if (ui_mode == UI_ALMANAC) {
         int px0 = 16, py0 = 16;
@@ -4561,7 +4664,7 @@ static void handle_input(void)
                 msg("You need a Magic level of %d for that spell.",
                     spellinfo[spell_cursor].lvl);
             } else if (spell_cursor == SPELL_HOME) {
-                do_teleport(SPELL_HOME, pl.spawn_x, pl.spawn_y, "Rune Valley");
+                do_teleport(SPELL_HOME, pl.spawn_x, pl.spawn_y, "Oakhaven");
                 ui_mode = UI_NONE;
                 return;
             } else if (spell_cursor == SPELL_BANK) {
@@ -4598,6 +4701,11 @@ static void handle_input(void)
         return;
     }
     if (ui_mode == UI_QUEST) {
+        if (pressed.a) { diary_refresh(); ui_mode = UI_DIARY; return; }
+        if (pressed.b) { ui_mode = UI_NONE; return; }
+        return;
+    }
+    if (ui_mode == UI_DIARY) {
         if (pressed.a) { build_almanac(); almanac_scroll = 0; ui_mode = UI_ALMANAC; return; }
         if (pressed.b) { ui_mode = UI_NONE; return; }
         return;
@@ -4715,6 +4823,7 @@ int main(void)
     gp = 25;                      /* a few starter coins */
     quest_state = QUEST_NONE; quest_kills = 0; wquest = WQ_NONE; dquest = DQ_NONE;
     cquest = CQ_NONE; cow_kills = 0;
+    diary_done = 0;
     dungeon_floor = 1;
     memset(bank, 0, sizeof bank);
     for (int i = 0; i < CHAT_LINES; i++) chat[i][0] = 0;
