@@ -23,6 +23,7 @@ Worn in the weapon slot. The Magic bonus raises spell accuracy and max hit.
 | ![](docs/almanac/item_mi_sword.png) | Mithril sword | +14 | +13 | +0 | +0 | 30 |
 | ![](docs/almanac/item_ru_sword.png) | Rune sword | +20 | +18 | +0 | +0 | 40 |
 | ![](docs/almanac/item_dragonfire.png) | Dragonfire blade | +22 | +21 | +18 | +2 | 40 |
+| ![](docs/almanac/item_frostmaul.png) | Frostmaul | +20 | +24 | +0 | +0 | 45 |
 
 ## Armour
 
@@ -179,6 +180,50 @@ Hitpoints **150** | max hit **12** | defence **35**.
 | ![](docs/almanac/item_dragon_hide.png) | Dragonhide | 2 | 13% |
 | ![](docs/almanac/item_dragonstone.png) | Dragonstone | 1 | 10% |
 | ![](docs/almanac/item_dragonfire.png) | Dragonfire blade | 1 | 7% |
+
+### Frost wolf - Frostmere snowfield
+![](docs/almanac/mob_wolf_a.png)
+
+Hitpoints **16** | max hit **4** | defence **10**.
+
+| | Drop | Qty | Chance |
+|:-:|---|--:|--:|
+| ![](docs/almanac/item_coins.png) | Coins | 40 | 30% |
+| ![](docs/almanac/item_bones.png) | Bones | 1 | 0% |
+| ![](docs/almanac/item_raw_trout.png) | Raw trout | 1 | 18% |
+| ![](docs/almanac/item_coal.png) | Coal | 1 | 14% |
+|  | Nothing | - | 38% |
+
+### Ice warrior - Frostmere, the north
+![](docs/almanac/mob_icew_a.png)
+
+Hitpoints **30** | max hit **6** | defence **20**.
+
+| | Drop | Qty | Chance |
+|:-:|---|--:|--:|
+| ![](docs/almanac/item_coins.png) | Coins | 150 | 24% |
+| ![](docs/almanac/item_steel_bar.png) | Steel bar | 1 | 16% |
+| ![](docs/almanac/item_law_rune.png) | Law rune | 3 | 12% |
+| ![](docs/almanac/item_mith_ore.png) | Mithril ore | 1 | 12% |
+| ![](docs/almanac/item_gold_ore.png) | Gold ore | 1 | 10% |
+|  | Nothing | - | 26% |
+
+### Yeti - boss, Frostmere
+![](docs/almanac/mob_yeti.png)
+
+Hitpoints **120** | max hit **11** | defence **32**.
+
+**Always pays out (no "nothing").**
+
+| | Drop | Qty | Chance |
+|:-:|---|--:|--:|
+| ![](docs/almanac/item_coins.png) | Coins | 1200 | 22% |
+| ![](docs/almanac/item_ru_body.png) | Rune body | 1 | 12% |
+| ![](docs/almanac/item_ru_shield.png) | Rune shield | 1 | 12% |
+| ![](docs/almanac/item_gold_ore.png) | Gold ore | 4 | 16% |
+| ![](docs/almanac/item_dragonstone.png) | Dragonstone | 1 | 12% |
+| ![](docs/almanac/item_frostmaul.png) | Frostmaul | 1 | 14% |
+| ![](docs/almanac/item_pine_logs.png) | Pine logs | 8 | 12% |
 
 ---
 

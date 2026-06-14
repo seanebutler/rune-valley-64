@@ -43,7 +43,7 @@
 /* ------------------------------------------------------------ terrain & map */
 
 enum { TER_GRASS, TER_PATH, TER_SAND, TER_WATER, TER_BRIDGE, TER_WALL, TER_FLOOR,
-       TER_CAVE };
+       TER_CAVE, TER_SNOW, TER_ICE };
 enum { OBJ_NONE, OBJ_TREE, OBJ_OAK, OBJ_STUMP, OBJ_ROCK_COPPER, OBJ_ROCK_TIN,
        OBJ_ROCK_IRON, OBJ_ROCK_EMPTY, OBJ_FISH, OBJ_BOOTH, OBJ_FIRE,
        OBJ_ESSENCE, OBJ_ALTAR_AIR, OBJ_ALTAR_FIRE,
@@ -51,9 +51,12 @@ enum { OBJ_NONE, OBJ_TREE, OBJ_OAK, OBJ_STUMP, OBJ_ROCK_COPPER, OBJ_ROCK_TIN,
        OBJ_SHOP_GENERAL, OBJ_SHOP_WEAPON, OBJ_SHOP_ARMOR, OBJ_SHOP_MAGIC,
        OBJ_KNIGHT, OBJ_FENCE, OBJ_TUTOR,
        OBJ_ALTAR_WATER, OBJ_ALTAR_EARTH, OBJ_ALTAR_LAW, OBJ_ALTAR_CHAOS,
-       OBJ_ROCK_MITHRIL, OBJ_TANNER, OBJ_ROCK_COAL, OBJ_ROCK_GOLD };
+       OBJ_ROCK_MITHRIL, OBJ_TANNER, OBJ_ROCK_COAL, OBJ_ROCK_GOLD,
+       OBJ_BOAT, OBJ_PINE };
 
-enum { MAP_OVERWORLD, MAP_DUNGEON };
+enum { MAP_OVERWORLD, MAP_DUNGEON, MAP_FROSTMERE };
+/* named overworld regions, each with its own achievement diary */
+enum { AREA_OAKHAVEN, AREA_FROSTMERE, NUM_AREAS };
 
 static const char *map_rows[MAP_H] = {
     "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT~~~~TTTTTT",
@@ -160,6 +163,7 @@ enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_GOLD_ORE, IT_GOLD_BAR,
        IT_DSTONE_AMULET, IT_DSTONE_NECKLACE, IT_DSTONE_RING, IT_DSTONE_BRACELET,
        IT_GLORY_AMULET, IT_POWER_NECKLACE, IT_FURY_RING, IT_GUARD_BRACELET,
+       IT_PINE_LOGS, IT_FROSTMAUL,
        NUM_ITEMS };
 
 /* worn equipment slots; SLOT_NONE = item is not equippable */
@@ -261,6 +265,10 @@ enum {
     SPR_EQ_LE_BODY_D, SPR_EQ_LE_BODY_U, SPR_EQ_LE_BODY_S, SPR_EQ_LE_BODY_SL,
     SPR_EQ_DH_HELM_D, SPR_EQ_DH_HELM_U, SPR_EQ_DH_HELM_S, SPR_EQ_DH_HELM_SL,
     SPR_EQ_DH_BODY_D, SPR_EQ_DH_BODY_U, SPR_EQ_DH_BODY_S, SPR_EQ_DH_BODY_SL,
+    SPR_SNOW, SPR_ICE, SPR_PINE, SPR_BOAT,
+    SPR_WOLF_A, SPR_WOLF_B, SPR_ICEW_A, SPR_ICEW_B, SPR_YETI,
+    SPR_I_PINE_LOGS, SPR_I_FROSTMAUL,
+    SPR_EQ_FM_WEP_D, SPR_EQ_FM_WEP_U, SPR_EQ_FM_WEP_S, SPR_EQ_FM_WEP_SL,
     NUM_SPR
 };
 
@@ -348,7 +356,11 @@ static const char *spr_files[NUM_SPR] = {
     "eq_le_helm_d", "eq_le_helm_u", "eq_le_helm_s", "eq_le_helm_sl",
     "eq_le_body_d", "eq_le_body_u", "eq_le_body_s", "eq_le_body_sl",
     "eq_dh_helm_d", "eq_dh_helm_u", "eq_dh_helm_s", "eq_dh_helm_sl",
-    "eq_dh_body_d", "eq_dh_body_u", "eq_dh_body_s", "eq_dh_body_sl"
+    "eq_dh_body_d", "eq_dh_body_u", "eq_dh_body_s", "eq_dh_body_sl",
+    "tile_snow", "tile_ice", "obj_pine", "obj_boat",
+    "mob_wolf_a", "mob_wolf_b", "mob_icew_a", "mob_icew_b", "mob_yeti",
+    "item_pine_logs", "item_frostmaul",
+    "eq_fm_wep_d", "eq_fm_wep_u", "eq_fm_wep_s", "eq_fm_wep_sl"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -444,6 +456,9 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     [IT_POWER_NECKLACE] ={ "Necklace of Power",SPR_I_POWER_NECKLACE,0,false, SLOT_NECK, 0,0,0,1, false,10, 8 },
     [IT_FURY_RING]      ={ "Ring of Fury",   SPR_I_FURY_RING,     0, false, SLOT_HAND, 0,8,0,1 },
     [IT_GUARD_BRACELET] ={ "Bracelet of Guard",SPR_I_GUARD_BRACELET,0,false, SLOT_HAND, 6,0,6,1 },
+    /* Frostmere: pine logs from the north woods, and the Yeti's mighty maul */
+    [IT_PINE_LOGS]    ={ "Pine logs",     SPR_I_PINE_LOGS,    0, false },
+    [IT_FROSTMAUL]    ={ "Frostmaul",     SPR_I_FROSTMAUL,    0, false, SLOT_WEAPON, 20,24,0,45 },
     /* mithril: a deeper ore that smelts into bars for gear and arrowtips */
     [IT_MITH_ORE]     ={ "Mithril ore",   SPR_I_MITH_ORE,     0, false },
     [IT_MITH_BAR]     ={ "Mithril bar",   SPR_I_MITH_BAR,     0, false },
@@ -490,6 +505,7 @@ static const int item_value[NUM_ITEMS] = {
     [IT_DSTONE_RING]=1500, [IT_DSTONE_BRACELET]=1500,
     [IT_GLORY_AMULET]=4000, [IT_POWER_NECKLACE]=4000,
     [IT_FURY_RING]=4000, [IT_GUARD_BRACELET]=4000,
+    [IT_PINE_LOGS]=25, [IT_FROSTMAUL]=5000,
     [IT_MITH_ORE]=60, [IT_MITH_BAR]=120, [IT_MITH_TIPS]=8, [IT_MITH_ARROW]=8,
     [IT_COWHIDE]=12, [IT_LEATHER]=20, [IT_DRAGON_HIDE]=120, [IT_DRAGON_LEATHER]=200,
     [IT_NEEDLE]=2, [IT_THREAD]=2,
@@ -647,7 +663,7 @@ static int num_gob = 0;
 /* monster types: stats, sprite, size, drop. mob_def lowers player accuracy;
    hit_base is the mob's chance to land before the player's defence. */
 enum { MOB_GOBLIN, MOB_SKELETON, MOB_BOSS, MOB_WIGHT, MOB_DEMON, MOB_COW,
-       MOB_WHELP, MOB_DRAGON, NUM_MOBS };
+       MOB_WHELP, MOB_DRAGON, MOB_WOLF, MOB_ICE_WARRIOR, MOB_YETI, NUM_MOBS };
 typedef struct {
     const char *name; int max_hp; int max_dmg; int mob_def; int hit_base;
     int aggro; int respawn; int spr_a, spr_b; int w, h;
@@ -666,6 +682,10 @@ static const mobinfo_t mobinfo[NUM_MOBS] = {
     /* the deepest boss: huge HP, hits hard in melee, and breathes fire from
        range. mob_def 35 demands rune-tier gear to land hits reliably */
     [MOB_DRAGON]   = { "Ancient Dragon",150,12, 35, 90, 8,140, SPR_DRAGON,  SPR_DRAGON,  24, 24 },
+    /* Frostmere foes: aggressive frost wolves, sturdy ice warriors, the Yeti boss */
+    [MOB_WOLF]       = { "frost wolf",   16, 4, 10, 66, 5, 20, SPR_WOLF_A,  SPR_WOLF_B,  16, 16 },
+    [MOB_ICE_WARRIOR]= { "ice warrior",  30, 6, 20, 74, 4, 28, SPR_ICEW_A,  SPR_ICEW_B,  16, 16 },
+    [MOB_YETI]       = { "Yeti",        120,11, 32, 88, 6,120, SPR_YETI,    SPR_YETI,    24, 24 },
 };
 
 /* ------------------------------------------------------------ UI state */
@@ -688,6 +708,7 @@ static char almanac_buf[ALMANAC_MAX][48];
 static uint8_t almanac_style[ALMANAC_MAX];
 static int almanac_count = 0;
 static int almanac_scroll = 0;
+static int diary_scroll = 0;
 
 /* magic: the selected combat spell (SPELL_MELEE = ordinary melee).
    SPELL_HOME is an instant utility cast handled in the spellbook, not a combat
@@ -769,7 +790,8 @@ static int quest_kills = 0;
 /* The Warlord's Bane - a multi-stage quest from the Knight */
 enum { WQ_NONE, WQ_STARTED, WQ_SCOUTED, WQ_ARMED, WQ_SLAIN, WQ_DONE };
 static int wquest = WQ_NONE;
-static uint32_t diary_done = 0;    /* Oakhaven achievement-diary completion bits */
+static uint32_t diary_done[NUM_AREAS] = {0};  /* per-area diary completion bits */
+static int cur_area = AREA_OAKHAVEN;          /* which region to reload into */
 #define WQ_BONES_NEEDED 5
 #define WQ_BARS_NEEDED  2
 #define WQ_COIN_COST    300
@@ -1000,6 +1022,8 @@ static void load_overworld(void)
             obj_timer[y][x] = 0;
         }
     }
+    /* a boat at the south-east beach sails north to Frostmere */
+    object[27][36] = OBJ_BOAT; obj_orig[27][36] = OBJ_BOAT;
 }
 
 static void build_dungeon(int floor)
@@ -1062,11 +1086,59 @@ static void build_dungeon(int floor)
     }
 }
 
+static void put_obj(int x, int y, int o)
+{
+    object[y][x] = o; obj_orig[y][x] = o; obj_timer[y][x] = 0;
+}
+
+/* Frostmere: a frozen island reached by boat, built procedurally */
+static void load_frostmere(void)
+{
+    num_gob = 0;
+    pl.spawn_x = 24; pl.spawn_y = 31;        /* the southern landing dock */
+    down_x = down_y = up_x = up_y = -1;
+    for (int y = 0; y < MAP_H; y++)
+        for (int x = 0; x < MAP_W; x++) {
+            bool sea = (x == 0 || y == 0 || x == MAP_W - 1 || y == MAP_H - 1);
+            terrain[y][x] = sea ? TER_WATER : TER_SNOW;
+            object[y][x] = OBJ_NONE; obj_orig[y][x] = OBJ_NONE; obj_timer[y][x] = 0;
+        }
+    /* a frozen lake in the north-east, fishing spots along its shore */
+    for (int y = 7; y <= 15; y++)
+        for (int x = 30; x <= 43; x++) terrain[y][x] = TER_ICE;
+    put_obj(31, 7, OBJ_FISH); put_obj(35, 7, OBJ_FISH);
+    put_obj(43, 11, OBJ_FISH); put_obj(40, 15, OBJ_FISH);
+    /* the landing: a boat home and a bank booth */
+    put_obj(22, 32, OBJ_BOAT);
+    put_obj(27, 32, OBJ_BOOTH);
+    /* pine groves to the west */
+    static const int pines[][2] = {
+        {5,8},{8,7},{11,9},{6,12},{9,13},{13,12},{5,16},{8,17},{12,17},
+        {7,20},{11,21},{15,9},{17,14},{16,20},{13,24}
+    };
+    for (int i = 0; i < (int)(sizeof pines / sizeof pines[0]); i++)
+        put_obj(pines[i][0], pines[i][1], OBJ_PINE);
+    put_obj(20, 11, OBJ_OAK); put_obj(28, 22, OBJ_OAK);
+    /* frost wolves roam the central snowfield */
+    static const int wolves[][2] = {
+        {18,26},{22,24},{26,27},{31,24},{20,29},{34,27}
+    };
+    for (int i = 0; i < (int)(sizeof wolves / sizeof wolves[0]); i++)
+        spawn_mob(MOB_WOLF, wolves[i][0], wolves[i][1]);
+    /* ice warriors guard the north */
+    static const int warriors[][2] = { {14,8},{24,9},{20,14},{27,16} };
+    for (int i = 0; i < (int)(sizeof warriors / sizeof warriors[0]); i++)
+        spawn_mob(MOB_ICE_WARRIOR, warriors[i][0], warriors[i][1]);
+    spawn_mob(MOB_YETI, 24, 4);              /* the Yeti broods at the top */
+}
+
 static void load_map(int which)
 {
     cur_map = which;
-    if (which == MAP_DUNGEON) build_dungeon(dungeon_floor);
-    else load_overworld();
+    if (which == MAP_DUNGEON)        build_dungeon(dungeon_floor);
+    else if (which == MAP_FROSTMERE) { load_frostmere(); cur_area = AREA_FROSTMERE; }
+    else                             { load_overworld(); cur_area = AREA_OAKHAVEN; }
+    if (which == MAP_DUNGEON) cur_area = AREA_OAKHAVEN;  /* dungeon is Oakhaven's */
 }
 
 static void place_player(int x, int y)
@@ -1137,8 +1209,9 @@ static bool tile_walkable(int x, int y)
 /* ------------------------------------------------------------ saves (EEPROM 4K) */
 
 #define SAVE_MAGIC   0x52563634u   /* 'RV64' */
-#define SAVE_VERSION 15            /* current save format */
-#define SAVE_VER_MIN 15            /* oldest forward-compatible format we read */
+#define SAVE_VERSION 16            /* current save format */
+#define SAVE_VER_MIN 16            /* oldest forward-compatible format we read */
+#define SAVE_VER_V15 15            /* prior layout (bank[96]); auto-migrated */
 #define SAVE_VER_V14 14            /* the last fixed-layout save; auto-migrated */
 
 /* Forward-compatible save. Arrays use generous fixed caps so adding items,
@@ -1148,7 +1221,8 @@ static bool tile_walkable(int x, int y)
 #define SAVE_CAP_SKILLS 24
 #define SAVE_CAP_INV    32
 #define SAVE_CAP_SLOTS  8
-#define SAVE_CAP_ITEMS  96
+#define SAVE_CAP_ITEMS  128
+#define SAVE_CAP_AREAS  4
 
 typedef struct __attribute__((packed)) {
     uint32_t magic;
@@ -1165,10 +1239,12 @@ typedef struct __attribute__((packed)) {
     uint8_t  inv_qty[SAVE_CAP_INV];
     uint8_t  equipped[SAVE_CAP_SLOTS];
     uint16_t bank[SAVE_CAP_ITEMS];
-    uint32_t diary;               /* Oakhaven diary completion bitmask */
-    uint8_t  reserved[28];        /* future scalar fields; zero in older saves */
+    uint8_t  cur_area;            /* overworld region to reload into */
+    uint8_t  area_pad;
+    uint32_t diary[SAVE_CAP_AREAS];  /* per-area diary completion bitmasks */
+    uint8_t  reserved[20];        /* future scalar fields; zero in older saves */
     uint16_t checksum;
-    uint8_t  pad2[3];              /* align sizeof to the 8-byte EEPROM block */
+    uint8_t  pad2[5];             /* align sizeof to the 8-byte EEPROM block */
 } save_t;
 _Static_assert(sizeof(save_t) % 8 == 0, "save_t must be EEPROM-block aligned");
 _Static_assert(sizeof(save_t) <= 512,   "save_t must fit EEPROM 4k");
@@ -1176,6 +1252,25 @@ _Static_assert(NUM_SKILLS <= SAVE_CAP_SKILLS, "raise SAVE_CAP_SKILLS");
 _Static_assert(INV_SIZE   <= SAVE_CAP_INV,    "raise SAVE_CAP_INV");
 _Static_assert(NUM_SLOTS  <= SAVE_CAP_SLOTS,  "raise SAVE_CAP_SLOTS");
 _Static_assert(NUM_ITEMS  <= SAVE_CAP_ITEMS,  "raise SAVE_CAP_ITEMS");
+_Static_assert(NUM_AREAS  <= SAVE_CAP_AREAS,  "raise SAVE_CAP_AREAS");
+
+/* v15: the prior layout (bank[96], single diary), frozen for migration */
+typedef struct __attribute__((packed)) {
+    uint32_t magic;
+    uint8_t  version, hp, tx, ty, run_energy;
+    uint8_t  quest_state, quest_kills, wquest, dquest, cquest, cow_kills;
+    uint32_t gp;
+    int32_t  xp[24];
+    uint8_t  inv[32];
+    uint8_t  inv_qty[32];
+    uint8_t  equipped[8];
+    uint16_t bank[96];
+    uint32_t diary;
+    uint8_t  reserved[28];
+    uint16_t checksum;
+    uint8_t  pad2[3];
+} save_v15_t;
+_Static_assert(sizeof(save_v15_t) == 416, "v15 layout is frozen");
 
 /* v14: the previous fixed-layout save, dimensions frozen. Loaded once and
    migrated so existing progress survives. Do NOT use the live constants here. */
@@ -1232,7 +1327,9 @@ static void save_game(void)
     s.cquest = cquest;
     s.cow_kills = cow_kills;
     for (int i = 0; i < NUM_SLOTS; i++) s.equipped[i] = equipped[i];
-    s.diary = diary_done;
+    /* dungeon visits never persist: reload into the region you sailed from */
+    s.cur_area = (cur_map == MAP_FROSTMERE) ? AREA_FROSTMERE : AREA_OAKHAVEN;
+    for (int i = 0; i < NUM_AREAS; i++) s.diary[i] = diary_done[i];
     s.checksum = csum_bytes(&s, offsetof(save_t, checksum));
 
     /* write only the blocks that changed, and keep the audio mixer fed
@@ -1276,11 +1373,11 @@ static bool save_present(void)
     return false;
 }
 
-/* migrate the frozen v14 layout into the current struct */
-static void v14_to_v15(const save_v14_t *o, save_t *n)
+/* migrate the frozen v14 layout into the v15 layout */
+static void v14_to_v15(const save_v14_t *o, save_v15_t *n)
 {
     memset(n, 0, sizeof *n);
-    n->magic = SAVE_MAGIC; n->version = SAVE_VERSION;
+    n->magic = SAVE_MAGIC; n->version = SAVE_VER_V15;
     n->hp = o->hp; n->tx = o->tx; n->ty = o->ty;
     n->run_energy = o->run_energy;
     n->quest_state = o->quest_state; n->quest_kills = o->quest_kills;
@@ -1291,6 +1388,25 @@ static void v14_to_v15(const save_v14_t *o, save_t *n)
     for (int i = 0; i < 28; i++) { n->inv[i] = o->inv[i]; n->inv_qty[i] = o->inv_qty[i]; }
     for (int i = 0; i < 4;  i++) n->equipped[i] = o->equipped[i];
     for (int i = 0; i < 53; i++) n->bank[i] = o->bank[i];
+}
+
+/* migrate the frozen v15 layout into the current (v16) struct */
+static void v15_to_v16(const save_v15_t *o, save_t *n)
+{
+    memset(n, 0, sizeof *n);
+    n->magic = SAVE_MAGIC; n->version = SAVE_VERSION;
+    n->hp = o->hp; n->tx = o->tx; n->ty = o->ty;
+    n->run_energy = o->run_energy;
+    n->quest_state = o->quest_state; n->quest_kills = o->quest_kills;
+    n->wquest = o->wquest; n->dquest = o->dquest;
+    n->cquest = o->cquest; n->cow_kills = o->cow_kills;
+    n->gp = o->gp;
+    for (int i = 0; i < 24; i++) n->xp[i] = o->xp[i];
+    for (int i = 0; i < 32; i++) { n->inv[i] = o->inv[i]; n->inv_qty[i] = o->inv_qty[i]; }
+    for (int i = 0; i < 8;  i++) n->equipped[i] = o->equipped[i];
+    for (int i = 0; i < 96; i++) n->bank[i] = o->bank[i];
+    n->cur_area = AREA_OAKHAVEN;
+    n->diary[AREA_OAKHAVEN] = o->diary;   /* the old single diary was Oakhaven's */
 }
 
 /* copy a (validated, current-format) save into the live game state */
@@ -1312,14 +1428,17 @@ static void apply_save(const save_t *s)
     dquest = s->dquest <= DQ_DONE ? s->dquest : DQ_NONE;
     cquest = s->cquest <= CQ_DONE ? s->cquest : CQ_NONE;
     cow_kills = s->cow_kills <= CQ_COWS_NEEDED ? s->cow_kills : 0;
-    diary_done = s->diary;
+    for (int i = 0; i < NUM_AREAS; i++) diary_done[i] = s->diary[i];
     for (int i = 0; i < NUM_SLOTS; i++) {
         int it = s->equipped[i];
         /* only restore if it really belongs in this slot */
         equipped[i] = (it > 0 && it < NUM_ITEMS && iteminfo[it].slot == i + 1)
                       ? it : IT_NONE;
     }
+    /* reload into the saved region, then place within it */
+    load_map(s->cur_area == AREA_FROSTMERE ? MAP_FROSTMERE : MAP_OVERWORLD);
     if (tile_walkable(s->tx, s->ty)) { pl.tx = s->tx; pl.ty = s->ty; }
+    else { pl.tx = pl.spawn_x; pl.ty = pl.spawn_y; }
     pl.mtx = pl.tx; pl.mty = pl.ty;
     pl.px = pl.tx * TILE + 8; pl.py = pl.ty * TILE + 12;
     /* prayer points are transient; you reload with a full prayer pool */
@@ -1338,11 +1457,18 @@ static void load_game(void)
     if (magic != SAVE_MAGIC) return;
     uint8_t ver = hdr[4];
     save_t s;
-    if (ver == SAVE_VER_V14) {                 /* migrate the old layout */
+    if (ver == SAVE_VER_V14) {                 /* v14 -> v15 -> v16 */
         save_v14_t o;
         eeprom_read_bytes((uint8_t *)&o, 0, sizeof o);
         if (o.checksum != csum_bytes(&o, offsetof(save_v14_t, checksum))) return;
-        v14_to_v15(&o, &s);
+        save_v15_t m;
+        v14_to_v15(&o, &m);
+        v15_to_v16(&m, &s);
+    } else if (ver == SAVE_VER_V15) {          /* v15 -> v16 */
+        save_v15_t o;
+        eeprom_read_bytes((uint8_t *)&o, 0, sizeof o);
+        if (o.checksum != csum_bytes(&o, offsetof(save_v15_t, checksum))) return;
+        v15_to_v16(&o, &s);
     } else if (ver >= SAVE_VER_MIN) {           /* current/forward-compatible */
         eeprom_read_bytes((uint8_t *)&s, 0, sizeof s);
         if (s.checksum != csum_bytes(&s, offsetof(save_t, checksum))) return;
@@ -1437,6 +1563,20 @@ static const drop_t dragon_drops[] = {  /* on top of a guaranteed coin+stone pay
     { IT_DRAGONSTONE, 1, 10 },
     { IT_DRAGONFIRE, 1, 7 },   /* the rare unique: the Dragonfire blade */
 };
+static const drop_t wolf_drops[] = {   /* Frostmere fodder */
+    { IT_COINS, 40, 30 }, { IT_BONES, 1, 0 }, { IT_RAW_TROUT, 1, 18 },
+    { IT_COAL, 1, 14 }, { IT_NONE, 0, 38 },
+};
+static const drop_t ice_warrior_drops[] = {   /* steel-tier loot */
+    { IT_COINS, 150, 24 }, { IT_STEEL_BAR, 1, 16 }, { IT_LAW_RUNE, 3, 12 },
+    { IT_MITH_ORE, 1, 12 }, { IT_GOLD_ORE, 1, 10 }, { IT_NONE, 0, 26 },
+};
+static const drop_t yeti_drops[] = {   /* the mini-boss: rich, no "nothing" */
+    { IT_COINS, 1200, 22 }, { IT_RUNE_BODY, 1, 12 }, { IT_RUNE_SHIELD, 1, 12 },
+    { IT_GOLD_ORE, 4, 16 }, { IT_DRAGONSTONE, 1, 12 },
+    { IT_FROSTMAUL, 1, 14 },   /* its signature maul (uncommon) */
+    { IT_PINE_LOGS, 8, 12 },
+};
 
 static void give_drop(int item, int qty)
 {
@@ -1472,6 +1612,9 @@ static const drop_t *mob_drops(int type, int *n)
     case MOB_COW:      *n = NDROPS(cow_drops);      return cow_drops;
     case MOB_WHELP:    *n = NDROPS(whelp_drops);    return whelp_drops;
     case MOB_DRAGON:   *n = NDROPS(dragon_drops);   return dragon_drops;
+    case MOB_WOLF:     *n = NDROPS(wolf_drops);     return wolf_drops;
+    case MOB_ICE_WARRIOR:*n = NDROPS(ice_warrior_drops); return ice_warrior_drops;
+    case MOB_YETI:     *n = NDROPS(yeti_drops);     return yeti_drops;
     default:           *n = 0;                      return NULL;
     }
 }
@@ -1620,69 +1763,90 @@ static int total_level(void)
     return t;
 }
 
+/* Oakhaven (area 0) tasks */
 enum { DTASK_BASIC, DTASK_CHEF, DTASK_WARLORD, DTASK_DEMON,
        DTASK_MINE40, DTASK_SMITH40, DTASK_CRAFT50, DTASK_COMBAT50, DTASK_TOTAL300,
        DTASK_DRAGON, DTASK_ENCHANT, DTASK_ARMOUR, NUM_DTASK };
-static const char *diary_desc[NUM_DTASK] = {
-    "Complete Basic Training",
-    "Complete The Chef's Problem",
-    "Complete The Warlord's Bane",
-    "Complete The Demon Below",
-    "Reach Mining 40 (mine gold)",
-    "Reach Smithing 40",
-    "Reach Crafting 50",
-    "Reach combat level 50",
-    "Reach a total level of 300",
-    "Slay the Ancient Dragon",
-    "Enchant dragonstone jewelry",
-    "Craft a piece of ranged armour",
+/* Frostmere (area 1) tasks */
+enum { FTASK_SAIL, FTASK_PINE, FTASK_WOLF, FTASK_WARRIOR, FTASK_YETI,
+       FTASK_FROSTMAUL, FTASK_WC40, FTASK_COMBAT60, NUM_FTASK };
+
+#define MAX_DTASK 16
+typedef struct {
+    const char *name;
+    int n;
+    const char *desc[MAX_DTASK];
+    int reward[MAX_DTASK];
+    int bonus;                 /* coins paid when the whole diary is done */
+} area_diary_t;
+static const area_diary_t area_diary[NUM_AREAS] = {
+    [AREA_OAKHAVEN] = { "Oakhaven", NUM_DTASK, {
+        "Complete Basic Training", "Complete The Chef's Problem",
+        "Complete The Warlord's Bane", "Complete The Demon Below",
+        "Reach Mining 40 (mine gold)", "Reach Smithing 40", "Reach Crafting 50",
+        "Reach combat level 50", "Reach a total level of 300",
+        "Slay the Ancient Dragon", "Enchant dragonstone jewelry",
+        "Craft a piece of ranged armour",
+    }, { 200,200,300,400,500,500,500,750,750,1500,500,500 }, 5000 },
+    [AREA_FROSTMERE] = { "Frostmere", NUM_FTASK, {
+        "Sail to Frostmere", "Chop a pine tree", "Slay a frost wolf",
+        "Slay an ice warrior", "Slay the Yeti", "Wield the Frostmaul",
+        "Reach Woodcutting 40", "Reach combat level 60",
+    }, { 100,300,300,500,1500,500,750,1000 }, 5000 },
 };
-static const int diary_reward[NUM_DTASK] = {   /* coins awarded per task */
-    200, 200, 300, 400, 500, 500, 500, 750, 750, 1500, 500, 500,
-};
-#define DIARY_ALL_MASK ((1u << NUM_DTASK) - 1u)
 #define DIARY_CLAIMED  (1u << 31)      /* full-completion bonus already paid */
 
-/* derivable tasks (levels/quests); event tasks are set at their event */
-static bool diary_check(int t)
+/* derivable tasks (levels/quests/worn gear); event tasks are set at their event */
+static bool diary_check(int area, int t)
 {
-    switch (t) {
-    case DTASK_BASIC:    return cquest == CQ_DONE;
-    case DTASK_CHEF:     return quest_state == QUEST_DONE;
-    case DTASK_WARLORD:  return wquest >= WQ_DONE;
-    case DTASK_DEMON:    return dquest >= DQ_DONE;
-    case DTASK_MINE40:   return level_of(SK_MINE) >= 40;
-    case DTASK_SMITH40:  return level_of(SK_SMITH) >= 40;
-    case DTASK_CRAFT50:  return level_of(SK_CRAFT) >= 50;
-    case DTASK_COMBAT50: return combat_level() >= 50;
-    case DTASK_TOTAL300: return total_level() >= 300;
-    default:             return false;
+    if (area == AREA_OAKHAVEN) switch (t) {
+        case DTASK_BASIC:    return cquest == CQ_DONE;
+        case DTASK_CHEF:     return quest_state == QUEST_DONE;
+        case DTASK_WARLORD:  return wquest >= WQ_DONE;
+        case DTASK_DEMON:    return dquest >= DQ_DONE;
+        case DTASK_MINE40:   return level_of(SK_MINE) >= 40;
+        case DTASK_SMITH40:  return level_of(SK_SMITH) >= 40;
+        case DTASK_CRAFT50:  return level_of(SK_CRAFT) >= 50;
+        case DTASK_COMBAT50: return combat_level() >= 50;
+        case DTASK_TOTAL300: return total_level() >= 300;
+        default:             return false;
     }
+    else if (area == AREA_FROSTMERE) switch (t) {
+        case FTASK_FROSTMAUL: return equipped[SLOT_WEAPON - 1] == IT_FROSTMAUL;
+        case FTASK_WC40:      return level_of(SK_WC) >= 40;
+        case FTASK_COMBAT60:  return combat_level() >= 60;
+        default:              return false;   /* sail/pine/kills are event-set */
+    }
+    return false;
 }
 
-static void diary_complete(int t)
+static void diary_complete(int area, int t)
 {
-    if (t < 0 || t >= NUM_DTASK || (diary_done & (1u << t))) return;
-    diary_done |= (1u << t);
-    gp += diary_reward[t];
+    if (area < 0 || area >= NUM_AREAS || t < 0 || t >= area_diary[area].n) return;
+    if (diary_done[area] & (1u << t)) return;
+    const area_diary_t *a = &area_diary[area];
+    diary_done[area] |= (1u << t);
+    gp += a->reward[t];
     sfx_ui(SND_LEVELUP);
     gratz_timer = 3;
-    msg("Oakhaven task done: %s! (+%d coins)", diary_desc[t], diary_reward[t]);
-    if ((diary_done & DIARY_ALL_MASK) == DIARY_ALL_MASK && !(diary_done & DIARY_CLAIMED)) {
-        diary_done |= DIARY_CLAIMED;
-        gp += 5000;
+    msg("%s task: %s! (+%d coins)", a->name, a->desc[t], a->reward[t]);
+    unsigned all = (1u << a->n) - 1u;
+    if ((diary_done[area] & all) == all && !(diary_done[area] & DIARY_CLAIMED)) {
+        diary_done[area] |= DIARY_CLAIMED;
+        gp += a->bonus;
         add_xp(SK_ATT, 8000, false); add_xp(SK_STR, 8000, false);
         add_xp(SK_DEF, 8000, false); add_xp(SK_HP, 6000, false);
-        msg("OAKHAVEN DIARY COMPLETE! A hero's bounty: 5000 coins!");
+        msg("%s DIARY COMPLETE! A hero's bounty: %d coins!", a->name, a->bonus);
     }
 }
 
-/* re-evaluate the derivable tasks (cheap; called each tick and on opening) */
+/* re-evaluate every area's derivable tasks (cheap; called each tick + on open) */
 static void diary_refresh(void)
 {
-    for (int t = 0; t < NUM_DTASK; t++)
-        if (!(diary_done & (1u << t)) && diary_check(t))
-            diary_complete(t);
+    for (int area = 0; area < NUM_AREAS; area++)
+        for (int t = 0; t < area_diary[area].n; t++)
+            if (!(diary_done[area] & (1u << t)) && diary_check(area, t))
+                diary_complete(area, t);
 }
 
 static void mob_die(gob_t *g)
@@ -1740,7 +1904,15 @@ static void mob_die(gob_t *g)
         if (!inv_full()) add_item(IT_DRAGONSTONE);
         msg("You plunder its hoard: 2500 coins and a Dragonstone!");
         gratz_timer = 4;
-        diary_complete(DTASK_DRAGON);
+        diary_complete(AREA_OAKHAVEN, DTASK_DRAGON);
+    } else if (g->type == MOB_YETI) {
+        msg("The Yeti topples into the snow with a frozen groan!");
+        sfx_ui(SND_LEVELUP);
+        add_xp(SK_ATT, 7000, false);
+        add_xp(SK_STR, 7000, false);
+        add_xp(SK_DEF, 7000, false);
+        add_xp(SK_HP,  5500, false);
+        gratz_timer = 4;
     } else {
         msg("You have defeated the %s!", mi->name);
     }
@@ -1768,6 +1940,12 @@ static void mob_die(gob_t *g)
     case MOB_COW:      roll_drops(cow_drops,      NDROPS(cow_drops));      break;
     case MOB_WHELP:    roll_drops(whelp_drops,    NDROPS(whelp_drops));    break;
     case MOB_DRAGON:   roll_drops(dragon_drops,   NDROPS(dragon_drops));   break;
+    case MOB_WOLF:     roll_drops(wolf_drops,     NDROPS(wolf_drops));
+                       diary_complete(AREA_FROSTMERE, FTASK_WOLF);          break;
+    case MOB_ICE_WARRIOR: roll_drops(ice_warrior_drops, NDROPS(ice_warrior_drops));
+                       diary_complete(AREA_FROSTMERE, FTASK_WARRIOR);       break;
+    case MOB_YETI:     roll_drops(yeti_drops,     NDROPS(yeti_drops));
+                       diary_complete(AREA_FROSTMERE, FTASK_YETI);          break;
     }
     if (pl.state == ST_FIGHT) pl.state = ST_IDLE;
 }
@@ -1989,7 +2167,7 @@ static void do_enchant(void)
     sfx_ui(SND_LEVELUP);
     add_xp(SK_MAGIC, spellinfo[SPELL_ENCHANT].xp_x10, true);
     msg("The gem flares - you enchant a %s!", iteminfo[made].name);
-    diary_complete(DTASK_ENCHANT);
+    diary_complete(AREA_OAKHAVEN, DTASK_ENCHANT);
 }
 
 /* ------------------------------------------------------------ skilling ticks */
@@ -2020,23 +2198,28 @@ static void tick_skilling(void)
     switch (pl.state) {
     case ST_CHOP: {
         int o = object[ay][ax];
-        if (o != OBJ_TREE && o != OBJ_OAK) { stop_action(); break; }
+        if (o != OBJ_TREE && o != OBJ_OAK && o != OBJ_PINE) { stop_action(); break; }
         if (--pl.act_timer > 0) break;
         pl.act_timer = 4;
         int wc = level_of(SK_WC);
-        bool oak = (o == OBJ_OAK);
-        if (oak && wc < 15) { msg("You need a Woodcutting level of 15 to chop oaks."); stop_action(); break; }
+        int req, item, xpv, base, resp; const char *got;
+        if (o == OBJ_PINE)     { req=35; item=IT_PINE_LOGS; xpv=500; base=8+wc;     resp=16; got="pine logs"; }
+        else if (o == OBJ_OAK) { req=15; item=IT_OAK_LOGS;  xpv=375; base=10+wc*3/2;resp=14; got="oak logs"; }
+        else                   { req=1;  item=IT_LOGS;      xpv=250; base=25+wc*2;  resp=10; got="logs"; }
+        if (wc < req) { msg("You need a Woodcutting level of %d to chop that.", req); stop_action(); break; }
         if (inv_full()) { msg("Your inventory is too full to carry any more."); stop_action(); break; }
-        int p = (oak ? (10 + wc * 3 / 2) : (25 + wc * 2)) + axe_bonus();
+        int p = base + axe_bonus();
         if (p > 90) p = 90;
         if (chance(p)) {
             sfx(SND_CHOP);
-            add_item(oak ? IT_OAK_LOGS : IT_LOGS);
-            msg(oak ? "You get some oak logs." : "You get some logs.");
-            add_xp(SK_WC, oak ? 375 : 250, true);
-            if (!oak || chance(13)) {           /* oaks survive ~7/8 logs */
+            add_item(item);
+            msg("You get some %s.", got);
+            add_xp(SK_WC, xpv, true);
+            if (o == OBJ_PINE) diary_complete(AREA_FROSTMERE, FTASK_PINE);
+            bool sturdy = (o == OBJ_OAK || o == OBJ_PINE);   /* survive most chops */
+            if (!sturdy || chance(13)) {
                 object[ay][ax] = OBJ_STUMP;
-                obj_timer[ay][ax] = oak ? 14 : 10;
+                obj_timer[ay][ax] = resp;
                 stop_action();
             }
         } else {
@@ -2143,16 +2326,16 @@ static void tick_skilling(void)
         int p = 30 + fm * 3 / 2;
         if (p > 90) p = 90;
         if (chance(p)) {
-            bool oak = false;
-            if (!remove_item(IT_LOGS)) {
-                if (remove_item(IT_OAK_LOGS)) oak = true;
-                else { stop_action(); break; }
-            }
+            int fmxp;
+            if      (remove_item(IT_LOGS))      fmxp = 400;
+            else if (remove_item(IT_OAK_LOGS))  fmxp = 600;
+            else if (remove_item(IT_PINE_LOGS)) fmxp = 800;
+            else { stop_action(); break; }
             object[pl.ty][pl.tx] = OBJ_FIRE;
             obj_timer[pl.ty][pl.tx] = 60 + rand() % 40;
             sfx(SND_FIRE);
             msg("The fire catches and the logs begin to burn.");
-            add_xp(SK_FM, oak ? 600 : 400, true);
+            add_xp(SK_FM, fmxp, true);
             /* step west like the old days */
             if (tile_walkable(pl.tx - 1, pl.ty)) {
                 pl.mtx = pl.tx - 1; pl.mty = pl.ty;
@@ -3143,10 +3326,23 @@ static void interact(void)
     }
 
     switch (t.obj) {
-    case OBJ_TREE: case OBJ_OAK:
+    case OBJ_TREE: case OBJ_OAK: case OBJ_PINE:
         if (!has_axe()) { msg("You need an axe to chop down this tree."); return; }
         pl.state = ST_CHOP; pl.act_timer = 2;
         msg("You swing your axe at the tree.");
+        break;
+    case OBJ_BOAT:
+        if (cur_map == MAP_FROSTMERE) {
+            load_map(MAP_OVERWORLD);
+            place_player(35, 27);
+            msg("You sail back to Oakhaven.");
+        } else {
+            load_map(MAP_FROSTMERE);
+            place_player(pl.spawn_x, pl.spawn_y);
+            msg("You sail north to the frozen isle of Frostmere.");
+            diary_complete(AREA_FROSTMERE, FTASK_SAIL);
+        }
+        save_game();
         break;
     case OBJ_ROCK_COPPER: case OBJ_ROCK_TIN: case OBJ_ROCK_IRON:
     case OBJ_ROCK_MITHRIL: case OBJ_ROCK_COAL: case OBJ_ROCK_GOLD: case OBJ_ESSENCE:
@@ -3286,6 +3482,9 @@ static const char *context_hint(void)
     switch (t.obj) {
     case OBJ_TREE:        return "A: Chop down Tree";
     case OBJ_OAK:         return "A: Chop down Oak";
+    case OBJ_PINE:        return "A: Chop down Pine";
+    case OBJ_BOAT:        return cur_map == MAP_FROSTMERE
+                                 ? "A: Sail to Oakhaven" : "A: Sail to Frostmere";
     case OBJ_ROCK_COPPER: return "A: Mine Copper rock";
     case OBJ_ROCK_TIN:    return "A: Mine Tin rock";
     case OBJ_ROCK_IRON:   return "A: Mine Iron rock";
@@ -3382,7 +3581,7 @@ static void use_inv_item(int slot)
         add_xp(SK_PRAY, 45, true);
         msg("You bury the bones.");
         break;
-    case IT_LOGS: case IT_OAK_LOGS: {
+    case IT_LOGS: case IT_OAK_LOGS: case IT_PINE_LOGS: {
         if (!has_item(IT_TINDER)) { msg("You need a tinderbox to light a fire."); break; }
         int ter = terrain[pl.ty][pl.tx];
         if (object[pl.ty][pl.tx] != OBJ_NONE ||
@@ -3577,7 +3776,7 @@ static void craft_make(int row)
     sfx(SND_SMITH);
     msg("You craft a %s.", iteminfo[result].name);
     add_xp(SK_CRAFT, craft_list[row].xp_x10, true);
-    if (is_ranged_armour(result)) diary_complete(DTASK_ARMOUR);
+    if (is_ranged_armour(result)) diary_complete(AREA_OAKHAVEN, DTASK_ARMOUR);
 }
 
 /* ------------------------------------------------------------ bank */
@@ -3845,6 +4044,7 @@ static int equip_overlay_base(int item)
     case IT_LEATHER_BODY:  return SPR_EQ_LE_BODY_D;
     case IT_DHIDE_COIF:    return SPR_EQ_DH_HELM_D;
     case IT_DHIDE_BODY:    return SPR_EQ_DH_BODY_D;
+    case IT_FROSTMAUL:     return SPR_EQ_FM_WEP_D;
     default:               return -1;
     }
 }
@@ -3933,6 +4133,8 @@ static void render(void)
             case TER_WALL:   s = SPR_WALL; break;
             case TER_FLOOR:  s = SPR_FLOOR; break;
             case TER_CAVE:   s = SPR_CAVE; break;
+            case TER_SNOW:   s = SPR_SNOW; break;
+            case TER_ICE:    s = SPR_ICE; break;
             default:
                 s = ((x * 31 + y * 17) % 5 == 0) ? SPR_GRASS_B : SPR_GRASS_A;
             }
@@ -3966,6 +4168,8 @@ static void render(void)
             switch (o) {
             case OBJ_TREE: rdpq_sprite_blit(spr[SPR_TREE], sx, sy - 8, NULL); break;
             case OBJ_OAK:  rdpq_sprite_blit(spr[SPR_OAK],  sx, sy - 8, NULL); break;
+            case OBJ_PINE: rdpq_sprite_blit(spr[SPR_PINE], sx, sy - 8, NULL); break;
+            case OBJ_BOAT: rdpq_sprite_blit(spr[SPR_BOAT], sx, sy, NULL); break;
             case OBJ_STUMP:rdpq_sprite_blit(spr[SPR_STUMP], sx, sy, NULL); break;
             case OBJ_ROCK_COPPER: rdpq_sprite_blit(spr[SPR_ROCK_C], sx, sy, NULL); break;
             case OBJ_ROCK_TIN:    rdpq_sprite_blit(spr[SPR_ROCK_T], sx, sy, NULL); break;
@@ -4489,22 +4693,32 @@ static void render(void)
         draw_text(6, px0 + 8, py0 + 152, "(A) Diary   (B) close");
     }
     else if (ui_mode == UI_DIARY) {
-        int px0 = 28, py0 = 12;
-        draw_panel(px0, py0, px0 + 264, py0 + 200);
-        int done = 0;
-        for (int t = 0; t < NUM_DTASK; t++) if (diary_done & (1u << t)) done++;
-        draw_text(1, px0 + 8, py0 + 12, "Oakhaven Diary");
-        draw_text(5, px0 + 176, py0 + 12, "%d / %d", done, NUM_DTASK);
-        for (int t = 0; t < NUM_DTASK; t++) {
-            bool d = (diary_done & (1u << t)) != 0;
-            draw_text(d ? 4 : 0, px0 + 8, py0 + 28 + t * 12, "%s %s",
-                      d ? "[x]" : "[ ]", diary_desc[t]);
+        int px0 = 20, py0 = 14;
+        draw_panel(px0, py0, px0 + 280, py0 + 212);
+        draw_text(1, px0 + 8, py0 + 10, "Achievement Diary");
+        /* flatten both areas into one scrollable list */
+        static char dline[32][40];
+        static uint8_t dstyle[32];
+        int n = 0;
+        for (int area = 0; area < NUM_AREAS && n < 30; area++) {
+            const area_diary_t *a = &area_diary[area];
+            int done = 0;
+            for (int t = 0; t < a->n; t++) if (diary_done[area] & (1u << t)) done++;
+            snprintf(dline[n], 40, "== %s ==   %d/%d", a->name, done, a->n);
+            dstyle[n++] = 5;
+            for (int t = 0; t < a->n && n < 31; t++) {
+                bool d = (diary_done[area] & (1u << t)) != 0;
+                snprintf(dline[n], 40, "%s %s", d ? "[x]" : "[ ]", a->desc[t]);
+                dstyle[n++] = d ? 4 : 0;
+            }
         }
-        if ((diary_done & DIARY_ALL_MASK) == DIARY_ALL_MASK)
-            draw_text(4, px0 + 8, py0 + 174, "A hero of Oakhaven - every task done!");
-        else
-            draw_text(6, px0 + 8, py0 + 174, "Finish them all for a grand reward.");
-        draw_text(6, px0 + 8, py0 + 188, "(A) Almanac   (B) close");
+        const int VIS = 16;
+        if (diary_scroll > n - VIS) diary_scroll = n - VIS;
+        if (diary_scroll < 0) diary_scroll = 0;
+        for (int i = 0; i < VIS && diary_scroll + i < n; i++)
+            draw_text(dstyle[diary_scroll + i], px0 + 8, py0 + 26 + i * 11,
+                      "%s", dline[diary_scroll + i]);
+        draw_text(6, px0 + 8, py0 + 202, "D-pad scroll   (A) Almanac   (B) close");
     }
     else if (ui_mode == UI_ALMANAC) {
         int px0 = 16, py0 = 16;
@@ -4701,13 +4915,15 @@ static void handle_input(void)
         return;
     }
     if (ui_mode == UI_QUEST) {
-        if (pressed.a) { diary_refresh(); ui_mode = UI_DIARY; return; }
+        if (pressed.a) { diary_refresh(); diary_scroll = 0; ui_mode = UI_DIARY; return; }
         if (pressed.b) { ui_mode = UI_NONE; return; }
         return;
     }
     if (ui_mode == UI_DIARY) {
-        if (pressed.a) { build_almanac(); almanac_scroll = 0; ui_mode = UI_ALMANAC; return; }
         if (pressed.b) { ui_mode = UI_NONE; return; }
+        if (pressed.a) { build_almanac(); almanac_scroll = 0; ui_mode = UI_ALMANAC; return; }
+        if (pressed.d_up)   diary_scroll--;
+        if (pressed.d_down) diary_scroll++;
         return;
     }
     if (ui_mode == UI_ALMANAC) {
@@ -4823,7 +5039,7 @@ int main(void)
     gp = 25;                      /* a few starter coins */
     quest_state = QUEST_NONE; quest_kills = 0; wquest = WQ_NONE; dquest = DQ_NONE;
     cquest = CQ_NONE; cow_kills = 0;
-    diary_done = 0;
+    for (int i = 0; i < NUM_AREAS; i++) diary_done[i] = 0;
     dungeon_floor = 1;
     memset(bank, 0, sizeof bank);
     for (int i = 0; i < CHAT_LINES; i++) chat[i][0] = 0;

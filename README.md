@@ -167,8 +167,17 @@ with an axe, a pickaxe, a small net and a tinderbox. The world runs on a
   hits hardest in your hand whether you swing it or sling spells with it. Each
   boss pours out combat xp. Come armoured in rune, prayed-up, and well fed — and
   if you fall, you wake safely back on the surface
+- **Frostmere, the frozen north** — board the **boat** at Oakhaven's south-east
+  beach and sail to a second region: a snowbound isle of pine groves and a
+  frozen lake. **Frost wolves** prowl the snowfields, **ice warriors** guard the
+  north, and the hulking **Yeti** (120 HP) broods at the top of the isle — fell
+  it for a rich haul and its signature **Frostmaul**, a mighty two-handed
+  Strength weapon. Chop snow-dusted **pines** for pine logs (Woodcutting 35; they
+  burn hottest of all), fish the frozen lake, and tick off **Frostmere's own
+  achievement diary**. A bank and a boat home sit at the landing. Your save
+  remembers which region you logged out in
 - **Banking** — a bank with deposit-all and per-item withdrawal sits at the
-  north end of the path
+  north end of the path (and at the Frostmere landing)
 - **Hitpoints** start at level 10, regenerate 1 per minute, and cooked fish
   heal 3–16 depending on the catch
 - The **XP table is the real one** (level 99 = 13,034,431 xp — good luck on a

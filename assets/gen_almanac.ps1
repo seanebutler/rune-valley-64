@@ -177,14 +177,18 @@ foreach ($m in [regex]::Matches($src, 'static const drop_t (\w+)\[\]\s*=\s*\{(.*
 }
 
 # --- stable, hand-kept prose (location/flavour the data tables don't carry) ---
-$mobOrder  = 'COW','GOBLIN','SKELETON','BOSS','WIGHT','DEMON','WHELP','DRAGON'
+$mobOrder  = 'COW','GOBLIN','SKELETON','BOSS','WIGHT','DEMON','WHELP','DRAGON',
+             'WOLF','ICE_WARRIOR','YETI'
 $mobNote   = @{
     COW='overworld pasture'; GOBLIN='east of the bridge'; SKELETON='dungeon floor 1'
     BOSS='boss, dungeon floor 1'; WIGHT='dungeon floor 2'; DEMON='boss, dungeon floor 2'
     WHELP='dungeon floor 3 (the Dragon''s brood)'; DRAGON='boss, dungeon floor 3'
+    WOLF='Frostmere snowfield'; ICE_WARRIOR='Frostmere, the north'
+    YETI='boss, Frostmere'
 }
 $mobAlways = @{ DRAGON='Always drops 2500 coins + a Dragonstone.'
-                BOSS='Always pays out (no "nothing").'; DEMON='Always pays out (no "nothing").' }
+                BOSS='Always pays out (no "nothing").'; DEMON='Always pays out (no "nothing").'
+                YETI='Always pays out (no "nothing").' }
 $mobExtra  = @{ DRAGON=@(
     'Fire breath: a ranged attack (up to 5 tiles, ignores armour) for 5 damage, rising to 8 when enraged.',
     'Enrages at half health: attacks and breathes faster and hits harder.',

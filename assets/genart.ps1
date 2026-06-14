@@ -1989,6 +1989,50 @@ foreach ($pair in @(@('le',$leatherMap), @('dh',$dhideMap))) {
 # ---- Tanner NPC: a leather-aproned craftsman by the pasture ----
 New-Recolor 'pl_down_a' 'tanner_down_a' @{ '#3e5e7e' = '#8a5a30'; '#4a3320' = '#5a3a1e' }
 
+# ======== Frostmere: the frozen second area ========
+Write-Host "Generating Frostmere..."
+# snow ground + frozen-lake ice tiles
+$snowPal = @{ 'a'='#dfe7f0'; 'b'='#ccd8e8'; 'c'='#eef4fb'; 'd'='#b8c8dc' }
+New-NoiseTile 'tile_snow' $snowPal 'a' @(,@('b',20),@('c',14),@('d',6)) 5101
+$icePal = @{ 'a'='#a9c8e0'; 'b'='#bcd8ec'; 'c'='#90b4d4' }
+New-NoiseTile 'tile_ice' $icePal 'a' @(,@('b',16),@('c',10)) 5102
+# snow-dusted pine (recolor the tree's foliage to dark evergreen + snow tips)
+New-Recolor 'obj_tree' 'obj_pine' @{ '#2e5c20'='#1e4a30'; '#3f7a2c'='#2e6040'; '#4f9438'='#cfe0ee' }
+# ice warrior: a frost-blue skeleton
+New-Recolor 'skeleton_a' 'mob_icew_a' @{ '#e8e4d8'='#bcdcf4'; '#b8b4a4'='#5e88b8' }
+New-Recolor 'skeleton_b' 'mob_icew_b' @{ '#e8e4d8'='#bcdcf4'; '#b8b4a4'='#5e88b8' }
+# Yeti: a white-and-ice recolor of the demon (24x24 mini-boss)
+New-Recolor 'demon' 'mob_yeti' @{ '#b03028'='#e0eaf4'; '#7a1c18'='#a8bcd0'; '#f8d030'='#5ac8e8'; '#9a9088'='#c8d4e0'; '#4a1a16'='#7088a0' }
+# frost wolf: a small grey quadruped, two walk frames
+$wolfPal = @{ 'w'='#9aa0a8'; 'd'='#6a7078'; 'l'='#33373c' }
+Save-Sprite 'mob_wolf_a' $wolfPal @(
+    '................','................','................','............dd..',
+    '..ddd......dwwd.','.dwwwwwwwwwwwwl.','.dwwwwwwwwwwwwd.','.dwwwwwwwwwwwwd.',
+    '..d.d....d.d....','..d.d....d.d....','................','................',
+    '................','................','................','................')
+Save-Sprite 'mob_wolf_b' $wolfPal @(
+    '................','................','................','............dd..',
+    '..ddd......dwwd.','.dwwwwwwwwwwwwl.','.dwwwwwwwwwwwwd.','.dwwwwwwwwwwwwd.',
+    '...d.d..d.d.....','...d.d..d.d.....','................','................',
+    '................','................','................','................')
+# the boat (dock travel)
+Save-Sprite 'obj_boat' @{ 'h'='#9a6a3a'; 's'='#eef0ea'; 'm'='#5a3c20' } @(
+    '................','................','.......m........','.......m........',
+    '......sss.......','.....ssss.......','......sss.......','......mmm.......',
+    '..hhhhhhhhhhh...','..hhhhhhhhhhh...','...hhhhhhhhh....','....hhhhhhh.....',
+    '................','................','................','................')
+# pine logs (recolour ordinary logs evergreen)
+New-Recolor 'item_logs' 'item_pine_logs' @{ '#8a6a40'='#5a7048'; '#6e5230'='#42583a'; '#b89468'='#86a06e'; '#5a4226'='#33402a' }
+# Frostmaul: an icy maul icon + worn overlay (recolour the bronze weapon)
+Save-Sprite 'item_frostmaul' @{ 'I'='#a9d8f0'; 'j'='#6ab0d8'; 'w'='#6b4a2a' } @(
+    '................','................','....IIIIII......','...IjIIIIjI.....',
+    '...IIIIIIII.....','....IIIIII......','......ww........','......ww........',
+    '......ww........','......ww........','......ww........','.....wwww.......',
+    '................','................','................','................')
+$fmMap = @{ '#b87f4e'='#a9d8f0'; '#94633a'='#6ab0d8'; '#d8a070'='#d8f0ff' }
+foreach ($dir in 'd','u','s') { New-Recolor "eq_bz_wep_$dir" "eq_fm_wep_$dir" $fmMap }
+New-FlipX 'eq_fm_wep_s' 'eq_fm_wep_sl'
+
 Write-Host "Generating title logo..."
 
 # 256 wide: CI4 TMEM pitch must stay 8-byte aligned (280 wide = 140B = broken)
