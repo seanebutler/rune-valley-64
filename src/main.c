@@ -165,6 +165,7 @@ enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_GLORY_AMULET, IT_POWER_NECKLACE, IT_FURY_RING, IT_GUARD_BRACELET,
        IT_PINE_LOGS, IT_FROSTMAUL,
        IT_BIG_BONES, IT_DRAGON_BONES,
+       IT_POT_ATTACK, IT_POT_STRENGTH, IT_POT_DEFENCE, IT_POT_COMBAT, IT_POT_PRAYER,
        NUM_ITEMS };
 
 /* worn equipment slots; SLOT_NONE = item is not equippable */
@@ -271,6 +272,7 @@ enum {
     SPR_I_PINE_LOGS, SPR_I_FROSTMAUL,
     SPR_EQ_FM_WEP_D, SPR_EQ_FM_WEP_U, SPR_EQ_FM_WEP_S, SPR_EQ_FM_WEP_SL,
     SPR_I_BIG_BONES, SPR_I_DRAGON_BONES,
+    SPR_I_POT_ATTACK, SPR_I_POT_STRENGTH, SPR_I_POT_DEFENCE, SPR_I_POT_COMBAT, SPR_I_POT_PRAYER,
     NUM_SPR
 };
 
@@ -363,7 +365,8 @@ static const char *spr_files[NUM_SPR] = {
     "mob_wolf_a", "mob_wolf_b", "mob_icew_a", "mob_icew_b", "mob_yeti",
     "item_pine_logs", "item_frostmaul",
     "eq_fm_wep_d", "eq_fm_wep_u", "eq_fm_wep_s", "eq_fm_wep_sl",
-    "item_big_bones", "item_dragon_bones"
+    "item_big_bones", "item_dragon_bones",
+    "item_pot_attack", "item_pot_strength", "item_pot_defence", "item_pot_combat", "item_pot_prayer"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -465,6 +468,11 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     /* bigger bones from bigger foes - more Prayer xp when buried */
     [IT_BIG_BONES]    ={ "Big bones",     SPR_I_BIG_BONES,    0, false },
     [IT_DRAGON_BONES] ={ "Dragon bones",  SPR_I_DRAGON_BONES, 0, false },
+    [IT_POT_ATTACK]   ={ "Attack potion",   SPR_I_POT_ATTACK,   0, false },
+    [IT_POT_STRENGTH] ={ "Strength potion", SPR_I_POT_STRENGTH, 0, false },
+    [IT_POT_DEFENCE]  ={ "Defence potion",  SPR_I_POT_DEFENCE,  0, false },
+    [IT_POT_COMBAT]   ={ "Combat potion",   SPR_I_POT_COMBAT,   0, false },
+    [IT_POT_PRAYER]   ={ "Prayer potion",   SPR_I_POT_PRAYER,   0, false },
     /* mithril: a deeper ore that smelts into bars for gear and arrowtips */
     [IT_MITH_ORE]     ={ "Mithril ore",   SPR_I_MITH_ORE,     0, false },
     [IT_MITH_BAR]     ={ "Mithril bar",   SPR_I_MITH_BAR,     0, false },
@@ -513,6 +521,8 @@ static const int item_value[NUM_ITEMS] = {
     [IT_FURY_RING]=4000, [IT_GUARD_BRACELET]=4000,
     [IT_PINE_LOGS]=25, [IT_FROSTMAUL]=5000,
     [IT_BIG_BONES]=2, [IT_DRAGON_BONES]=12,
+    [IT_POT_ATTACK]=200, [IT_POT_STRENGTH]=200, [IT_POT_DEFENCE]=200,
+    [IT_POT_COMBAT]=500, [IT_POT_PRAYER]=300,
     [IT_MITH_ORE]=60, [IT_MITH_BAR]=120, [IT_MITH_TIPS]=8, [IT_MITH_ARROW]=8,
     [IT_COWHIDE]=12, [IT_LEATHER]=20, [IT_DRAGON_HIDE]=120, [IT_DRAGON_LEATHER]=200,
     [IT_NEEDLE]=2, [IT_THREAD]=2,
@@ -766,6 +776,12 @@ static int pray_pts;            /* current prayer points */
 static int pray_drain_acc;      /* accumulates active drain; -1 point per 120 */
 static int pray_regen;          /* slow passive regen accumulator when inactive */
 static int pray_cursor = 0;
+
+/* transient combat-potion boosts (extra effective levels), not saved. They tick
+   down on the game clock and clear together when pot_timer hits zero. */
+static int pot_atk, pot_str, pot_def;
+static int pot_timer;
+#define POT_DUR 200             /* ~2 minutes at the ~0.6s game tick */
 
 /* prayer points cap = Prayer level */
 static int pray_max(void) { return level_of(SK_PRAY); }
@@ -1453,6 +1469,7 @@ static void apply_save(const save_t *s)
     deactivate_all_prayers();
     pray_pts = pray_max();
     pray_drain_acc = pray_regen = 0;
+    pot_atk = pot_str = pot_def = pot_timer = 0;
 }
 
 static void load_game(void)
@@ -1496,6 +1513,7 @@ static void player_die(void)
     deactivate_all_prayers();
     pray_pts = pray_max();
     pray_drain_acc = 0;
+    pot_atk = pot_str = pot_def = pot_timer = 0;
     ui_mode = UI_NONE;
     /* always wake up on the surface */
     if (cur_map != MAP_OVERWORLD) load_map(MAP_OVERWORLD);
@@ -1999,8 +2017,8 @@ static int hit_pct(int eff, int mob_def)
 
 static void player_attack(gob_t *g)
 {
-    int att = level_of(SK_ATT) * (100 + pray_bonus(PCAT_ATK)) / 100 + equip_atk();
-    int str = level_of(SK_STR) * (100 + pray_bonus(PCAT_STR)) / 100 + equip_str();
+    int att = (level_of(SK_ATT) + pot_atk) * (100 + pray_bonus(PCAT_ATK)) / 100 + equip_atk();
+    int str = (level_of(SK_STR) + pot_str) * (100 + pray_bonus(PCAT_STR)) / 100 + equip_str();
     int max_hit = 1 + str / 8;
     int p_hit = hit_pct(att, mobinfo[g->type].mob_def);
     int dmg = chance(p_hit) ? (rand() % (max_hit + 1)) : 0;
@@ -2025,7 +2043,7 @@ static void player_attack(gob_t *g)
 
 static void mob_attack(gob_t *g)
 {
-    int def = level_of(SK_DEF) * (100 + pray_bonus(PCAT_DEF)) / 100 + equip_def();
+    int def = (level_of(SK_DEF) + pot_def) * (100 + pray_bonus(PCAT_DEF)) / 100 + equip_def();
     int p_hit = mobinfo[g->type].hit_base - def;
     if (p_hit < 5) p_hit = 5;
     int dmg = chance(p_hit) ? (rand() % (mobinfo[g->type].max_dmg + 1)) : 0;
@@ -2971,6 +2989,11 @@ static void game_tick(void)
             pray_pts++;
         }
     }
+    /* combat-potion boosts fade together when their timer expires */
+    if (pot_timer > 0 && --pot_timer == 0) {
+        pot_atk = pot_str = pot_def = 0;
+        msg("Your combat boost wears off.");
+    }
     /* tick off any newly-earned Oakhaven diary tasks (levels/quests) */
     if (game_state == STATE_PLAY) diary_refresh();
     /* silent autosave every ~60s of overworld play (saves never record the
@@ -3634,6 +3657,42 @@ static void use_inv_item(int slot)
         add_xp(SK_PRAY, 720, true);
         msg("You bury the dragon bones. Potent prayer xp!");
         break;
+    case IT_POT_ATTACK:
+        inv[slot] = IT_NONE;
+        pot_atk = level_of(SK_ATT) / 6 + 3; pot_timer = POT_DUR;
+        sfx_ui(SND_EAT);
+        msg("You drink the Attack potion. (+%d Attack)", pot_atk);
+        break;
+    case IT_POT_STRENGTH:
+        inv[slot] = IT_NONE;
+        pot_str = level_of(SK_STR) / 6 + 3; pot_timer = POT_DUR;
+        sfx_ui(SND_EAT);
+        msg("You drink the Strength potion. (+%d Strength)", pot_str);
+        break;
+    case IT_POT_DEFENCE:
+        inv[slot] = IT_NONE;
+        pot_def = level_of(SK_DEF) / 6 + 3; pot_timer = POT_DUR;
+        sfx_ui(SND_EAT);
+        msg("You drink the Defence potion. (+%d Defence)", pot_def);
+        break;
+    case IT_POT_COMBAT:
+        inv[slot] = IT_NONE;
+        pot_atk = level_of(SK_ATT) / 8 + 2;
+        pot_str = level_of(SK_STR) / 8 + 2;
+        pot_def = level_of(SK_DEF) / 8 + 2;
+        pot_timer = POT_DUR;
+        sfx_ui(SND_EAT);
+        msg("You drink the Combat potion. Attack, Strength and Defence surge!");
+        break;
+    case IT_POT_PRAYER: {
+        inv[slot] = IT_NONE;
+        int restore = 7 + pray_max() / 4;
+        pray_pts += restore;
+        if (pray_pts > pray_max()) pray_pts = pray_max();
+        sfx_ui(SND_EAT);
+        msg("You drink the Prayer potion. (+%d prayer points)", restore);
+        break;
+    }
     case IT_LOGS: case IT_OAK_LOGS: case IT_PINE_LOGS: {
         if (!has_item(IT_TINDER)) { msg("You need a tinderbox to light a fire."); break; }
         int ter = terrain[pl.ty][pl.tx];
@@ -3875,13 +3934,15 @@ static const char *shop_names[NUM_SHOPS] = {
 };
 static const int shop_stock[NUM_SHOPS][20] = {
     { IT_AXE, IT_PICK, IT_NET, IT_ROD, IT_LOBSTER_POT, IT_HARPOON, IT_KNIFE,
-      IT_NEEDLE, IT_THREAD, IT_TINDER, IT_HAMMER, IT_RAW_SHRIMP, IT_SHRIMP, IT_NONE },
-    { IT_BRONZE_SWORD, IT_IRON_SWORD, IT_STEEL_SWORD, IT_MITH_SWORD, IT_RUNE_SWORD, IT_NONE },
+      IT_NEEDLE, IT_THREAD, IT_TINDER, IT_HAMMER, IT_RAW_SHRIMP, IT_SHRIMP,
+      IT_POT_ATTACK, IT_POT_STRENGTH, IT_POT_DEFENCE, IT_POT_COMBAT, IT_POT_PRAYER, IT_NONE },
+    /* rune is no longer sold - it is earned only from the Demon, Dragon and
+       Yeti, which keeps the top tier rare and aspirational */
+    { IT_BRONZE_SWORD, IT_IRON_SWORD, IT_STEEL_SWORD, IT_MITH_SWORD, IT_NONE },
     { IT_BRONZE_HELM, IT_BRONZE_SHIELD, IT_BRONZE_BODY,
       IT_IRON_HELM, IT_IRON_SHIELD, IT_IRON_BODY,
       IT_STEEL_HELM, IT_STEEL_SHIELD, IT_STEEL_BODY,
-      IT_MITH_HELM, IT_MITH_SHIELD, IT_MITH_BODY,
-      IT_RUNE_HELM, IT_RUNE_SHIELD, IT_RUNE_BODY, IT_NONE },
+      IT_MITH_HELM, IT_MITH_SHIELD, IT_MITH_BODY, IT_NONE },
     { IT_AIR_RUNE, IT_WATER_RUNE, IT_EARTH_RUNE, IT_FIRE_RUNE, IT_CHAOS_RUNE,
       IT_LAW_RUNE, IT_STAFF, IT_WIZ_HAT, IT_WIZ_ROBE, IT_NONE },
 };

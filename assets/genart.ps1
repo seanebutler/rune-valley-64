@@ -2037,6 +2037,32 @@ New-FlipX 'eq_fm_wep_s' 'eq_fm_wep_sl'
 New-Recolor 'item_bones' 'item_big_bones'    @{ '#e8e4d8'='#f2ecd6'; '#b8b4a4'='#cabf94' }
 New-Recolor 'item_bones' 'item_dragon_bones' @{ '#e8e4d8'='#bcd0dc'; '#b8b4a4'='#5e7e92' }
 
+# combat potions: one corked flask, five liquids (L = recoloured per potion)
+Write-Host "Generating potions..."
+$potRows = @(
+    '................',
+    '......cccc......',
+    '......cccc......',
+    '......oooo......',
+    '......oggo......',
+    '.....oggggo.....',
+    '....ogLLLLgo....',
+    '...ogLLLLLLgo...',
+    '..ogLLLLLLLLgo..',
+    '..oLLLLLLLLLLo..',
+    '..oLLLLLLLLLLo..',
+    '..oLLLLLLLLLLo..',
+    '..ogLLLLLLLLgo..',
+    '...oLLLLLLLLo...',
+    '....oooooooo....',
+    '................')
+$potBase = @{ 'c'='#8a5a2b'; 'o'='#33323f'; 'g'='#cfe6ef' }
+Save-Sprite 'item_pot_attack'   ($potBase + @{ 'L'='#d23a3a' }) $potRows
+Save-Sprite 'item_pot_strength' ($potBase + @{ 'L'='#3ab24a' }) $potRows
+Save-Sprite 'item_pot_defence'  ($potBase + @{ 'L'='#3a6ad2' }) $potRows
+Save-Sprite 'item_pot_combat'   ($potBase + @{ 'L'='#e08a1e' }) $potRows
+Save-Sprite 'item_pot_prayer'   ($potBase + @{ 'L'='#e6d24a' }) $potRows
+
 Write-Host "Generating title logo..."
 
 # 256 wide: CI4 TMEM pitch must stay 8-byte aligned (280 wide = 140B = broken)

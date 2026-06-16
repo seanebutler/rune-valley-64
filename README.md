@@ -62,6 +62,10 @@ defender **recoils**.
   dragon **dragon bones**, worth far more), then toggle boosts across Attack/
   Strength/Defence/Magic (+10%, or +20% at higher levels). Active prayers drain
   points; recharge at any altar (carry no essence).
+- **Potions** — buy brews at the General Store and drink them for a timed boost:
+  Attack, Strength or Defence singly, a **Combat** potion that lifts all three,
+  or a **Prayer** potion that restores prayer points. A renewable way to spend
+  your coin hoard on the harder fights.
 
 ## Equipment
 
@@ -70,8 +74,9 @@ Attack/Strength/Defence/Magic/Ranged straight into the formulas. Worn gear is
 drawn on your character.
 
 - **Gear tiers** — bronze, iron, steel and mithril are smithed from your own
-  bars; **rune** is bought at the bazaar or won from the Warlord (rune needs
-  level 40). Carried iron tools speed up gathering.
+  bars. **Rune** can't be bought — it drops only from the **Demon, Dragon and
+  Yeti** (needs level 40 to wield), so the top tier stays rare. Carried iron
+  tools speed up gathering.
 - **Special weapons** — the Warlord's **Bane**, the dragon's hybrid **Dragonfire
   blade** (top melee *and* Magic), and the Yeti's two-handed **Frostmaul**.
 - **Ranged armour** — leather (novice) and dragonhide (high Crafting) coif + body.
