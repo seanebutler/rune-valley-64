@@ -102,7 +102,7 @@ Hitpoints **9** | max hit **2** | defence **6**.
 ### Goblin Warlord - boss, dungeon floor 1
 ![](docs/almanac/boss.png)
 
-Hitpoints **45** | max hit **5** | defence **15**.
+Hitpoints **45** | max hit **5** | defence **12**.
 
 **Always pays out (no "nothing").**
 
@@ -138,7 +138,7 @@ Hitpoints **14** | max hit **3** | defence **10**.
 ### Demon - boss, dungeon floor 2
 ![](docs/almanac/demon.png)
 
-Hitpoints **80** | max hit **8** | defence **25**.
+Hitpoints **80** | max hit **8** | defence **18**.
 
 **Always pays out (no "nothing").**
 
@@ -171,7 +171,7 @@ Hitpoints **18** | max hit **4** | defence **12**.
 ### Ancient Dragon - boss, dungeon floor 3
 ![](docs/almanac/mob_dragon.png)
 
-Hitpoints **150** | max hit **12** | defence **35**.
+Hitpoints **150** | max hit **12** | defence **24**.
 
 **Always drops a 2000-3000 coin hoard (Dragonstone no longer guaranteed).**
 
@@ -211,7 +211,7 @@ Hitpoints **16** | max hit **4** | defence **10**.
 ### Ice warrior - Frostmere, the north
 ![](docs/almanac/mob_icew_a.png)
 
-Hitpoints **30** | max hit **6** | defence **20**.
+Hitpoints **30** | max hit **6** | defence **15**.
 
 | | Drop | Qty | Chance |
 |:-:|---|--:|--:|
@@ -227,7 +227,7 @@ Hitpoints **30** | max hit **6** | defence **20**.
 ### Yeti - boss, Frostmere
 ![](docs/almanac/mob_yeti.png)
 
-Hitpoints **120** | max hit **11** | defence **32**.
+Hitpoints **120** | max hit **11** | defence **20**.
 
 **Always pays out (no "nothing").**
 

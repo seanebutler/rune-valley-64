@@ -47,7 +47,10 @@ weapon, monster and recipe live in the in-game **Almanac** (and
 
 The classic **triangle** of melee, **Magic** and **Ranged**. Pick a spell or
 draw a bow and **A** strikes the nearest foe from up to five tiles; otherwise you
-swing in melee. Every exchange shows on screen — the attacker **lunges**, the
+swing in melee. All three share one accuracy curve, so none out-lands another at
+equal investment — they differ in damage, speed and cost: melee hits hardest and
+free, ranged matches it from safety but burns arrows, magic trades raw damage for
+range and utility. Every exchange shows on screen — the attacker **lunges**, the
 defender **recoils**.
 
 - **Magic** — elemental strikes (Wind → Water → Earth → Fire) build to Earth and

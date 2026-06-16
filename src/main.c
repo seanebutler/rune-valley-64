@@ -678,21 +678,22 @@ typedef struct {
 static const mobinfo_t mobinfo[NUM_MOBS] = {
     [MOB_GOBLIN]   = { "goblin",         5, 1,  1, 52, 3, 25, SPR_GOB_A,   SPR_GOB_B,   16, 16 },
     [MOB_SKELETON] = { "skeleton",       9, 2,  6, 60, 4, 25, SPR_SKEL_A,  SPR_SKEL_B,  16, 16 },
-    [MOB_BOSS]     = { "Goblin Warlord",45, 5, 15, 75, 6, 80, SPR_BOSS,    SPR_BOSS,    24, 24 },
+    [MOB_BOSS]     = { "Goblin Warlord",45, 5, 12, 75, 6, 80, SPR_BOSS,    SPR_BOSS,    24, 24 },
     [MOB_WIGHT]    = { "wight",         14, 3, 10, 64, 4, 25, SPR_WIGHT_A, SPR_WIGHT_B, 16, 16 },
-    [MOB_DEMON]    = { "Demon",         80, 8, 25, 85, 7,100, SPR_DEMON,   SPR_DEMON,   24, 24 },
+    [MOB_DEMON]    = { "Demon",         80, 8, 18, 85, 7,100, SPR_DEMON,   SPR_DEMON,   24, 24 },
     /* a placid training target: lots of HP for the xp, defence 0 so you hit
        almost every swing, never aggressive, barely scratches back, respawns fast */
     [MOB_COW]      = { "cow",            8, 1,  0, 25, 0,  8, SPR_COW_A,   SPR_COW_B,   16, 16 },
     /* floor-3 fodder, and the Dragon's brood */
     [MOB_WHELP]    = { "whelp",         18, 4, 12, 66, 5, 25, SPR_WHELP_A, SPR_WHELP_B, 16, 16 },
     /* the deepest boss: huge HP, hits hard in melee, and breathes fire from
-       range. mob_def 35 demands rune-tier gear to land hits reliably */
-    [MOB_DRAGON]   = { "Ancient Dragon",150,12, 35, 90, 8,140, SPR_DRAGON,  SPR_DRAGON,  24, 24 },
+       range. the game's stiffest defence - even rune-tier gear lands well under
+       half its swings, so the fight rewards food, prayer and patience */
+    [MOB_DRAGON]   = { "Ancient Dragon",150,12, 24, 90, 8,140, SPR_DRAGON,  SPR_DRAGON,  24, 24 },
     /* Frostmere foes: aggressive frost wolves, sturdy ice warriors, the Yeti boss */
     [MOB_WOLF]       = { "frost wolf",   16, 4, 10, 66, 5, 20, SPR_WOLF_A,  SPR_WOLF_B,  16, 16 },
-    [MOB_ICE_WARRIOR]= { "ice warrior",  30, 6, 20, 74, 4, 28, SPR_ICEW_A,  SPR_ICEW_B,  16, 16 },
-    [MOB_YETI]       = { "Yeti",        120,11, 32, 88, 6,120, SPR_YETI,    SPR_YETI,    24, 24 },
+    [MOB_ICE_WARRIOR]= { "ice warrior",  30, 6, 15, 74, 4, 28, SPR_ICEW_A,  SPR_ICEW_B,  16, 16 },
+    [MOB_YETI]       = { "Yeti",        120,11, 20, 88, 6,120, SPR_YETI,    SPR_YETI,    24, 24 },
 };
 
 /* ------------------------------------------------------------ UI state */
@@ -1935,10 +1936,11 @@ static void mob_die(gob_t *g)
     } else if (g->type == MOB_YETI) {
         msg("The Yeti topples into the snow with a frozen groan!");
         sfx_ui(SND_LEVELUP);
-        add_xp(SK_ATT, 7000, false);
-        add_xp(SK_STR, 7000, false);
-        add_xp(SK_DEF, 7000, false);
-        add_xp(SK_HP,  5500, false);
+        /* tougher than the Demon, below the Dragon - so its bounty sits between */
+        add_xp(SK_ATT, 12000, false);
+        add_xp(SK_STR, 12000, false);
+        add_xp(SK_DEF, 12000, false);
+        add_xp(SK_HP,  9000, false);
         gratz_timer = 4;
     } else {
         msg("You have defeated the %s!", mi->name);
@@ -1982,14 +1984,25 @@ static void mob_die(gob_t *g)
     if (pl.state == ST_FIGHT) pl.state = ST_IDLE;
 }
 
+/* One shared accuracy curve for all three combat styles keeps the triangle
+   fair: a saturating roll of effective offensive power (skill x prayer + gear)
+   against the mob's defence, clamped to 5-95%. Melee feeds it Attack, magic its
+   Magic level + bonus, ranged its Ranged level + bonus - so no style out-lands
+   another at equal investment; their identities live in damage, speed and cost. */
+static int hit_pct(int eff, int mob_def)
+{
+    int p = 100 * (eff + 8) / (eff + 18) - mob_def * 2;
+    if (p > 95) p = 95;
+    if (p < 5)  p = 5;
+    return p;
+}
+
 static void player_attack(gob_t *g)
 {
     int att = level_of(SK_ATT) * (100 + pray_bonus(PCAT_ATK)) / 100 + equip_atk();
     int str = level_of(SK_STR) * (100 + pray_bonus(PCAT_STR)) / 100 + equip_str();
     int max_hit = 1 + str / 8;
-    int p_hit = 100 * (att + 8) / (att + 18) - mobinfo[g->type].mob_def * 2;
-    if (p_hit > 95) p_hit = 95;
-    if (p_hit < 5) p_hit = 5;
+    int p_hit = hit_pct(att, mobinfo[g->type].mob_def);
     int dmg = chance(p_hit) ? (rand() % (max_hit + 1)) : 0;
     float vx = g->px - pl.px, vy = g->py - pl.py;
     bump_set(&pl.bump_x, &pl.bump_y, &pl.bump_t, vx, vy, BUMP_LUNGE);
@@ -2070,10 +2083,10 @@ static bool player_cast(gob_t *g)
     sfx(SND_CRAFT);
     int magic = level_of(SK_MAGIC) * (100 + pray_bonus(PCAT_MAG)) / 100;
     int mbonus = equip_mag();
-    int p_hit = 55 + magic * 2 + mbonus - mobinfo[g->type].mob_def * 2;
-    if (p_hit > 95) p_hit = 95;
-    if (p_hit < 5) p_hit = 5;
-    int maxhit = spellinfo[cast_spell].maxhit + mbonus / 10;   /* gear ups the cap */
+    int p_hit = hit_pct(magic + mbonus, mobinfo[g->type].mob_def);
+    /* the spell sets the floor; Magic level and gear nudge the cap up so a
+       high mage keeps pace - magic still trades raw damage for range + utility */
+    int maxhit = spellinfo[cast_spell].maxhit + magic / 20 + mbonus / 10;
     int dmg = chance(p_hit) ? (rand() % (maxhit + 1)) : 0;
     float vx = g->px - pl.px, vy = g->py - pl.py;
     bump_set(&pl.bump_x, &pl.bump_y, &pl.bump_t, vx, vy, BUMP_LUNGE);
@@ -2121,9 +2134,7 @@ static bool player_shoot(gob_t *g)
     sfx(SND_HIT);
     int rng = level_of(SK_RANGED);
     int rbonus = equip_rng() + iteminfo[arrow].rng;
-    int p_hit = 60 + rng * 2 + rbonus - mobinfo[g->type].mob_def * 2;
-    if (p_hit > 95) p_hit = 95;
-    if (p_hit < 5) p_hit = 5;
+    int p_hit = hit_pct(rng + rbonus, mobinfo[g->type].mob_def);
     int maxhit = 1 + (rng + rbonus) / 8;
     int dmg = chance(p_hit) ? (rand() % (maxhit + 1)) : 0;
     float vx = g->px - pl.px, vy = g->py - pl.py;
