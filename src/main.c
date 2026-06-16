@@ -53,7 +53,7 @@ enum { OBJ_NONE, OBJ_TREE, OBJ_OAK, OBJ_STUMP, OBJ_ROCK_COPPER, OBJ_ROCK_TIN,
        OBJ_KNIGHT, OBJ_FENCE, OBJ_TUTOR,
        OBJ_ALTAR_WATER, OBJ_ALTAR_EARTH, OBJ_ALTAR_LAW, OBJ_ALTAR_CHAOS,
        OBJ_ROCK_MITHRIL, OBJ_TANNER, OBJ_ROCK_COAL, OBJ_ROCK_GOLD,
-       OBJ_BOAT, OBJ_PINE };
+       OBJ_BOAT, OBJ_PINE, OBJ_GAMBLE };
 
 enum { MAP_OVERWORLD, MAP_DUNGEON, MAP_FROSTMERE };
 /* named overworld regions, each with its own achievement diary */
@@ -216,6 +216,7 @@ enum {
     SPR_I_BRONZE_BODY, SPR_I_IRON_BODY,
     SPR_I_STAFF, SPR_I_WIZ_HAT, SPR_I_WIZ_ROBE, SPR_I_COINS,
     SPR_STALL_GENERAL, SPR_STALL_WEAPON, SPR_STALL_ARMOR, SPR_STALL_MAGIC,
+    SPR_STALL_GAMBLE,
     SPR_BOLT_AIR, SPR_BOLT_FIRE,
     /* worn-equipment overlays: 4 facings (down,up,side,side-left) per slot */
     SPR_EQ_BZ_HELM_D, SPR_EQ_BZ_HELM_U, SPR_EQ_BZ_HELM_S, SPR_EQ_BZ_HELM_SL,
@@ -311,6 +312,7 @@ static const char *spr_files[NUM_SPR] = {
     "item_iron_shield", "item_bronze_body", "item_iron_body",
     "item_staff", "item_wizard_hat", "item_wizard_robe", "item_coins",
     "obj_stall_general", "obj_stall_weapon", "obj_stall_armor", "obj_stall_magic",
+    "obj_stall_gamble",
     "obj_bolt_air", "obj_bolt_fire",
     "eq_bz_helm_d", "eq_bz_helm_u", "eq_bz_helm_s", "eq_bz_helm_sl",
     "eq_bz_body_d", "eq_bz_body_u", "eq_bz_body_s", "eq_bz_body_sl",
@@ -1059,6 +1061,8 @@ static void load_overworld(void)
     }
     /* a boat at the south-east beach sails north to Frostmere */
     object[27][36] = OBJ_BOAT; obj_orig[27][36] = OBJ_BOAT;
+    /* the Gambler's stall joins the bazaar row, right of the Magic Shop */
+    object[26][34] = OBJ_GAMBLE; obj_orig[26][34] = OBJ_GAMBLE;
 }
 
 static void build_dungeon(int floor)
@@ -1657,6 +1661,61 @@ static void roll_drops(const drop_t *tbl, int n)
             give_drop(tbl[i].item, qty);
             return;
         }
+    }
+}
+
+/* ---- the Gambler's stall: pay a flat fee to spin a weighted prize wheel.
+   the house keeps an edge (average payout well under the stake), but the long
+   tail holds rune, a dragonstone and the Frostmaul jackpot - a sink with teeth
+   and a thrill. */
+#define GAMBLE_COST 1000
+static const drop_t gamble_table[] = {
+    { IT_COINS,       100,  400, 32 },   /* common consolation */
+    { IT_COAL,          3,    8, 10 },
+    { IT_FIRE_RUNE,    10,   30, 10 },
+    { IT_MITH_ARROW,   20,   50,  1 },
+    { IT_MITH_BAR,      1,    3,  9 },
+    { IT_GOLD_BAR,      1,    2,  7 },
+    { IT_DRAGON_BONES,  1,    3,  5 },
+    { IT_COINS,       600, 1500, 18 },   /* a tidy win */
+    { IT_DRAGONSTONE,   1,    1,  5 },   /* a gem */
+    { IT_RUNE_SWORD,    1,    1,  2 },   /* rune, off the wheel */
+    { IT_FROSTMAUL,     1,    1,  1 },   /* the jackpot */
+};
+
+static void take_gamble(void)
+{
+    if (gp < GAMBLE_COST) {
+        msg("The Gambler's wheel costs %d coins a spin.", GAMBLE_COST);
+        return;
+    }
+    gp -= GAMBLE_COST;
+    sfx(SND_HIT);
+    int n = NDROPS(gamble_table), total = 0;
+    for (int i = 0; i < n; i++) total += gamble_table[i].weight;
+    int r = rand() % total, acc = 0;
+    for (int i = 0; i < n; i++) {
+        acc += gamble_table[i].weight;
+        if (r >= acc) continue;
+        int it = gamble_table[i].item;
+        int lo = gamble_table[i].lo, hi = gamble_table[i].hi;
+        int qty = (hi > lo) ? lo + rand() % (hi - lo + 1) : lo;
+        bool jackpot = (it == IT_FROSTMAUL || it == IT_RUNE_SWORD || it == IT_DRAGONSTONE);
+        if (it == IT_COINS) {
+            gp += qty;
+            msg("The wheel spins... %d coins!", qty);
+        } else {
+            int got = 0;
+            for (int k = 0; k < qty; k++) { if (!add_item(it)) break; got++; }
+            if (got < qty && got == 0)
+                msg("The wheel spins... %s, but you've no room!", iteminfo[it].name);
+            else if (qty > 1)
+                msg("The wheel spins... %s x%d!", iteminfo[it].name, qty);
+            else
+                msg("The wheel spins... %s!", iteminfo[it].name);
+        }
+        if (jackpot) { sfx_ui(SND_LEVELUP); msg("A rare prize! Lady Luck smiles."); }
+        return;
     }
 }
 
@@ -3550,6 +3609,9 @@ static void interact(void)
         shop_mode = 0; shop_cursor = 0;
         ui_mode = UI_SHOP;
         break;
+    case OBJ_GAMBLE:
+        take_gamble();
+        break;
     }
 }
 
@@ -3605,6 +3667,7 @@ static const char *context_hint(void)
     case OBJ_SHOP_WEAPON: return "A: Browse the Weapon Shop";
     case OBJ_SHOP_ARMOR:  return "A: Browse the Armoury";
     case OBJ_SHOP_MAGIC:  return "A: Browse the Magic Shop";
+    case OBJ_GAMBLE:      return "A: Gamble (1000 gp a spin)";
     }
     return NULL;
 }
@@ -4340,6 +4403,7 @@ static void render(void)
             case OBJ_SHOP_WEAPON: rdpq_sprite_blit(spr[SPR_STALL_WEAPON], sx, sy - 4, NULL); break;
             case OBJ_SHOP_ARMOR:  rdpq_sprite_blit(spr[SPR_STALL_ARMOR], sx, sy - 4, NULL); break;
             case OBJ_SHOP_MAGIC:  rdpq_sprite_blit(spr[SPR_STALL_MAGIC], sx, sy - 4, NULL); break;
+            case OBJ_GAMBLE:      rdpq_sprite_blit(spr[SPR_STALL_GAMBLE], sx, sy - 4, NULL); break;
             }
         }
 

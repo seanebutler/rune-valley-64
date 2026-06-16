@@ -1829,6 +1829,7 @@ New-FlipX 'eq_staff_s' 'eq_staff_sl'
 New-Recolor 'obj_stall_general' 'obj_stall_weapon' @{ '#8a4a2a' = '#b03030' }
 New-Recolor 'obj_stall_general' 'obj_stall_armor'  @{ '#8a4a2a' = '#3a6a9a' }
 New-Recolor 'obj_stall_general' 'obj_stall_magic'  @{ '#8a4a2a' = '#7a3a9a' }
+New-Recolor 'obj_stall_general' 'obj_stall_gamble' @{ '#8a4a2a' = '#d4a017' }   # lucky gold
 
 # Higher gear tiers: recolor the bronze icons and overlays (b/d/h -> tier hues)
 $gearTiers = @{

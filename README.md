@@ -91,8 +91,10 @@ drawn on your character.
 ## The world
 
 - **Oakhaven** — the starting region: the mine and furnace/anvil, the **Bazaar**
-  (General Store, Weapon Shop, Armoury, Magic Shop), a **bank**, the cow pasture,
-  and the rune ruins. Buy with coins from drops, or sell loot (**Z**) for half.
+  (General Store, Weapon Shop, Armoury, Magic Shop, and the **Gambler's stall**),
+  a **bank**, the cow pasture, and the rune ruins. Buy with coins from drops, or
+  sell loot (**Z**) for half. The Gambler's wheel spins a prize for 1000 coins —
+  usually a trinket, rarely rune, a dragonstone, or the Frostmaul jackpot.
 - **The dungeon** (three floors, SW of the mine) — skeletons and the **Goblin
   Warlord**, then wights and the **Demon**, then the **Ancient Dragon**, which
   breathes fire across the room, enrages at half health, and summons whelps. It
