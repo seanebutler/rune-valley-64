@@ -26,7 +26,8 @@
 #define SCREEN_W       320
 #define SCREEN_H       240
 #define TICK_MS        600          /* one game tick, OSRS style */
-#define INV_SIZE       28
+#define INV_SIZE       32      /* array/cap; usable slots = inv_cap (upgradable) */
+#define INV_BASE       28      /* slots before any inventory upgrade */
 #define MAX_GOB        16     /* overworld goblins, or dungeon skeletons + boss */
 #define MAX_XPDROP     8
 #define CHAT_LINES     6
@@ -651,6 +652,15 @@ static int inv[INV_SIZE];
 static int inv_qty[INV_SIZE];      /* stack count per slot (1 for non-stackable) */
 static int bank[NUM_ITEMS];
 
+/* purchasable upgrades (persisted): extra inventory slots and a run boost.
+   inv_cap is the live usable slot count, derived from up_invslots. */
+static int up_invslots, up_run;
+static int inv_cap = INV_BASE;
+#define UPGRADE_MAX 4   /* tiers per track */
+/* rising cost per tier already owned (index 0..3) */
+static const int INV_UP_COST[UPGRADE_MAX] = {  2000,  4000,  8000, 16000 };
+static const int RUN_UP_COST[UPGRADE_MAX] = {  3000,  6000, 12000, 24000 };
+
 /* ------------------------------------------------------------ goblins */
 
 typedef struct {
@@ -710,8 +720,9 @@ static const mobinfo_t mobinfo[NUM_MOBS] = {
 
 typedef enum { UI_NONE, UI_INV, UI_SKILLS, UI_BANK, UI_HELP, UI_SMITH,
                UI_DIALOG, UI_EQUIP, UI_SPELL, UI_SHOP, UI_QUEST, UI_PRAYER,
-               UI_ALMANAC, UI_FLETCH, UI_CRAFT, UI_DIARY } ui_t;
+               UI_ALMANAC, UI_FLETCH, UI_CRAFT, UI_DIARY, UI_UPGRADE } ui_t;
 static ui_t ui_mode = UI_NONE;
+static int upgrade_cursor = 0;
 static int smith_cursor = 0;
 static int fletch_cursor = 0;
 static int craft_cursor = 0;
@@ -926,9 +937,9 @@ static bool add_item(int item)
 {
     /* stackable items merge into their existing slot */
     if (iteminfo[item].stackable)
-        for (int i = 0; i < INV_SIZE; i++)
+        for (int i = 0; i < inv_cap; i++)
             if (inv[i] == item) { inv_qty[i]++; return true; }
-    for (int i = 0; i < INV_SIZE; i++)
+    for (int i = 0; i < inv_cap; i++)
         if (inv[i] == IT_NONE) { inv[i] = item; inv_qty[i] = 1; return true; }
     msg("Your inventory is too full to carry any more.");
     return false;
@@ -946,7 +957,7 @@ static bool remove_item(int item)
 
 static bool inv_full(void)
 {
-    for (int i = 0; i < INV_SIZE; i++) if (inv[i] == IT_NONE) return false;
+    for (int i = 0; i < inv_cap; i++) if (inv[i] == IT_NONE) return false;
     return true;
 }
 
@@ -1266,7 +1277,9 @@ typedef struct __attribute__((packed)) {
     uint8_t  cur_area;            /* overworld region to reload into */
     uint8_t  area_pad;
     uint32_t diary[SAVE_CAP_AREAS];  /* per-area diary completion bitmasks */
-    uint8_t  reserved[20];        /* future scalar fields; zero in older saves */
+    uint8_t  up_invslots;         /* extra inventory slots bought (0..4) */
+    uint8_t  up_run;              /* run boost tier bought (0..4) */
+    uint8_t  reserved[18];        /* future scalar fields; zero in older saves */
     uint16_t checksum;
     uint8_t  pad2[5];             /* align sizeof to the 8-byte EEPROM block */
 } save_t;
@@ -1354,6 +1367,8 @@ static void save_game(void)
     /* dungeon visits never persist: reload into the region you sailed from */
     s.cur_area = (cur_map == MAP_FROSTMERE) ? AREA_FROSTMERE : AREA_OAKHAVEN;
     for (int i = 0; i < NUM_AREAS; i++) s.diary[i] = diary_done[i];
+    s.up_invslots = up_invslots;
+    s.up_run = up_run;
     s.checksum = csum_bytes(&s, offsetof(save_t, checksum));
 
     /* write only the blocks that changed, and keep the audio mixer fed
@@ -1453,6 +1468,10 @@ static void apply_save(const save_t *s)
     cquest = s->cquest <= CQ_DONE ? s->cquest : CQ_NONE;
     cow_kills = s->cow_kills <= CQ_COWS_NEEDED ? s->cow_kills : 0;
     for (int i = 0; i < NUM_AREAS; i++) diary_done[i] = s->diary[i];
+    up_invslots = s->up_invslots <= 4 ? s->up_invslots : 0;
+    up_run      = s->up_run      <= 4 ? s->up_run      : 0;
+    inv_cap = INV_BASE + up_invslots;
+    if (inv_cap > INV_SIZE) inv_cap = INV_SIZE;
     for (int i = 0; i < NUM_SLOTS; i++) {
         int it = s->equipped[i];
         /* only restore if it really belongs in this slot */
@@ -3002,9 +3021,9 @@ static void game_tick(void)
         save_timer = 0;
         save_game();
     }
-    /* run energy regen */
+    /* run energy regen (the run upgrade speeds recovery) */
     if (!pl.moving || !pl.run_on) {
-        pl.run_energy += 2;
+        pl.run_energy += 2 + up_run;
         if (pl.run_energy > 100) pl.run_energy = 100;
     }
     if (pl.eat_cd > 0) pl.eat_cd--;
@@ -4004,7 +4023,9 @@ static void update_projectiles(float dt)
 static void update_movement(float dt)
 {
     update_projectiles(dt);
-    float speed = (pl.run_on && pl.run_energy > 0) ? RUN_SPEED : WALK_SPEED;
+    /* the run upgrade also lifts top speed a little per tier */
+    float speed = (pl.run_on && pl.run_energy > 0)
+                  ? RUN_SPEED * (1.0f + up_run * 0.08f) : WALK_SPEED;
     if (pl.moving) {
         float gx = pl.mtx * TILE + 8, gy = pl.mty * TILE + 12;
         float dx = gx - pl.px, dy = gy - pl.py;
@@ -4491,12 +4512,15 @@ static void render(void)
     /* ---- side panels ---- */
     if (ui_mode == UI_INV) {
         int px0 = SCREEN_W - 88, py0 = 30;
-        draw_panel(px0, py0, px0 + 82, py0 + 152);
+        int rows = (inv_cap + 3) / 4;            /* the panel grows with upgrades */
+        int name_y = py0 + 42 + (rows - 1) * 18;
+        if (inv_cursor >= inv_cap) inv_cursor = inv_cap - 1;
+        draw_panel(px0, py0, px0 + 82, name_y + 2);
         draw_text(1, px0 + 6, py0 + 12, "Inv");
         draw_text(5, px0 + 34, py0 + 12, "%d gp", gp);
         /* slots: one fill pass, then the cursor highlight */
         rdpq_set_mode_fill(RGBA32(70, 60, 45, 255));
-        for (int i = 0; i < INV_SIZE; i++) {
+        for (int i = 0; i < inv_cap; i++) {
             if (i == inv_cursor) continue;
             int cx = px0 + 6 + (i % 4) * 19;
             int cy = py0 + 18 + (i / 4) * 18;
@@ -4509,20 +4533,20 @@ static void render(void)
             rdpq_fill_rectangle(cx, cy, cx + 17, cy + 16);
         }
         rdpq_set_mode_copy(true);
-        for (int i = 0; i < INV_SIZE; i++) {
+        for (int i = 0; i < inv_cap; i++) {
             if (inv[i] == IT_NONE) continue;
             int cx = (px0 + 6 + (i % 4) * 19) & ~1;
             int cy = py0 + 18 + (i / 4) * 18;
             rdpq_sprite_blit(spr[iteminfo[inv[i]].spr], cx, cy, NULL);
         }
         /* stack counts, drawn over the top-left of stackable icons */
-        for (int i = 0; i < INV_SIZE; i++) {
+        for (int i = 0; i < inv_cap; i++) {
             if (inv[i] == IT_NONE || inv_qty[i] <= 1) continue;
             int cx = px0 + 6 + (i % 4) * 19;
             int cy = py0 + 18 + (i / 4) * 18;
             draw_text(1, cx + 1, cy + 7, "%d", inv_qty[i]);
         }
-        draw_text(0, px0 + 6, py0 + 150, "%s",
+        draw_text(0, px0 + 6, name_y, "%s",
                   inv[inv_cursor] != IT_NONE ? iteminfo[inv[inv_cursor]].name : "-");
     }
     else if (ui_mode == UI_SKILLS) {
@@ -4749,7 +4773,7 @@ static void render(void)
         draw_text(0, px0 + 8, py0 + 98, "wear gear, sling spells, shop, quest.");
         draw_text(3, px0 + 8, py0 + 112, "A three-floor dungeon lurks SW: Warlord,");
         draw_text(3, px0 + 8, py0 + 122, "Demon, then the Ancient Dragon below!");
-        draw_text(1, px0 + 8, py0 + 142, "(A) Journal / Diary / Almanac   (B) close");
+        draw_text(1, px0 + 8, py0 + 142, "(A) Journal/Diary/Almanac/Upgrades  (B) close");
     }
     else if (ui_mode == UI_QUEST) {
         int px0 = 36, py0 = 24;
@@ -4848,8 +4872,32 @@ static void render(void)
         /* scroll position indicator + controls */
         int shown = almanac_scroll + ALMANAC_VIS;
         if (shown > almanac_count) shown = almanac_count;
-        draw_text(6, px0 + 8, py0 + 198, "%d-%d of %d   (A) Help   (B) close",
+        draw_text(6, px0 + 8, py0 + 198, "%d-%d of %d   (A) Upgrades   (B) close",
                   almanac_count ? almanac_scroll + 1 : 0, shown, almanac_count);
+    }
+    else if (ui_mode == UI_UPGRADE) {
+        int px0 = 40, py0 = 44;
+        draw_panel(px0, py0, px0 + 244, py0 + 120);
+        draw_text(1, px0 + 8, py0 + 10, "Upgrades");
+        draw_text(5, px0 + 168, py0 + 10, "%d gp", gp);
+        int sel0 = upgrade_cursor == 0, sel1 = upgrade_cursor == 1;
+        if (up_invslots >= UPGRADE_MAX)
+            draw_text(sel0 ? 1 : 4, px0 + 8, py0 + 36,
+                      "%c Inventory slots: %d  (MAX)", sel0 ? '>' : ' ', inv_cap);
+        else
+            draw_text(sel0 ? 1 : (gp >= INV_UP_COST[up_invslots] ? 0 : 6),
+                      px0 + 8, py0 + 36, "%c Inventory slots: %d   +1 = %d gp",
+                      sel0 ? '>' : ' ', inv_cap, INV_UP_COST[up_invslots]);
+        if (up_run >= UPGRADE_MAX)
+            draw_text(sel1 ? 1 : 4, px0 + 8, py0 + 52,
+                      "%c Run boost: tier %d  (MAX)", sel1 ? '>' : ' ', up_run);
+        else
+            draw_text(sel1 ? 1 : (gp >= RUN_UP_COST[up_run] ? 0 : 6),
+                      px0 + 8, py0 + 52, "%c Run boost: tier %d   next = %d gp",
+                      sel1 ? '>' : ' ', up_run, RUN_UP_COST[up_run]);
+        draw_text(6, px0 + 8, py0 + 78, "Carry more loot and run faster,");
+        draw_text(6, px0 + 8, py0 + 88, "longer - a place for your hoard.");
+        draw_text(6, px0 + 8, py0 + 106, "D-pad pick  Z buy  A Help  B close");
     }
 
     rdpq_detach_show();
@@ -4913,7 +4961,7 @@ static void handle_input(void)
         if (pressed.d_left  && inv_cursor % 4 > 0) inv_cursor--;
         if (pressed.d_right && inv_cursor % 4 < 3) inv_cursor++;
         if (pressed.d_up    && inv_cursor >= 4) inv_cursor -= 4;
-        if (pressed.d_down  && inv_cursor < INV_SIZE - 4) inv_cursor += 4;
+        if (pressed.d_down  && inv_cursor + 4 < inv_cap) inv_cursor += 4;
         if (pressed.a) use_inv_item(inv_cursor);
         if (pressed.c_down && inv[inv_cursor] != IT_NONE) {
             if (iteminfo[inv[inv_cursor]].tool)
@@ -5042,7 +5090,7 @@ static void handle_input(void)
     }
     if (ui_mode == UI_ALMANAC) {
         if (pressed.b) { ui_mode = UI_NONE; return; }
-        if (pressed.a) { ui_mode = UI_HELP; return; }
+        if (pressed.a) { upgrade_cursor = 0; ui_mode = UI_UPGRADE; return; }
         int maxs = almanac_count - ALMANAC_VIS;
         if (maxs < 0) maxs = 0;
         if (pressed.d_up)    almanac_scroll -= 1;
@@ -5051,6 +5099,36 @@ static void handle_input(void)
         if (pressed.d_right) almanac_scroll += ALMANAC_VIS;
         if (almanac_scroll < 0) almanac_scroll = 0;
         if (almanac_scroll > maxs) almanac_scroll = maxs;
+        return;
+    }
+    if (ui_mode == UI_UPGRADE) {
+        if (pressed.b) { ui_mode = UI_NONE; return; }
+        if (pressed.a) { ui_mode = UI_HELP; return; }   /* cycle back to Help */
+        if (pressed.d_up)   upgrade_cursor = 0;
+        if (pressed.d_down) upgrade_cursor = 1;
+        if (pressed.z) {
+            if (upgrade_cursor == 0) {        /* inventory slot */
+                if (up_invslots >= UPGRADE_MAX) msg("Your pack can hold no more.");
+                else if (gp < INV_UP_COST[up_invslots])
+                    msg("You need %d coins for that.", INV_UP_COST[up_invslots]);
+                else {
+                    gp -= INV_UP_COST[up_invslots];
+                    up_invslots++; inv_cap = INV_BASE + up_invslots;
+                    sfx_ui(SND_LEVELUP);
+                    msg("Pack expanded - you can now carry %d items.", inv_cap);
+                }
+            } else {                          /* run boost */
+                if (up_run >= UPGRADE_MAX) msg("Your stride is already peerless.");
+                else if (gp < RUN_UP_COST[up_run])
+                    msg("You need %d coins for that.", RUN_UP_COST[up_run]);
+                else {
+                    gp -= RUN_UP_COST[up_run];
+                    up_run++;
+                    sfx_ui(SND_LEVELUP);
+                    msg("Run boost improved to tier %d.", up_run);
+                }
+            }
+        }
         return;
     }
     if (ui_mode == UI_SKILLS || ui_mode == UI_HELP) {
@@ -5139,6 +5217,7 @@ int main(void)
     pl.facing = 0;
     pl.run_energy = 100;
     pl.state = ST_IDLE;
+    up_invslots = up_run = 0; inv_cap = INV_BASE;
     for (int i = 0; i < INV_SIZE; i++) { inv[i] = IT_NONE; inv_qty[i] = 0; }
     inv[0] = IT_AXE; inv[1] = IT_PICK; inv[2] = IT_NET; inv[3] = IT_TINDER;
     inv[4] = IT_HAMMER; inv[5] = IT_BRONZE_SWORD;

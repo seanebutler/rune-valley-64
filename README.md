@@ -66,6 +66,9 @@ defender **recoils**.
   Attack, Strength or Defence singly, a **Combat** potion that lifts all three,
   or a **Prayer** potion that restores prayer points. A renewable way to spend
   your coin hoard on the harder fights.
+- **Upgrades** — open the **Start** menu and page through to **Upgrades** (Z to
+  buy): spend coins on extra inventory slots and a **run boost** (faster, fuller
+  run energy and a little more speed). Rising one-time sinks for a swollen purse.
 
 ## Equipment
 
