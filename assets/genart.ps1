@@ -2033,6 +2033,10 @@ $fmMap = @{ '#b87f4e'='#a9d8f0'; '#94633a'='#6ab0d8'; '#d8a070'='#d8f0ff' }
 foreach ($dir in 'd','u','s') { New-Recolor "eq_bz_wep_$dir" "eq_fm_wep_$dir" $fmMap }
 New-FlipX 'eq_fm_wep_s' 'eq_fm_wep_sl'
 
+# bigger bones: warm ivory (big) and cold blue-grey (dragon), recolours of bones
+New-Recolor 'item_bones' 'item_big_bones'    @{ '#e8e4d8'='#f2ecd6'; '#b8b4a4'='#cabf94' }
+New-Recolor 'item_bones' 'item_dragon_bones' @{ '#e8e4d8'='#bcd0dc'; '#b8b4a4'='#5e7e92' }
+
 Write-Host "Generating title logo..."
 
 # 256 wide: CI4 TMEM pitch must stay 8-byte aligned (280 wide = 140B = broken)

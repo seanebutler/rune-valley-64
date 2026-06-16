@@ -164,6 +164,7 @@ enum { IT_NONE, IT_LOGS, IT_OAK_LOGS, IT_COPPER, IT_TIN, IT_IRON,
        IT_DSTONE_AMULET, IT_DSTONE_NECKLACE, IT_DSTONE_RING, IT_DSTONE_BRACELET,
        IT_GLORY_AMULET, IT_POWER_NECKLACE, IT_FURY_RING, IT_GUARD_BRACELET,
        IT_PINE_LOGS, IT_FROSTMAUL,
+       IT_BIG_BONES, IT_DRAGON_BONES,
        NUM_ITEMS };
 
 /* worn equipment slots; SLOT_NONE = item is not equippable */
@@ -269,6 +270,7 @@ enum {
     SPR_WOLF_A, SPR_WOLF_B, SPR_ICEW_A, SPR_ICEW_B, SPR_YETI,
     SPR_I_PINE_LOGS, SPR_I_FROSTMAUL,
     SPR_EQ_FM_WEP_D, SPR_EQ_FM_WEP_U, SPR_EQ_FM_WEP_S, SPR_EQ_FM_WEP_SL,
+    SPR_I_BIG_BONES, SPR_I_DRAGON_BONES,
     NUM_SPR
 };
 
@@ -360,7 +362,8 @@ static const char *spr_files[NUM_SPR] = {
     "tile_snow", "tile_ice", "obj_pine", "obj_boat",
     "mob_wolf_a", "mob_wolf_b", "mob_icew_a", "mob_icew_b", "mob_yeti",
     "item_pine_logs", "item_frostmaul",
-    "eq_fm_wep_d", "eq_fm_wep_u", "eq_fm_wep_s", "eq_fm_wep_sl"
+    "eq_fm_wep_d", "eq_fm_wep_u", "eq_fm_wep_s", "eq_fm_wep_sl",
+    "item_big_bones", "item_dragon_bones"
 };
 
 static sprite_t *spr[NUM_SPR];
@@ -459,6 +462,9 @@ static const iteminfo_t iteminfo[NUM_ITEMS] = {
     /* Frostmere: pine logs from the north woods, and the Yeti's mighty maul */
     [IT_PINE_LOGS]    ={ "Pine logs",     SPR_I_PINE_LOGS,    0, false },
     [IT_FROSTMAUL]    ={ "Frostmaul",     SPR_I_FROSTMAUL,    0, false, SLOT_WEAPON, 20,24,0,45 },
+    /* bigger bones from bigger foes - more Prayer xp when buried */
+    [IT_BIG_BONES]    ={ "Big bones",     SPR_I_BIG_BONES,    0, false },
+    [IT_DRAGON_BONES] ={ "Dragon bones",  SPR_I_DRAGON_BONES, 0, false },
     /* mithril: a deeper ore that smelts into bars for gear and arrowtips */
     [IT_MITH_ORE]     ={ "Mithril ore",   SPR_I_MITH_ORE,     0, false },
     [IT_MITH_BAR]     ={ "Mithril bar",   SPR_I_MITH_BAR,     0, false },
@@ -506,6 +512,7 @@ static const int item_value[NUM_ITEMS] = {
     [IT_GLORY_AMULET]=4000, [IT_POWER_NECKLACE]=4000,
     [IT_FURY_RING]=4000, [IT_GUARD_BRACELET]=4000,
     [IT_PINE_LOGS]=25, [IT_FROSTMAUL]=5000,
+    [IT_BIG_BONES]=2, [IT_DRAGON_BONES]=12,
     [IT_MITH_ORE]=60, [IT_MITH_BAR]=120, [IT_MITH_TIPS]=8, [IT_MITH_ARROW]=8,
     [IT_COWHIDE]=12, [IT_LEATHER]=20, [IT_DRAGON_HIDE]=120, [IT_DRAGON_LEATHER]=200,
     [IT_NEEDLE]=2, [IT_THREAD]=2,
@@ -1522,60 +1529,70 @@ static void hurt_player(int dmg)
     if (pl.hp <= 0) pending_death = true;
 }
 
-/* ---- monster drop tables (weighted; an IT_NONE entry means "nothing") ---- */
-typedef struct { int item, qty, weight; } drop_t;
+/* ---- monster drop tables (weighted; an IT_NONE entry means "nothing").
+   Each roll yields a random quantity in [lo, hi] (lo == hi for a fixed
+   amount) - so coins (and stacks) vary per monster. ---- */
+typedef struct { int item, lo, hi, weight; } drop_t;
 #define NDROPS(t) ((int)(sizeof(t) / sizeof(t[0])))
 
 static const drop_t goblin_drops[] = {
-    { IT_COINS, 12, 28 }, { IT_AIR_RUNE, 3, 24 }, { IT_RAW_SHRIMP, 1, 16 },
-    { IT_COPPER, 1, 12 }, { IT_NONE, 0, 20 },
+    { IT_COINS, 5, 25, 28 }, { IT_AIR_RUNE, 2, 6, 22 }, { IT_RAW_SHRIMP, 1, 1, 14 },
+    { IT_COPPER, 1, 2, 10 }, { IT_TIN, 1, 2, 8 }, { IT_NONE, 0, 0, 18 },
 };
 static const drop_t skeleton_drops[] = {
-    { IT_COINS, 30, 25 }, { IT_FIRE_RUNE, 2, 20 }, { IT_AIR_RUNE, 4, 15 },
-    { IT_IRON, 1, 13 }, { IT_SHRIMP, 1, 12 }, { IT_WIZ_HAT, 1, 5 }, { IT_NONE, 0, 10 },
+    { IT_COINS, 20, 60, 22 }, { IT_FIRE_RUNE, 2, 5, 18 }, { IT_AIR_RUNE, 3, 8, 12 },
+    { IT_IRON, 1, 2, 11 }, { IT_COAL, 1, 2, 12 }, { IT_MITH_ARROW, 5, 12, 8 },
+    { IT_SHRIMP, 1, 1, 8 }, { IT_WIZ_HAT, 1, 1, 4 }, { IT_NONE, 0, 0, 5 },
 };
 static const drop_t boss_drops[] = {   /* no "nothing": the boss always pays */
-    { IT_COINS, 350, 20 }, { IT_STAFF, 1, 14 }, { IT_WIZ_ROBE, 1, 12 },
-    { IT_WIZ_HAT, 1, 10 }, { IT_FIRE_RUNE, 15, 10 },
-    { IT_STEEL_BODY, 1, 14 }, { IT_MITH_HELM, 1, 12 }, { IT_MITH_SWORD, 1, 8 },
+    { IT_COINS, 250, 500, 18 }, { IT_STAFF, 1, 1, 12 }, { IT_WIZ_ROBE, 1, 1, 10 },
+    { IT_WIZ_HAT, 1, 1, 8 }, { IT_FIRE_RUNE, 10, 25, 9 }, { IT_STEEL_BODY, 1, 1, 11 },
+    { IT_STEEL_BAR, 2, 4, 10 }, { IT_MITH_HELM, 1, 1, 10 }, { IT_MITH_SWORD, 1, 1, 6 },
+    { IT_GOLD_ORE, 2, 4, 6 },
 };
 static const drop_t wight_drops[] = {
-    { IT_COINS, 60, 26 }, { IT_FIRE_RUNE, 5, 18 }, { IT_IRON_BAR, 1, 14 },
-    { IT_SHRIMP, 2, 14 }, { IT_MITH_HELM, 1, 4 }, { IT_NONE, 0, 24 },
+    { IT_COINS, 40, 90, 24 }, { IT_FIRE_RUNE, 4, 8, 16 }, { IT_STEEL_BAR, 1, 1, 12 },
+    { IT_COAL, 1, 3, 12 }, { IT_MITH_ORE, 1, 2, 10 }, { IT_SHRIMP, 1, 2, 10 },
+    { IT_MITH_HELM, 1, 1, 4 }, { IT_NONE, 0, 0, 12 },
 };
-static const drop_t demon_drops[] = {  /* the deepest boss pays the richest */
-    { IT_COINS, 800, 22 }, { IT_RUNE_SWORD, 1, 14 }, { IT_RUNE_HELM, 1, 14 },
-    { IT_RUNE_SHIELD, 1, 12 }, { IT_RUNE_BODY, 1, 8 }, { IT_FIRE_RUNE, 30, 14 },
-    { IT_MITH_BODY, 1, 16 },
+static const drop_t demon_drops[] = {  /* the deepest dungeon boss pays the richest */
+    { IT_COINS, 600, 1000, 20 }, { IT_RUNE_SWORD, 1, 1, 13 }, { IT_RUNE_HELM, 1, 1, 13 },
+    { IT_RUNE_SHIELD, 1, 1, 11 }, { IT_RUNE_BODY, 1, 1, 7 }, { IT_FIRE_RUNE, 25, 40, 12 },
+    { IT_MITH_BODY, 1, 1, 14 }, { IT_GOLD_BAR, 1, 3, 10 },
 };
 static const drop_t cow_drops[] = {   /* mostly cowhide for crafting, plus a few coins */
-    { IT_COWHIDE, 1, 55 }, { IT_COINS, 6, 25 }, { IT_RAW_SHRIMP, 1, 8 },
-    { IT_NONE, 0, 12 },
+    { IT_COWHIDE, 1, 1, 55 }, { IT_COINS, 3, 12, 25 }, { IT_RAW_SHRIMP, 1, 1, 8 },
+    { IT_NONE, 0, 0, 12 },
 };
 static const drop_t whelp_drops[] = {  /* floor-3 fodder: better than wights */
-    { IT_COINS, 90, 26 }, { IT_FIRE_RUNE, 6, 20 }, { IT_SHRIMP, 2, 16 },
-    { IT_MITH_HELM, 1, 4 }, { IT_NONE, 0, 34 },
+    { IT_COINS, 60, 120, 26 }, { IT_FIRE_RUNE, 5, 10, 20 }, { IT_SHRIMP, 2, 3, 16 },
+    { IT_COAL, 1, 3, 12 }, { IT_MITH_ORE, 1, 2, 8 }, { IT_MITH_HELM, 1, 1, 4 },
+    { IT_NONE, 0, 0, 14 },
 };
-static const drop_t dragon_drops[] = {  /* on top of a guaranteed coin+stone payout */
-    { IT_COINS, 1500, 16 }, { IT_RUNE_BODY, 1, 12 }, { IT_RUNE_SWORD, 1, 11 },
-    { IT_RUNE_SHIELD, 1, 10 }, { IT_RUNE_HELM, 1, 10 }, { IT_FIRE_RUNE, 60, 11 },
-    { IT_DRAGON_HIDE, 2, 13 },   /* tan into dragon leather for the best ranged armour */
-    { IT_DRAGONSTONE, 1, 10 },
-    { IT_DRAGONFIRE, 1, 7 },   /* the rare unique: the Dragonfire blade */
+static const drop_t dragon_drops[] = {  /* on top of a guaranteed coin hoard */
+    { IT_COINS, 800, 2000, 16 }, { IT_RUNE_BODY, 1, 1, 12 }, { IT_RUNE_SWORD, 1, 1, 11 },
+    { IT_RUNE_SHIELD, 1, 1, 9 }, { IT_RUNE_HELM, 1, 1, 9 }, { IT_FIRE_RUNE, 40, 80, 10 },
+    { IT_DRAGON_HIDE, 1, 3, 13 },   /* tan into dragon leather for the best ranged armour */
+    { IT_DRAGON_LEATHER, 1, 2, 5 }, { IT_GOLD_BAR, 2, 5, 7 },
+    { IT_DRAGONSTONE, 1, 2, 12 },   /* no longer guaranteed - earn it here */
+    { IT_GLORY_AMULET, 1, 1, 3 },   /* a rare pre-enchanted treasure */
+    { IT_DRAGONFIRE, 1, 1, 6 },     /* the rarest unique: the Dragonfire blade */
 };
 static const drop_t wolf_drops[] = {   /* Frostmere fodder */
-    { IT_COINS, 40, 30 }, { IT_BONES, 1, 0 }, { IT_RAW_TROUT, 1, 18 },
-    { IT_COAL, 1, 14 }, { IT_NONE, 0, 38 },
+    { IT_COINS, 30, 60, 30 }, { IT_RAW_TROUT, 1, 2, 16 }, { IT_COAL, 1, 2, 14 },
+    { IT_LEATHER, 1, 1, 8 }, { IT_PINE_LOGS, 1, 3, 10 }, { IT_NONE, 0, 0, 22 },
 };
-static const drop_t ice_warrior_drops[] = {   /* steel-tier loot */
-    { IT_COINS, 150, 24 }, { IT_STEEL_BAR, 1, 16 }, { IT_LAW_RUNE, 3, 12 },
-    { IT_MITH_ORE, 1, 12 }, { IT_GOLD_ORE, 1, 10 }, { IT_NONE, 0, 26 },
+static const drop_t ice_warrior_drops[] = {   /* steel/mithril-tier loot */
+    { IT_COINS, 120, 220, 24 }, { IT_STEEL_BAR, 1, 2, 16 }, { IT_LAW_RUNE, 2, 5, 12 },
+    { IT_MITH_ORE, 1, 3, 12 }, { IT_GOLD_ORE, 1, 2, 10 }, { IT_MITH_BAR, 1, 1, 7 },
+    { IT_MITH_ARROW, 8, 15, 8 }, { IT_NONE, 0, 0, 11 },
 };
 static const drop_t yeti_drops[] = {   /* the mini-boss: rich, no "nothing" */
-    { IT_COINS, 1200, 22 }, { IT_RUNE_BODY, 1, 12 }, { IT_RUNE_SHIELD, 1, 12 },
-    { IT_GOLD_ORE, 4, 16 }, { IT_DRAGONSTONE, 1, 12 },
-    { IT_FROSTMAUL, 1, 14 },   /* its signature maul (uncommon) */
-    { IT_PINE_LOGS, 8, 12 },
+    { IT_COINS, 800, 1500, 22 }, { IT_RUNE_BODY, 1, 1, 12 }, { IT_RUNE_SHIELD, 1, 1, 12 },
+    { IT_GOLD_ORE, 3, 6, 14 }, { IT_GOLD_BAR, 1, 3, 10 }, { IT_DRAGONSTONE, 1, 2, 10 },
+    { IT_FROSTMAUL, 1, 1, 12 },   /* its signature maul (uncommon) */
+    { IT_FURY_RING, 1, 1, 3 },    /* a rare pre-enchanted ring */
+    { IT_PINE_LOGS, 4, 10, 10 },
 };
 
 static void give_drop(int item, int qty)
@@ -1596,7 +1613,12 @@ static void roll_drops(const drop_t *tbl, int n)
     int r = rand() % total, acc = 0;
     for (int i = 0; i < n; i++) {
         acc += tbl[i].weight;
-        if (r < acc) { give_drop(tbl[i].item, tbl[i].qty); return; }
+        if (r < acc) {
+            int lo = tbl[i].lo, hi = tbl[i].hi;
+            int qty = (hi > lo) ? lo + rand() % (hi - lo + 1) : lo;
+            give_drop(tbl[i].item, qty);
+            return;
+        }
     }
 }
 
@@ -1670,18 +1692,22 @@ static void build_almanac(void)
         al_add(0, " HP %d   max hit %d   defence %d",
                mobinfo[m].max_hp, mobinfo[m].max_dmg, mobinfo[m].mob_def);
         if (m == MOB_DRAGON)
-            al_add(5, " always: 2500 coins + Dragonstone");
+            al_add(5, " always: 2000-3000 coins");
         int n;
         const drop_t *t = mob_drops(m, &n);
         int total = 0;
         for (int i = 0; i < n; i++) total += t[i].weight;
         for (int i = 0; i < n; i++) {
             int pct = total ? t[i].weight * 100 / total : 0;
+            int lo = t[i].lo, hi = t[i].hi;
             if (t[i].item == IT_NONE)
                 al_add(6, "  nothing                  %d%%", pct);
-            else if (t[i].qty > 1)
+            else if (hi > lo)
+                al_add(6, "  %-15s %d-%-4d %d%%",
+                       iteminfo[t[i].item].name, lo, hi, pct);
+            else if (lo > 1)
                 al_add(6, "  %-16s x%-4d %d%%",
-                       iteminfo[t[i].item].name, t[i].qty, pct);
+                       iteminfo[t[i].item].name, lo, pct);
             else
                 al_add(6, "  %-21s %d%%", iteminfo[t[i].item].name, pct);
         }
@@ -1899,10 +1925,11 @@ static void mob_die(gob_t *g)
         add_xp(SK_STR, 18000, false);
         add_xp(SK_DEF, 18000, false);
         add_xp(SK_HP,  14000, false);
-        /* a guaranteed hoard on top of the weighted table below */
-        gp += 2500;
-        if (!inv_full()) add_item(IT_DRAGONSTONE);
-        msg("You plunder its hoard: 2500 coins and a Dragonstone!");
+        /* a guaranteed coin hoard on top of the weighted table below
+           (the Dragonstone is no longer guaranteed - roll for it) */
+        int hoard = 2000 + rand() % 1001;   /* 2000-3000 coins */
+        gp += hoard;
+        msg("You plunder its hoard for %d coins!", hoard);
         gratz_timer = 4;
         diary_complete(AREA_OAKHAVEN, DTASK_DRAGON);
     } else if (g->type == MOB_YETI) {
@@ -1927,10 +1954,15 @@ static void mob_die(gob_t *g)
         quest_kills++;
         msg("Goblin bashed for the Chef! (%d/%d)", quest_kills, QUEST_KILLS_NEEDED);
     }
-    /* always-bones, plus a roll on this monster's table */
-    int bones = (g->type == MOB_BOSS || g->type == MOB_DEMON ||
-                 g->type == MOB_DRAGON) ? 2 : 1;
-    for (int i = 0; i < bones; i++) if (!inv_full()) add_item(IT_BONES);
+    /* always-bones (type + count scale with the foe), plus a table roll */
+    int bonet = IT_BONES, bonen = 1;
+    switch (g->type) {
+    case MOB_DRAGON: bonet = IT_DRAGON_BONES; bonen = 2; break;
+    case MOB_BOSS: case MOB_DEMON: case MOB_YETI: bonet = IT_BIG_BONES; bonen = 2; break;
+    case MOB_WIGHT: case MOB_WHELP: case MOB_ICE_WARRIOR: bonet = IT_BIG_BONES; bonen = 1; break;
+    default: break;
+    }
+    for (int i = 0; i < bonen; i++) if (!inv_full()) add_item(bonet);
     switch (g->type) {
     case MOB_GOBLIN:   roll_drops(goblin_drops,   NDROPS(goblin_drops));   break;
     case MOB_SKELETON: roll_drops(skeleton_drops, NDROPS(skeleton_drops)); break;
@@ -3580,6 +3612,16 @@ static void use_inv_item(int slot)
         inv[slot] = IT_NONE;
         add_xp(SK_PRAY, 45, true);
         msg("You bury the bones.");
+        break;
+    case IT_BIG_BONES:
+        inv[slot] = IT_NONE;
+        add_xp(SK_PRAY, 150, true);
+        msg("You bury the big bones.");
+        break;
+    case IT_DRAGON_BONES:
+        inv[slot] = IT_NONE;
+        add_xp(SK_PRAY, 720, true);
+        msg("You bury the dragon bones. Potent prayer xp!");
         break;
     case IT_LOGS: case IT_OAK_LOGS: case IT_PINE_LOGS: {
         if (!has_item(IT_TINDER)) { msg("You need a tinderbox to light a fire."); break; }

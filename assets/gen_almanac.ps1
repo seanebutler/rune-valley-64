@@ -166,12 +166,13 @@ foreach ($m in [regex]::Matches($src, 'case\s+MOB_(\w+):\s*\*n\s*=\s*NDROPS\((\w
     $mobTable[$m.Groups[1].Value] = $m.Groups[2].Value
 }
 
-# --- drop tables: name -> list of {item, qty, weight} ---
+# --- drop tables: name -> list of {item, lo, hi, weight} ---
 $drops = @{}
 foreach ($m in [regex]::Matches($src, 'static const drop_t (\w+)\[\]\s*=\s*\{(.*?)\};', [System.Text.RegularExpressions.RegexOptions]::Singleline)) {
     $list = @()
-    foreach ($d in [regex]::Matches($m.Groups[2].Value, '\{\s*(IT_\w+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\}')) {
-        $list += [pscustomobject]@{ Item = $d.Groups[1].Value; Qty = [int]$d.Groups[2].Value; Weight = [int]$d.Groups[3].Value }
+    foreach ($d in [regex]::Matches($m.Groups[2].Value, '\{\s*(IT_\w+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\}')) {
+        $list += [pscustomobject]@{ Item = $d.Groups[1].Value; Lo = [int]$d.Groups[2].Value
+            Hi = [int]$d.Groups[3].Value; Weight = [int]$d.Groups[4].Value }
     }
     $drops[$m.Groups[1].Value] = $list
 }
@@ -186,7 +187,7 @@ $mobNote   = @{
     WOLF='Frostmere snowfield'; ICE_WARRIOR='Frostmere, the north'
     YETI='boss, Frostmere'
 }
-$mobAlways = @{ DRAGON='Always drops 2500 coins + a Dragonstone.'
+$mobAlways = @{ DRAGON='Always drops a 2000-3000 coin hoard (Dragonstone no longer guaranteed).'
                 BOSS='Always pays out (no "nothing").'; DEMON='Always pays out (no "nothing").'
                 YETI='Always pays out (no "nothing").' }
 $mobExtra  = @{ DRAGON=@(
@@ -259,7 +260,8 @@ foreach ($id in $mobOrder) {
     W '|:-:|---|--:|--:|'
     foreach ($d in $tbl) {
         $pct = [math]::Round($d.Weight * 100.0 / $total)
-        $qty = if ($d.Item -eq 'IT_NONE') { '-' } else { "$($d.Qty)" }
+        $qty = if ($d.Item -eq 'IT_NONE') { '-' }
+               elseif ($d.Hi -gt $d.Lo) { "$($d.Lo)-$($d.Hi)" } else { "$($d.Lo)" }
         W ("| {0} | {1} | {2} | {3}% |" -f (Item-Icon $d.Item), (Item-Label $d.Item), $qty, $pct)
     }
     W ''

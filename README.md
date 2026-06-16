@@ -55,9 +55,10 @@ defender **recoils**.
   **teleports** (Home, Bank, and the quest-locked Cave) and **Enchant Jewel**.
 - **Ranged** — equip a bow and carry arrows; accuracy and max hit add the bow's,
   arrow's and ranged armour's bonuses. Mithril arrows need an oak shortbow+.
-- **Prayer** — bury bones for xp, then toggle boosts across Attack/Strength/
-  Defence/Magic (+10%, or +20% at higher levels). Active prayers drain points;
-  recharge at any altar (carry no essence).
+- **Prayer** — bury bones for xp (tougher foes drop **big bones** and the
+  dragon **dragon bones**, worth far more), then toggle boosts across Attack/
+  Strength/Defence/Magic (+10%, or +20% at higher levels). Active prayers drain
+  points; recharge at any altar (carry no essence).
 
 ## Equipment
 
@@ -84,7 +85,8 @@ drawn on your character.
 - **The dungeon** (three floors, SW of the mine) — skeletons and the **Goblin
   Warlord**, then wights and the **Demon**, then the **Ancient Dragon**, which
   breathes fire across the room, enrages at half health, and summons whelps. It
-  always drops a Dragonstone and rarely the **Dragonfire blade**.
+  always drops a fat coin hoard and **dragon bones**, often a Dragonstone, and
+  rarely the **Dragonfire blade**.
 - **Frostmere** — sail the **boat** from Oakhaven's beach to a frozen isle of
   pine groves and a frozen lake: frost wolves, ice warriors, and the **Yeti**
   mini-boss. Its own bank and boat home sit at the landing.

@@ -64,7 +64,7 @@ Hitpoints **8** | max hit **1** | defence **0**.
 | | Drop | Qty | Chance |
 |:-:|---|--:|--:|
 | ![](docs/almanac/item_cowhide.png) | Cowhide | 1 | 55% |
-| ![](docs/almanac/item_coins.png) | Coins | 6 | 25% |
+| ![](docs/almanac/item_coins.png) | Coins | 3-12 | 25% |
 | ![](docs/almanac/item_raw_shrimp.png) | Raw shrimp | 1 | 8% |
 |  | Nothing | - | 12% |
 
@@ -75,11 +75,12 @@ Hitpoints **5** | max hit **1** | defence **1**.
 
 | | Drop | Qty | Chance |
 |:-:|---|--:|--:|
-| ![](docs/almanac/item_coins.png) | Coins | 12 | 28% |
-| ![](docs/almanac/item_air_rune.png) | Air rune | 3 | 24% |
-| ![](docs/almanac/item_raw_shrimp.png) | Raw shrimp | 1 | 16% |
-| ![](docs/almanac/item_copper_ore.png) | Copper ore | 1 | 12% |
-|  | Nothing | - | 20% |
+| ![](docs/almanac/item_coins.png) | Coins | 5-25 | 28% |
+| ![](docs/almanac/item_air_rune.png) | Air rune | 2-6 | 22% |
+| ![](docs/almanac/item_raw_shrimp.png) | Raw shrimp | 1 | 14% |
+| ![](docs/almanac/item_copper_ore.png) | Copper ore | 1-2 | 10% |
+| ![](docs/almanac/item_tin_ore.png) | Tin ore | 1-2 | 8% |
+|  | Nothing | - | 18% |
 
 ### Skeleton - dungeon floor 1
 ![](docs/almanac/skeleton_a.png)
@@ -88,13 +89,15 @@ Hitpoints **9** | max hit **2** | defence **6**.
 
 | | Drop | Qty | Chance |
 |:-:|---|--:|--:|
-| ![](docs/almanac/item_coins.png) | Coins | 30 | 25% |
-| ![](docs/almanac/item_fire_rune.png) | Fire rune | 2 | 20% |
-| ![](docs/almanac/item_air_rune.png) | Air rune | 4 | 15% |
-| ![](docs/almanac/item_iron_ore.png) | Iron ore | 1 | 13% |
-| ![](docs/almanac/item_shrimp.png) | Shrimp | 1 | 12% |
-| ![](docs/almanac/item_wizard_hat.png) | Wizard hat | 1 | 5% |
-|  | Nothing | - | 10% |
+| ![](docs/almanac/item_coins.png) | Coins | 20-60 | 22% |
+| ![](docs/almanac/item_fire_rune.png) | Fire rune | 2-5 | 18% |
+| ![](docs/almanac/item_air_rune.png) | Air rune | 3-8 | 12% |
+| ![](docs/almanac/item_iron_ore.png) | Iron ore | 1-2 | 11% |
+| ![](docs/almanac/item_coal.png) | Coal | 1-2 | 12% |
+| ![](docs/almanac/item_mith_arrow.png) | Mithril arrow | 5-12 | 8% |
+| ![](docs/almanac/item_shrimp.png) | Shrimp | 1 | 8% |
+| ![](docs/almanac/item_wizard_hat.png) | Wizard hat | 1 | 4% |
+|  | Nothing | - | 5% |
 
 ### Goblin Warlord - boss, dungeon floor 1
 ![](docs/almanac/boss.png)
@@ -105,14 +108,16 @@ Hitpoints **45** | max hit **5** | defence **15**.
 
 | | Drop | Qty | Chance |
 |:-:|---|--:|--:|
-| ![](docs/almanac/item_coins.png) | Coins | 350 | 20% |
-| ![](docs/almanac/item_staff.png) | Wizard staff | 1 | 14% |
-| ![](docs/almanac/item_wizard_robe.png) | Wizard robe | 1 | 12% |
-| ![](docs/almanac/item_wizard_hat.png) | Wizard hat | 1 | 10% |
-| ![](docs/almanac/item_fire_rune.png) | Fire rune | 15 | 10% |
-| ![](docs/almanac/item_st_body.png) | Steel body | 1 | 14% |
-| ![](docs/almanac/item_mi_helm.png) | Mithril helm | 1 | 12% |
-| ![](docs/almanac/item_mi_sword.png) | Mithril sword | 1 | 8% |
+| ![](docs/almanac/item_coins.png) | Coins | 250-500 | 18% |
+| ![](docs/almanac/item_staff.png) | Wizard staff | 1 | 12% |
+| ![](docs/almanac/item_wizard_robe.png) | Wizard robe | 1 | 10% |
+| ![](docs/almanac/item_wizard_hat.png) | Wizard hat | 1 | 8% |
+| ![](docs/almanac/item_fire_rune.png) | Fire rune | 10-25 | 9% |
+| ![](docs/almanac/item_st_body.png) | Steel body | 1 | 11% |
+| ![](docs/almanac/item_steel_bar.png) | Steel bar | 2-4 | 10% |
+| ![](docs/almanac/item_mi_helm.png) | Mithril helm | 1 | 10% |
+| ![](docs/almanac/item_mi_sword.png) | Mithril sword | 1 | 6% |
+| ![](docs/almanac/item_gold_ore.png) | Gold ore | 2-4 | 6% |
 
 ### Wight - dungeon floor 2
 ![](docs/almanac/wight_a.png)
@@ -121,12 +126,14 @@ Hitpoints **14** | max hit **3** | defence **10**.
 
 | | Drop | Qty | Chance |
 |:-:|---|--:|--:|
-| ![](docs/almanac/item_coins.png) | Coins | 60 | 26% |
-| ![](docs/almanac/item_fire_rune.png) | Fire rune | 5 | 18% |
-| ![](docs/almanac/item_iron_bar.png) | Iron bar | 1 | 14% |
-| ![](docs/almanac/item_shrimp.png) | Shrimp | 2 | 14% |
+| ![](docs/almanac/item_coins.png) | Coins | 40-90 | 24% |
+| ![](docs/almanac/item_fire_rune.png) | Fire rune | 4-8 | 16% |
+| ![](docs/almanac/item_steel_bar.png) | Steel bar | 1 | 12% |
+| ![](docs/almanac/item_coal.png) | Coal | 1-3 | 12% |
+| ![](docs/almanac/item_mith_ore.png) | Mithril ore | 1-2 | 10% |
+| ![](docs/almanac/item_shrimp.png) | Shrimp | 1-2 | 10% |
 | ![](docs/almanac/item_mi_helm.png) | Mithril helm | 1 | 4% |
-|  | Nothing | - | 24% |
+|  | Nothing | - | 12% |
 
 ### Demon - boss, dungeon floor 2
 ![](docs/almanac/demon.png)
@@ -137,13 +144,14 @@ Hitpoints **80** | max hit **8** | defence **25**.
 
 | | Drop | Qty | Chance |
 |:-:|---|--:|--:|
-| ![](docs/almanac/item_coins.png) | Coins | 800 | 22% |
-| ![](docs/almanac/item_ru_sword.png) | Rune sword | 1 | 14% |
-| ![](docs/almanac/item_ru_helm.png) | Rune helm | 1 | 14% |
-| ![](docs/almanac/item_ru_shield.png) | Rune shield | 1 | 12% |
-| ![](docs/almanac/item_ru_body.png) | Rune body | 1 | 8% |
-| ![](docs/almanac/item_fire_rune.png) | Fire rune | 30 | 14% |
-| ![](docs/almanac/item_mi_body.png) | Mithril body | 1 | 16% |
+| ![](docs/almanac/item_coins.png) | Coins | 600-1000 | 20% |
+| ![](docs/almanac/item_ru_sword.png) | Rune sword | 1 | 13% |
+| ![](docs/almanac/item_ru_helm.png) | Rune helm | 1 | 13% |
+| ![](docs/almanac/item_ru_shield.png) | Rune shield | 1 | 11% |
+| ![](docs/almanac/item_ru_body.png) | Rune body | 1 | 7% |
+| ![](docs/almanac/item_fire_rune.png) | Fire rune | 25-40 | 12% |
+| ![](docs/almanac/item_mi_body.png) | Mithril body | 1 | 14% |
+| ![](docs/almanac/item_gold_bar.png) | Gold bar | 1-3 | 10% |
 
 ### Whelp - dungeon floor 3 (the Dragon's brood)
 ![](docs/almanac/mob_whelp_a.png)
@@ -152,18 +160,20 @@ Hitpoints **18** | max hit **4** | defence **12**.
 
 | | Drop | Qty | Chance |
 |:-:|---|--:|--:|
-| ![](docs/almanac/item_coins.png) | Coins | 90 | 26% |
-| ![](docs/almanac/item_fire_rune.png) | Fire rune | 6 | 20% |
-| ![](docs/almanac/item_shrimp.png) | Shrimp | 2 | 16% |
+| ![](docs/almanac/item_coins.png) | Coins | 60-120 | 26% |
+| ![](docs/almanac/item_fire_rune.png) | Fire rune | 5-10 | 20% |
+| ![](docs/almanac/item_shrimp.png) | Shrimp | 2-3 | 16% |
+| ![](docs/almanac/item_coal.png) | Coal | 1-3 | 12% |
+| ![](docs/almanac/item_mith_ore.png) | Mithril ore | 1-2 | 8% |
 | ![](docs/almanac/item_mi_helm.png) | Mithril helm | 1 | 4% |
-|  | Nothing | - | 34% |
+|  | Nothing | - | 14% |
 
 ### Ancient Dragon - boss, dungeon floor 3
 ![](docs/almanac/mob_dragon.png)
 
 Hitpoints **150** | max hit **12** | defence **35**.
 
-**Always drops 2500 coins + a Dragonstone.**
+**Always drops a 2000-3000 coin hoard (Dragonstone no longer guaranteed).**
 
 - Fire breath: a ranged attack (up to 5 tiles, ignores armour) for 5 damage, rising to 8 when enraged.
 - Enrages at half health: attacks and breathes faster and hits harder.
@@ -171,15 +181,18 @@ Hitpoints **150** | max hit **12** | defence **35**.
 
 | | Drop | Qty | Chance |
 |:-:|---|--:|--:|
-| ![](docs/almanac/item_coins.png) | Coins | 1500 | 16% |
-| ![](docs/almanac/item_ru_body.png) | Rune body | 1 | 12% |
-| ![](docs/almanac/item_ru_sword.png) | Rune sword | 1 | 11% |
-| ![](docs/almanac/item_ru_shield.png) | Rune shield | 1 | 10% |
-| ![](docs/almanac/item_ru_helm.png) | Rune helm | 1 | 10% |
-| ![](docs/almanac/item_fire_rune.png) | Fire rune | 60 | 11% |
-| ![](docs/almanac/item_dragon_hide.png) | Dragonhide | 2 | 13% |
-| ![](docs/almanac/item_dragonstone.png) | Dragonstone | 1 | 10% |
-| ![](docs/almanac/item_dragonfire.png) | Dragonfire blade | 1 | 7% |
+| ![](docs/almanac/item_coins.png) | Coins | 800-2000 | 14% |
+| ![](docs/almanac/item_ru_body.png) | Rune body | 1 | 11% |
+| ![](docs/almanac/item_ru_sword.png) | Rune sword | 1 | 10% |
+| ![](docs/almanac/item_ru_shield.png) | Rune shield | 1 | 8% |
+| ![](docs/almanac/item_ru_helm.png) | Rune helm | 1 | 8% |
+| ![](docs/almanac/item_fire_rune.png) | Fire rune | 40-80 | 9% |
+| ![](docs/almanac/item_dragon_hide.png) | Dragonhide | 1-3 | 12% |
+| ![](docs/almanac/item_dragon_leather.png) | Dragon leather | 1-2 | 4% |
+| ![](docs/almanac/item_gold_bar.png) | Gold bar | 2-5 | 6% |
+| ![](docs/almanac/item_dragonstone.png) | Dragonstone | 1-2 | 11% |
+| ![](docs/almanac/item_glory_amulet.png) | Amulet of Glory | 1 | 3% |
+| ![](docs/almanac/item_dragonfire.png) | Dragonfire blade | 1 | 5% |
 
 ### Frost wolf - Frostmere snowfield
 ![](docs/almanac/mob_wolf_a.png)
@@ -188,11 +201,12 @@ Hitpoints **16** | max hit **4** | defence **10**.
 
 | | Drop | Qty | Chance |
 |:-:|---|--:|--:|
-| ![](docs/almanac/item_coins.png) | Coins | 40 | 30% |
-| ![](docs/almanac/item_bones.png) | Bones | 1 | 0% |
-| ![](docs/almanac/item_raw_trout.png) | Raw trout | 1 | 18% |
-| ![](docs/almanac/item_coal.png) | Coal | 1 | 14% |
-|  | Nothing | - | 38% |
+| ![](docs/almanac/item_coins.png) | Coins | 30-60 | 30% |
+| ![](docs/almanac/item_raw_trout.png) | Raw trout | 1-2 | 16% |
+| ![](docs/almanac/item_coal.png) | Coal | 1-2 | 14% |
+| ![](docs/almanac/item_leather.png) | Leather | 1 | 8% |
+| ![](docs/almanac/item_pine_logs.png) | Pine logs | 1-3 | 10% |
+|  | Nothing | - | 22% |
 
 ### Ice warrior - Frostmere, the north
 ![](docs/almanac/mob_icew_a.png)
@@ -201,12 +215,14 @@ Hitpoints **30** | max hit **6** | defence **20**.
 
 | | Drop | Qty | Chance |
 |:-:|---|--:|--:|
-| ![](docs/almanac/item_coins.png) | Coins | 150 | 24% |
-| ![](docs/almanac/item_steel_bar.png) | Steel bar | 1 | 16% |
-| ![](docs/almanac/item_law_rune.png) | Law rune | 3 | 12% |
-| ![](docs/almanac/item_mith_ore.png) | Mithril ore | 1 | 12% |
-| ![](docs/almanac/item_gold_ore.png) | Gold ore | 1 | 10% |
-|  | Nothing | - | 26% |
+| ![](docs/almanac/item_coins.png) | Coins | 120-220 | 24% |
+| ![](docs/almanac/item_steel_bar.png) | Steel bar | 1-2 | 16% |
+| ![](docs/almanac/item_law_rune.png) | Law rune | 2-5 | 12% |
+| ![](docs/almanac/item_mith_ore.png) | Mithril ore | 1-3 | 12% |
+| ![](docs/almanac/item_gold_ore.png) | Gold ore | 1-2 | 10% |
+| ![](docs/almanac/item_mith_bar.png) | Mithril bar | 1 | 7% |
+| ![](docs/almanac/item_mith_arrow.png) | Mithril arrow | 8-15 | 8% |
+|  | Nothing | - | 11% |
 
 ### Yeti - boss, Frostmere
 ![](docs/almanac/mob_yeti.png)
@@ -217,13 +233,15 @@ Hitpoints **120** | max hit **11** | defence **32**.
 
 | | Drop | Qty | Chance |
 |:-:|---|--:|--:|
-| ![](docs/almanac/item_coins.png) | Coins | 1200 | 22% |
-| ![](docs/almanac/item_ru_body.png) | Rune body | 1 | 12% |
-| ![](docs/almanac/item_ru_shield.png) | Rune shield | 1 | 12% |
-| ![](docs/almanac/item_gold_ore.png) | Gold ore | 4 | 16% |
-| ![](docs/almanac/item_dragonstone.png) | Dragonstone | 1 | 12% |
-| ![](docs/almanac/item_frostmaul.png) | Frostmaul | 1 | 14% |
-| ![](docs/almanac/item_pine_logs.png) | Pine logs | 8 | 12% |
+| ![](docs/almanac/item_coins.png) | Coins | 800-1500 | 21% |
+| ![](docs/almanac/item_ru_body.png) | Rune body | 1 | 11% |
+| ![](docs/almanac/item_ru_shield.png) | Rune shield | 1 | 11% |
+| ![](docs/almanac/item_gold_ore.png) | Gold ore | 3-6 | 13% |
+| ![](docs/almanac/item_gold_bar.png) | Gold bar | 1-3 | 10% |
+| ![](docs/almanac/item_dragonstone.png) | Dragonstone | 1-2 | 10% |
+| ![](docs/almanac/item_frostmaul.png) | Frostmaul | 1 | 11% |
+| ![](docs/almanac/item_fury_ring.png) | Ring of Fury | 1 | 3% |
+| ![](docs/almanac/item_pine_logs.png) | Pine logs | 4-10 | 10% |
 
 ---
 
